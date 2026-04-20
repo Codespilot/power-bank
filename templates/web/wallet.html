@@ -41,6 +41,18 @@
         gap: 11px;
     }
 
+    .wallet-action-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: nowrap;
+    }
+
+    .wallet-action-row .layui-btn {
+        margin: 0 !important;
+        white-space: nowrap;
+    }
+
     .wallet-action-desc {
         color: #6b7280;
         margin: 8px 0 16px;
@@ -68,8 +80,10 @@
     <div class="layui-col-md4">
         <div class="wallet-action-box">
             <h3>提现申请</h3>
-            <button type="button" class="layui-btn layui-btn-normal" id="wallet-withdraw-btn">立即提现</button>
-            <a href="/withdraw" class="layui-btn layui-btn-primary layui-border">查看申请记录</a>
+            <div class="wallet-action-row">
+                <button type="button" class="layui-btn layui-btn-normal" id="wallet-withdraw-btn">立即提现</button>
+                <a href="/withdraw" class="layui-btn layui-btn-primary layui-border">查看申请记录</a>
+            </div>
         </div>
     </div>
 </div>
@@ -105,6 +119,7 @@
         var table = layui.table;
         var laydate = layui.laydate;
         var layer = layui.layer;
+        var form = layui.form;
         var currentWallet = {
             total_amount: '0.00',
             frozen_amount: '0.00',
@@ -192,15 +207,16 @@
                 title: '提现申请',
                 area: ['420px', '220px'],
                 content: '' +
-                    '<div style="padding:20px 24px;">' +
+                    '<div class="layui-form" style="padding:20px 24px;">' +
+                    '  <label>提现金额</label>' +
                     '  <div class="layui-form-item">' +
-                    '    <label class="layui-form-label" style="width:90px;">提现金额</label>' +
-                    '    <div class="layui-input-block" style="margin-left:120px;">' +
-                    '      <input id="withdraw-amount-input" type="number" min="0.01" step="0.01" max="' + maxAmount.toFixed(2) + '" class="layui-input" placeholder="最小 0.01，最大 ' + maxAmount.toFixed(2) + '">' +
-                    '    </div>' +
+                    '      <input id="withdraw-amount-input" type="text" lay-affix="number" autocomplete="off" class="layui-input" placeholder="请输入提现金额，例如12.34" value="">' +
+                    '      <label>最小0.01，最大' + maxAmount.toFixed(2) + '</label>' +
                     '  </div>' +
-                    '  <div style="margin-left:120px;color:#6b7280;">可用金额：' + maxAmount.toFixed(2) + '</div>' +
                     '</div>',
+                success: function () {
+                    form.render();
+                },
                 btn: ['提交', '取消'],
                 yes: function (index) {
                     var input = document.getElementById('withdraw-amount-input');

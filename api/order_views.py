@@ -9,6 +9,8 @@ from .models import MerchantOrder, OrderImport
 from .order_serializers import MerchantOrderSerializer, OrderImportSerializer
 
 class MerchantOrderListView(ListAPIView):
+    """商户订单分页查询接口，支持关键字与日期范围筛选。"""
+
     serializer_class = MerchantOrderSerializer
     def get_queryset(self):
         qs = MerchantOrder.objects.all().order_by('-id')
@@ -31,6 +33,10 @@ from utils.generate_snowflake_id import generate_snowflake_id
 from api.import_tasks import start_import_task
 
 class OrderImportListCreateView(APIView):
+    """订单导入任务接口。
+
+    GET 返回导入历史；POST 仅创建导入任务，实际文件解析由后台线程完成。
+    """
     parser_classes = [MultiPartParser]
     permission_classes = [AllowAny]
 
@@ -77,6 +83,8 @@ class OrderImportListCreateView(APIView):
         return Response({'id': str(order_import.id)})
 
 class OrderImportRunningCountView(APIView):
+    """返回当前仍在执行中的导入任务数量。"""
+
     def get(self, request):
         count = OrderImport.objects.filter(status=OrderImport.STATUS_RUNNING).count()
         return Response({'count': count})

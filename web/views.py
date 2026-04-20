@@ -7,7 +7,9 @@ from django.views.generic import TemplateView
 from api.models import InviteCode, User, UserRole
 from api.auth import new_captcha_code
 
+# 页面视图层：负责渲染后台模板并注入当前登录用户上下文。
 class HomePageView(TemplateView):
+    """后台首页，同时负责导航高亮状态。"""
     template_name = "web/home.html"
 
     def get_context_data(self, **kwargs):
@@ -48,6 +50,8 @@ class HomePageView(TemplateView):
 
 
 class LoginPageView(TemplateView):
+    """登录页，按失败次数决定是否显示图片验证码。"""
+
     template_name = "web/login.html"
 
     def get_context_data(self, **kwargs):
@@ -76,6 +80,8 @@ class LoginPageView(TemplateView):
 
 
 class RegisterPageView(TemplateView):
+    """注册页，只允许通过有效邀请码进入。"""
+
     template_name = "web/register.html"
 
     def get_context_data(self, **kwargs):
@@ -119,6 +125,8 @@ class RegisterPageView(TemplateView):
 
 
 class CaptchaImageView(View):
+    """动态生成登录验证码图片，避免明文验证码直接暴露在页面。"""
+
     def get(self, request):
         code = new_captcha_code()
         request.session["login_captcha_code"] = code
@@ -156,12 +164,17 @@ class CaptchaImageView(View):
 
 
 class LogoutView(View):
+    """退出登录并清理当前会话。"""
+
     def get(self, request):
         request.session.flush()
         return redirect("/login")
 
 
+# 以下页面主要承载后台管理界面，数据通过前端再请求对应 API 获取。
 class UserListPageView(TemplateView):
+    """用户管理页面。"""
+
     template_name = "web/user_list.html"  # Now always in templates/web/
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -182,6 +195,8 @@ class UserListPageView(TemplateView):
 
 
 class AgentListPageView(TemplateView):
+    """代理商管理页面，仅展示当前用户的直属下级代理。"""
+
     template_name = "web/agent_list.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -200,6 +215,8 @@ class AgentListPageView(TemplateView):
         return context
 
 class MerchantListPageView(TemplateView):
+    """商户管理页面。"""
+
     template_name = "web/merchant_list.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -237,6 +254,8 @@ class MerchantHistoryPageView(TemplateView):
         return context
 
 class ProfitListPageView(TemplateView):
+    """分润记录查询页面。"""
+
     template_name = "web/profit_list.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -273,6 +292,8 @@ class ProfilePageView(TemplateView):
         return context
 
 class InvitePageView(TemplateView):
+    """邀请推广页面，展示并维护当前用户生成的邀请码。"""
+
     template_name = "web/invite.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -291,6 +312,8 @@ class InvitePageView(TemplateView):
         return context
 
 class OrderListPageView(TemplateView):
+    """订单列表页面。"""
+
     template_name = "web/order_list.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -309,6 +332,8 @@ class OrderListPageView(TemplateView):
         return context
 
 class OrderImportListPageView(TemplateView):
+    """订单导入记录页面。"""
+
     template_name = "web/order_import_list.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

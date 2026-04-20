@@ -16,6 +16,7 @@ from rest_framework.exceptions import AuthenticationFailed
 
 from .models import User
 
+# 认证与登录相关公共方法，供 Session 登录和 JWT 鉴权共同使用。
 USERNAME_REGEX = re.compile(r"^[A-Za-z0-9_]{1,32}$")
 MOBILE_REGEX = re.compile(r"^1(3[0-9]|4[5-9]|5[0-35-9]|6[2567]|7[0-8]|8[0-9]|9[0-35-9])\d{8}$")
 EMAIL_REGEX = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
@@ -25,6 +26,7 @@ JWT_REFRESH_EXPIRES_SECONDS = int(os.getenv("JWT_REFRESH_EXPIRES_SECONDS", str(7
 
 
 def is_valid_username(identifier: str) -> bool:
+    """判断输入是否为合法的用户名、手机号或邮箱。"""
     return bool(USERNAME_REGEX.fullmatch(identifier) or MOBILE_REGEX.fullmatch(identifier) or EMAIL_REGEX.fullmatch(identifier))
 
 
@@ -37,6 +39,7 @@ def get_user_by_identifier(identifier: str) -> User | None:
 
 
 def hash_password(plain_password: str) -> tuple[str, str]:
+    """生成带随机盐值的密码摘要。"""
     password_salt = secrets.token_hex(16)
     password_hash = hashlib.sha256(f"{plain_password}{password_salt}".encode("utf-8")).hexdigest()
     return password_hash, password_salt
@@ -48,6 +51,7 @@ def verify_password(user: User, plain_password: str) -> bool:
 
 
 def compute_lock_until(access_failed_count: int):
+    """根据连续失败次数计算账号锁定截止时间。"""
     if access_failed_count <= 10:
         return None
     lock_minutes = min((access_failed_count - 10) * 10, 24 * 60)
@@ -109,6 +113,7 @@ def decode_jwt(token: str, expected_type: str | None = None) -> dict:
 
 
 def create_access_token(user: User) -> tuple[str, int]:
+    """签发短期访问令牌，供接口鉴权使用。"""
     now_ts = int(timezone.now().timestamp())
     exp = now_ts + JWT_ACCESS_EXPIRES_SECONDS
     payload = {
@@ -122,6 +127,7 @@ def create_access_token(user: User) -> tuple[str, int]:
 
 
 def create_refresh_token(user: User) -> tuple[str, int]:
+    """签发刷新令牌，用于换取新的访问令牌。"""
     now_ts = int(timezone.now().timestamp())
     exp = now_ts + JWT_REFRESH_EXPIRES_SECONDS
     payload = {
@@ -135,6 +141,7 @@ def create_refresh_token(user: User) -> tuple[str, int]:
 
 
 def get_request_user_id(request):
+    """优先从 Session，其次从 JWT 用户对象中解析当前登录用户 id。"""
     session_user_id = request.session.get("current_user_id")
     if session_user_id:
         return int(session_user_id)
@@ -148,6 +155,8 @@ def get_request_user_id(request):
 
 
 class JWTAuthentication(BaseAuthentication):
+    """自定义 Bearer Token 认证，供 DRF API 自动识别。"""
+
     keyword = "Bearer"
 
     def authenticate(self, request):

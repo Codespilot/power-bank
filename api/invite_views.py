@@ -14,12 +14,14 @@ from .user_views import _parse_agent_rate
 
 
 def _build_invite_link(request, code: str) -> str:
+    """根据当前请求上下文拼接可直接访问的注册邀请链接。"""
     scheme = "https" if request.is_secure() else "http"
     host = request.get_host() or "localhost"
     return f"{scheme}://{host}/register?invite_code={code}"
 
 
 def _serialize_invite_code(request, invite: InviteCode):
+    """将邀请码对象转换为前端表格需要的展示结构。"""
     rate_decimal = Decimal(str(invite.rate or "0.00"))
     percent_value = (rate_decimal * Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     return {

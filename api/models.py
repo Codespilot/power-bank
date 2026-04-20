@@ -7,7 +7,12 @@ import string
 from django.utils import timezone
 
 
+# ===== 核心数据模型 =====
+# 本文件集中定义用户、邀请码、钱包、商户、订单、分润等核心业务实体。
+
+
 def _generate_unique_invite_code(model_cls):
+    """生成全局唯一的邀请码，供 InviteCode 模型复用。"""
     alphabet = string.ascii_lowercase + string.digits
     for _ in range(20):
         code = "".join(secrets.choice(alphabet) for _ in range(8))
@@ -17,11 +22,18 @@ def _generate_unique_invite_code(model_cls):
 
 
 class BaseEntity(models.Model):
+    """项目公共抽象基类，统一声明 app_label。"""
+
     class Meta:
         abstract = True
         app_label = "api"
 
 class User(BaseEntity):
+    """系统用户。
+
+    agent / agent_rate 表示当前用户与其上级代理之间的直属关系。
+    invite_code 字段保存注册时使用的邀请码，而不是用户自己生成的邀请码列表。
+    """
     id = models.BigIntegerField(primary_key=True)
     username = models.CharField(max_length=32, unique=True)
     fullname = models.CharField(max_length=64, default="")
@@ -168,6 +180,10 @@ class MerchantOrder(BaseEntity):
 
 
 class ProfitAllocation(BaseEntity):
+    """代理分润明细。
+
+    一条记录表示某个用户在某个结算日得到的一笔 direct 或 subagent 分润。
+    """
     SOURCE_DIRECT = "direct"
     SOURCE_SUBAGENT = "subagent"
     SOURCE_CHOICES = (
@@ -199,6 +215,10 @@ class ProfitAllocation(BaseEntity):
 
 
 class InviteCode(BaseEntity):
+    """邀请码记录。
+
+    每个邀请码绑定一个生成人和一个默认分润比例，可用于邀请下级注册。
+    """
     id = models.BigIntegerField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="invite_codes")
     code = models.CharField(max_length=8, unique=True)
@@ -244,6 +264,10 @@ class OrderImport(BaseEntity):
 
 
 class Wallet(BaseEntity):
+    """用户钱包。
+
+    通过用户 id 与用户一一对应，保存总额、冻结额、在途额和可用额。
+    """
     id = models.BigIntegerField(primary_key=True)
     total_amount = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
     frozen_amount = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))

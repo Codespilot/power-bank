@@ -87,6 +87,7 @@ def _cron_matches(now_local: datetime, cron_expr: str) -> bool:
 
 
 def _fetch_profit_summary_rows(start_dt: datetime, end_dt: datetime) -> list[dict]:
+    """按账单日期汇总商户订单利润，作为分润任务的原始输入。"""
     sql = """
         SELECT
             mch.agent_id,
@@ -122,6 +123,7 @@ def _fetch_profit_summary_rows(start_dt: datetime, end_dt: datetime) -> list[dic
 
 
 def _get_superior_chain(agent_id: int) -> list[User]:
+    """从当前代理开始向上追溯直属上级链路。"""
     chain: list[User] = []
     visited: set[int] = set()
     current_id = int(agent_id)
@@ -153,6 +155,10 @@ def _allocate_agent_profit(
     total_order_amount: Decimal,
     allocations: dict[tuple[int, str, int | None, Decimal | None], dict[str, Decimal | None]],
 ):
+    """按代理链逐级拆分利润。
+
+    当前级先保留自己的部分，再按 agent_rate 将上级应得金额继续向上递推。
+    """
     current_amount = _quantize_amount(total_profit)
     total_profit = _quantize_amount(total_profit)
     total_order_amount = _quantize_amount(total_order_amount)
@@ -192,6 +198,7 @@ def _allocate_agent_profit(
 
 
 def _update_wallets(allocation_deltas: dict[int, Decimal]):
+    """根据当日分润差额增量更新钱包，保证重复执行不会重复入账。"""
     for user_id, delta in allocation_deltas.items():
         amount = _quantize_amount(delta)
         if amount == 0:
@@ -246,6 +253,8 @@ def run_profit_allocation(target_date: date | None = None) -> dict:
     created_count = 0
     asset_user_count = 0
     with transaction.atomic():
+        # 结算逻辑采用“先统计旧值 -> 删除旧记录 -> 重建新记录 -> 按差额更新钱包”，
+        # 这样任务重复执行时仍然是幂等的。
         existing_amounts = {
             int(row["user_id"]): _quantize_amount(Decimal(row["total_amount"] or 0))
             for row in ProfitAllocation.objects.filter(settle_date__gte=start_dt, settle_date__lt=end_dt)

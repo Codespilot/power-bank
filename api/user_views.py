@@ -18,6 +18,10 @@ from .auth import EMAIL_REGEX, MOBILE_REGEX, compute_lock_until, create_access_t
 
 
 def _authenticate_credentials(request, use_session_captcha: bool):
+    """统一处理登录鉴权。
+
+    session 登录与 token 授权都复用这套用户名、密码、锁定、验证码逻辑。
+    """
     session = request.session
     payload = request.data if isinstance(request.data, dict) else {}
 
@@ -148,6 +152,10 @@ class TokenRefreshView(APIView):
 
 
 def _resolve_superior_user(agent_phone: str = "", invite_code: str = ""):
+    """解析用户的上级代理。
+
+    优先通过邀请码反查 InviteCode 记录；后台手工创建用户时仍兼容手机号方式。
+    """
     invite_code = str(invite_code or "").strip().lower()
     agent_phone = str(agent_phone or "").strip()
 
@@ -169,6 +177,7 @@ def _resolve_superior_user(agent_phone: str = "", invite_code: str = ""):
 
 
 def _create_user_account(data, *, invite_code: str = ""):
+    """创建用户及其钱包，并在需要时绑定上级代理或邀请码。"""
     raw_username = str(data.get('username', ''))
     username = ''.join(raw_username.split()).lower()
     fullname = str(data.get('fullname', '')).strip()
@@ -287,6 +296,7 @@ class UserListView(generics.ListAPIView):
         exclude_user_id = self.request.GET.get('exclude_id', '').strip()
         direct_subordinates = str(self.request.GET.get('direct_subordinates', '')).strip().lower()
 
+        # 代理商管理页会传入 direct_subordinates=1，此时只看当前登录用户的直属下级。
         if direct_subordinates in {'1', 'true', 'yes'}:
             current_user_id = get_request_user_id(self.request)
             if not current_user_id:

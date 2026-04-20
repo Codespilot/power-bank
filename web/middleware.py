@@ -1,7 +1,22 @@
 from django.shortcuts import redirect
 from django.urls import reverse
 
-EXCLUDE_PATHS = ["/login", "/register", "/api/auth/login/", "/api/auth/register/", "/api/token/grant", "/api/token/grant/", "/api/token/refresh", "/api/token/refresh/", "/static/"]
+EXCLUDE_PATHS = [
+    "/login",
+    "/register",
+    "/api/auth/login/",
+    "/api/users/register",
+    "/api/users/register/",
+    "/api/token/grant",
+    "/api/token/grant/",
+    "/api/token/refresh",
+    "/api/token/refresh/",
+    "/api/schema",
+    "/api/schema/",
+    "/swagger",
+    "/swagger/",
+    "/static/",
+]
 
 class LoginRequiredMiddleware:
     def __init__(self, get_response):

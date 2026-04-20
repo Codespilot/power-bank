@@ -20,6 +20,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
     "web",
     "api",
 ]
@@ -93,6 +95,33 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "api.auth.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": SITE_TITLE,
+    "DESCRIPTION": f"{SITE_TITLE} API 文档",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "SCHEMA_PATH_PREFIX": r"/api",
+    "TAGS": [
+        {"name": "auth", "description": "登录认证相关接口"},
+        {"name": "token", "description": "JWT Token 接口"},
+        {"name": "users", "description": "用户管理接口"},
+        {"name": "agents", "description": "代理商管理接口"},
+        {"name": "merchants", "description": "商户管理接口"},
+        {"name": "orders", "description": "订单管理接口"},
+        {"name": "order-imports", "description": "订单导入接口"},
+        {"name": "profits", "description": "分润管理接口"},
+        {"name": "invite-codes", "description": "邀请码管理接口"},
+        {"name": "profile", "description": "个人资料接口"},
+        {"name": "wallet", "description": "钱包管理接口"},
+        {"name": "withdraws", "description": "提现管理接口"},
+        {"name": "health", "description": "系统健康检查接口"},
+        {"name": "items", "description": "示例数据接口"},
     ],
 }
 

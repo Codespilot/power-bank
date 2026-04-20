@@ -9,7 +9,8 @@ from rest_framework.views import APIView
 
 from utils.generate_snowflake_id import generate_snowflake_id
 
-from .models import Merchant, MerchantHistory, User
+from .auth import get_request_user_id
+from .models import Merchant, MerchantHistory, User, UserRole
 
 
 FULL_PHONE_REGEX = re.compile(r"^1[3-9]\d{9}$")
@@ -38,6 +39,12 @@ def _format_agent_display(user):
 
 class MerchantListView(APIView):
     def get(self, request):
+        current_user_id = get_request_user_id(request)
+        if not current_user_id:
+            return Response({"count": 0, "results": [], "message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        is_admin = UserRole.objects.filter(user_id=current_user_id, role=UserRole.ROLE_ADMIN).exists()
+
         merchant_name = str(request.GET.get("merchant_name", "")).strip()
         agent_keyword = str(request.GET.get("agent_keyword", "")).strip()
 
@@ -53,6 +60,10 @@ class MerchantListView(APIView):
 
         where_clauses = []
         params = []
+
+        if not is_admin:
+            where_clauses.append("mch.agent_id = %s")
+            params.append(int(current_user_id))
 
         if merchant_name:
             where_clauses.append("mch.name LIKE %s")
@@ -166,14 +177,27 @@ class MerchantHistoryListView(APIView):
         return Response({"count": len(results), "results": results, "message": "查询成功"})
 
 
-def _assign_merchants(merchant_ids, agent_phone):
+def _assign_merchants(request, merchant_ids, agent_phone):
+    current_user_id = get_request_user_id(request)
+    if not current_user_id:
+        return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+
     agent_phone = str(agent_phone or "").strip()
     if not agent_phone:
         return Response({"message": "请输入代理商手机号"}, status=status.HTTP_400_BAD_REQUEST)
 
+    current_user = User.objects.filter(id=current_user_id).first()
+    if not current_user:
+        return Response({"message": "用户不存在"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    is_admin = UserRole.objects.filter(user_id=current_user_id, role=UserRole.ROLE_ADMIN).exists()
+
     user = User.objects.filter(phone=agent_phone).first()
     if not user:
         return Response({"message": "未找到对应代理商"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not is_admin and int(user.agent_id or 0) != int(current_user_id):
+        return Response({"message": "普通用户仅能划拨给自己的直属下级代理商"}, status=status.HTTP_400_BAD_REQUEST)
 
     normalized_ids = []
     for merchant_id in merchant_ids:
@@ -192,6 +216,11 @@ def _assign_merchants(merchant_ids, agent_phone):
         if not merchants:
             return Response({"message": "商户不存在"}, status=status.HTTP_404_NOT_FOUND)
 
+        if not is_admin:
+            invalid_merchants = [str(merchant.id) for merchant in merchants if int(merchant.agent_id or 0) != int(current_user_id)]
+            if invalid_merchants:
+                return Response({"message": "普通用户仅能划拨自己名下的商户"}, status=status.HTTP_400_BAD_REQUEST)
+
         for merchant in merchants:
             old_agent_id = merchant.agent_id
             merchant.agent = user
@@ -209,10 +238,10 @@ def _assign_merchants(merchant_ids, agent_phone):
 
 class MerchantAssignAgentView(APIView):
     def post(self, request, id):
-        return _assign_merchants([id], request.data.get("agent_phone", ""))
+        return _assign_merchants(request, [id], request.data.get("agent_phone", ""))
 
 
 class MerchantBatchAssignAgentView(APIView):
     def post(self, request):
         merchant_ids = request.data.get("merchant_ids", [])
-        return _assign_merchants(merchant_ids, request.data.get("agent_phone", ""))
+        return _assign_merchants(request, merchant_ids, request.data.get("agent_phone", ""))

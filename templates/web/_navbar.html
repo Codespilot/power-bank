@@ -60,9 +60,15 @@
 
 <ul class="layui-nav layui-nav-tree" lay-filter="test">
     <li class="layui-nav-item {% if active_menu == 'home' %}layui-this{% endif %}"><a href="/">首页</a></li>
+    {% if user_is_admin %}
     <li class="layui-nav-item {% if active_menu == 'user' %}layui-this{% endif %}"><a href="/user">用户管理</a></li>
+    {% endif %}
     <li class="layui-nav-item {% if active_menu == 'agent' %}layui-this{% endif %}"><a href="/agent">我的代理商</a></li>
+    {% if user_is_admin %}
     <li class="layui-nav-item {% if active_menu == 'merchant' %}layui-this{% endif %}"><a href="/merchant">商户管理</a></li>
+    {% else %}
+    <li class="layui-nav-item {% if active_menu == 'merchant' %}layui-this{% endif %}"><a href="/merchant">我的商户</a></li>
+    {% endif %}
     <li class="layui-nav-item {% if active_menu == 'order' %}layui-this{% endif %}"><a href="/order">商户订单</a></li>
     <li class="layui-nav-item {% if active_menu == 'profit' %}layui-this{% endif %}"><a href="/profit">分润管理</a></li>
     <li class="layui-nav-item {% if active_menu == 'withdraw' %}layui-this{% endif %}"><a href="/withdraw">提现管理</a></li>

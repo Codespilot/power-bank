@@ -12,38 +12,33 @@
             </div>
         </div>
     </div>
+    
     <div class="layui-col-md5">
+        {% if user_is_admin %}
         <div class="layui-form-item">
             <div class="layui-input-group">
                 <div class="layui-input-prefix">代理商</div>
                 <input type="text" name="agent_keyword" value="{{ request.GET.agent_keyword|default:'' }}"
-                    placeholder="完整手机号精确搜索，否则模糊搜索用户名/姓名/手机号/邮箱" class="layui-input">
-                <div class="layui-input-split layui-input-suffix" style="cursor: pointer;" lay-submit
-                    lay-filter="list-search">
-                    <i class="layui-icon layui-icon-search"></i>
-                </div>
+                    placeholder="关键字" class="layui-input">
             </div>
         </div>
+        {% endif %}
     </div>
+    
     <div class="layui-col-md3" style="text-align: right;">
-        <button type="button" class="layui-btn" id="batch-assign-btn">批量划拨</button>
+        <button class="layui-btn" lay-submit lay-filter="list-search">搜索</button>
+        <button class="layui-btn layui-btn-normal" type="button" id="batch-assign-btn">批量划拨</button>
     </div>
 </form>
 
 <table class="layui-hide" id="list" lay-filter="list"></table>
-
-<style>
-    .layui-form-label {
-        width: 100px !important;
-    }
-</style>
 {% endblock %}
 
 {% block extra_js %}
 <script type="text/html" id="merchantToolBar">
   <div class="layui-btn-container">
     <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="show-history">历史记录</a>
-    <a class="layui-btn layui-btn-xs" lay-event="assign-agent">划拨</a>
+    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="assign-agent">划拨</a>
   </div>
 </script>
 
@@ -102,6 +97,7 @@
                             <label class="layui-form-label" style="width: 90px;">代理商</label>
                             <div class="layui-input-block" style="margin-left: 120px;">
                                 <input type="text" name="agent_phone" value="${defaultPhone || ''}" lay-verify="required|phone" placeholder="请输入代理商手机号" class="layui-input">
+                                {% if not user_is_admin %}<div class="layui-form-mid" style="margin-left:0;color:#999;float:none;">仅支持输入自己直属下级代理商手机号</div>{% endif %}
                             </div>
                         </div>
                         <div class="layui-form-item" style="margin-bottom: 0;">

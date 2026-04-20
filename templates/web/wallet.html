@@ -205,13 +205,13 @@
             layer.open({
                 type: 1,
                 title: '提现申请',
-                area: ['420px', '220px'],
+                area: ['420px', 'auto'],
                 content: '' +
                     '<div class="layui-form" style="padding:20px 24px;">' +
-                    '  <label>提现金额</label>' +
+                    '  <label style="margin-bottom:10px; display:block;">提现金额（元）</label>' +
                     '  <div class="layui-form-item">' +
-                    '      <input id="withdraw-amount-input" type="text" lay-affix="number" autocomplete="off" class="layui-input" placeholder="请输入提现金额，例如12.34" value="">' +
-                    '      <label>最小0.01，最大' + maxAmount.toFixed(2) + '</label>' +
+                    '      <input id="withdraw-amount-input" type="text" lay-affix="number" min="1" max="' + maxAmount.toFixed(2) + '" autocomplete="off" class="layui-input" placeholder="请输入提现金额，例如12.34" value="">' +
+                    '      <label>最小1，当前可提现金额：' + maxAmount.toFixed(2) + '</label>' +
                     '  </div>' +
                     '</div>',
                 success: function () {

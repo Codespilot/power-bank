@@ -1,5 +1,6 @@
 
 import secrets
+from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.views import View
@@ -7,10 +8,8 @@ from django.views.generic import TemplateView
 from api.models import InviteCode, User, UserRole
 from api.auth import new_captcha_code
 
-# 页面视图层：负责渲染后台模板并注入当前登录用户上下文。
-class HomePageView(TemplateView):
-    """后台首页，同时负责导航高亮状态。"""
-    template_name = "web/home.html"
+class BaseTemplateView(TemplateView):
+    """所有页面视图的基类，负责注入当前登录用户上下文和站点标题。"""
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -25,6 +24,16 @@ class HomePageView(TemplateView):
                 pass
         context["current_user"] = user
         context["user_is_admin"] = is_admin
+        context["site_title"] = getattr(settings, "SITE_TITLE")
+        return context
+
+# 页面视图层：负责渲染后台模板并注入当前登录用户上下文。
+class HomePageView(BaseTemplateView):
+    """后台首页，同时负责导航高亮状态。"""
+    template_name = "web/home.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         # Robust navbar highlighting
         path = self.request.path
         if path == "/":
@@ -78,6 +87,7 @@ class LoginPageView(TemplateView):
                 "source_token": source_token,
                 "current_user": None,
                 "user_is_admin": False,
+                "site_title": getattr(settings, "SITE_TITLE"),
             }
         )
         return context
@@ -123,6 +133,7 @@ class RegisterPageView(TemplateView):
                 "invite_error": invite_error,
                 "current_user": None,
                 "user_is_admin": False,
+                "site_title": getattr(settings, "SITE_TITLE"),
             }
         )
         return context
@@ -176,7 +187,7 @@ class LogoutView(View):
 
 
 # 以下页面主要承载后台管理界面，数据通过前端再请求对应 API 获取。
-class UserListPageView(TemplateView):
+class UserListPageView(BaseTemplateView):
     """用户管理页面。"""
 
     template_name = "web/user_list.html"  # Now always in templates/web/
@@ -184,213 +195,84 @@ class UserListPageView(TemplateView):
         context = super().get_context_data(**kwargs)
         # 复用导航栏高亮逻辑
         context["active_menu"] = "user"
-        user_id = self.request.session.get("current_user_id")
-        user = None
-        is_admin = False
-        if user_id:
-            try:
-                user = User.objects.get(id=user_id)
-                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
-            except Exception:
-                pass
-        context["current_user"] = user
-        context["user_is_admin"] = is_admin
         return context
 
 
-class AgentListPageView(TemplateView):
+class AgentListPageView(BaseTemplateView):
     """代理商管理页面，仅展示当前用户的直属下级代理。"""
 
     template_name = "web/agent_list.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "agent"
-        user_id = self.request.session.get("current_user_id")
-        user = None
-        is_admin = False
-        if user_id:
-            try:
-                user = User.objects.get(id=user_id)
-                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
-            except Exception:
-                pass
-        context["current_user"] = user
-        context["user_is_admin"] = is_admin
         return context
 
-class MerchantListPageView(TemplateView):
+class MerchantListPageView(BaseTemplateView):
     """商户管理页面。"""
 
     template_name = "web/merchant_list.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "merchant"
-        user_id = self.request.session.get("current_user_id")
-        user = None
-        is_admin = False
-        if user_id:
-            try:
-                user = User.objects.get(id=user_id)
-                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
-            except Exception:
-                pass
-        context["current_user"] = user
-        context["user_is_admin"] = is_admin
         return context
 
-class MerchantHistoryPageView(TemplateView):
+class MerchantHistoryPageView(BaseTemplateView):
     template_name = "web/merchant_history_list.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "merchant"
         context["merchant_id"] = self.request.GET.get("merchant_id", "").strip()
-        user_id = self.request.session.get("current_user_id")
-        user = None
-        is_admin = False
-        if user_id:
-            try:
-                user = User.objects.get(id=user_id)
-                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
-            except Exception:
-                pass
-        context["current_user"] = user
-        context["user_is_admin"] = is_admin
         return context
 
-class ProfitListPageView(TemplateView):
+class ProfitListPageView(BaseTemplateView):
     """分润记录查询页面。"""
 
     template_name = "web/profit_list.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "profit"
-        user_id = self.request.session.get("current_user_id")
-        user = None
-        is_admin = False
-        if user_id:
-            try:
-                user = User.objects.get(id=user_id)
-                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
-            except Exception:
-                pass
-        context["current_user"] = user
-        context["user_is_admin"] = is_admin
         return context
 
-class ProfilePageView(TemplateView):
+class ProfilePageView(BaseTemplateView):
     template_name = "web/profile.html"
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["active_menu"] = "profile"
-        user_id = self.request.session.get("current_user_id")
-        user = None
-        is_admin = False
-        if user_id:
-            try:
-                user = User.objects.get(id=user_id)
-                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
-            except Exception:
-                pass
-        context["current_user"] = user
-        context["user_is_admin"] = is_admin
-        return context
 
-class InvitePageView(TemplateView):
+class InvitePageView(BaseTemplateView):
     """邀请推广页面，展示并维护当前用户生成的邀请码。"""
 
     template_name = "web/invite.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "invite"
-        user_id = self.request.session.get("current_user_id")
-        user = None
-        is_admin = False
-        if user_id:
-            try:
-                user = User.objects.get(id=user_id)
-                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
-            except Exception:
-                pass
-        context["current_user"] = user
-        context["user_is_admin"] = is_admin
         return context
 
-class WalletPageView(TemplateView):
+class WalletPageView(BaseTemplateView):
     """我的钱包页面，展示余额概况并支持提交提现申请。"""
 
     template_name = "web/wallet.html"
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["active_menu"] = "wallet"
-        user_id = self.request.session.get("current_user_id")
-        user = None
-        is_admin = False
-        if user_id:
-            try:
-                user = User.objects.get(id=user_id)
-                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
-            except Exception:
-                pass
-        context["current_user"] = user
-        context["user_is_admin"] = is_admin
-        return context
 
-class WithdrawPageView(TemplateView):
+class WithdrawPageView(BaseTemplateView):
     """提现管理页面，管理员可审批，普通用户仅查看自己的申请。"""
 
     template_name = "web/withdraw_list.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "withdraw"
-        user_id = self.request.session.get("current_user_id")
-        user = None
-        is_admin = False
-        if user_id:
-            try:
-                user = User.objects.get(id=user_id)
-                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
-            except Exception:
-                pass
-        context["current_user"] = user
-        context["user_is_admin"] = is_admin
         return context
 
-class OrderListPageView(TemplateView):
+class OrderListPageView(BaseTemplateView):
     """订单列表页面。"""
 
     template_name = "web/order_list.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "order"
-        user_id = self.request.session.get("current_user_id")
-        user = None
-        is_admin = False
-        if user_id:
-            try:
-                user = User.objects.get(id=user_id)
-                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
-            except Exception:
-                pass
-        context["current_user"] = user
-        context["user_is_admin"] = is_admin
         return context
 
-class OrderImportListPageView(TemplateView):
+class OrderImportListPageView(BaseTemplateView):
     """订单导入记录页面。"""
 
     template_name = "web/order_import_list.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "order"
-        user_id = self.request.session.get("current_user_id")
-        user = None
-        is_admin = False
-        if user_id:
-            try:
-                user = User.objects.get(id=user_id)
-                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
-            except Exception:
-                pass
-        context["current_user"] = user
-        context["user_is_admin"] = is_admin
         return context

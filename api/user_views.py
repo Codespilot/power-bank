@@ -1,0 +1,403 @@
+from decimal import Decimal
+from urllib.parse import urlparse
+
+from rest_framework import generics, status
+from rest_framework.exceptions import NotFound
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from django.db import transaction
+from django.db.models import Q
+from django.utils import timezone
+from .models import AgentHistory, User, UserAsset
+from .user_serializers import UserListSerializer, UserCreateSerializer, UserDetailSerializer
+from utils.generate_snowflake_id import generate_snowflake_id
+from .auth import compute_lock_until, create_access_token, create_refresh_token, decode_jwt, get_user_by_identifier, is_valid_username, verify_password
+
+
+def _authenticate_credentials(request, use_session_captcha: bool):
+    session = request.session
+    payload = request.data if isinstance(request.data, dict) else {}
+
+    username = str(payload.get("username", "")).strip()
+    password = str(payload.get("password", ""))
+    captcha = str(payload.get("captcha", "")).strip()
+    source_token = str(payload.get("source_token", "")).strip()
+
+    print(f"Login attempt: username={username}, source_token={source_token}, captcha={captcha}, session_token={session.get('login_source_token', '')}")
+
+    if not is_valid_username(username):
+        return None, Response({"message": "用户名格式必须是中国大陆手机号或邮箱"}, status=status.HTTP_400_BAD_REQUEST)
+
+    referer = request.headers.get("Referer", "")
+    referer_path = urlparse(referer).path
+    session_source_token = str(session.get("login_source_token", ""))
+    # if use_session_captcha and (not referer_path.startswith("/login") or not session_source_token or source_token != session_source_token):
+    #     return None, Response({"message": "非法请求来源"}, status=status.HTTP_403_FORBIDDEN)
+
+    need_captcha = use_session_captcha and int(session.get("login_failed_in_session", 0)) >= 2
+    if need_captcha:
+        session_captcha = str(session.get("login_captcha_code", ""))
+        if not session_captcha or captcha != session_captcha:
+            return None, Response({"message": "验证码错误"}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = get_user_by_identifier(username)
+    if user is None:
+        if use_session_captcha:
+            session["login_failed_in_session"] = int(session.get("login_failed_in_session", 0)) + 1
+        return None, Response({"message": "用户名或密码错误"}, status=status.HTTP_400_BAD_REQUEST)
+
+    now = timezone.now()
+    if user.locked_out and user.locked_out > now:
+        return None, Response(
+            {"message": f"账号已锁定，请在 {user.locked_out.strftime('%Y-%m-%d %H:%M:%S')} 后重试"},
+            status=status.HTTP_423_LOCKED,
+        )
+
+    if not verify_password(user, password):
+        user.access_failed_count += 1
+        lock_until = compute_lock_until(user.access_failed_count)
+        user.locked_out = lock_until
+        user.save(update_fields=["access_failed_count", "locked_out"])
+
+        if use_session_captcha:
+            session["login_failed_in_session"] = int(session.get("login_failed_in_session", 0)) + 1
+
+        if lock_until:
+            return None, Response(
+                {"message": f"账号已锁定至 {lock_until.strftime('%Y-%m-%d %H:%M:%S')}"},
+                status=status.HTTP_423_LOCKED,
+            )
+        return None, Response({"message": "用户名或密码错误"}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.access_failed_count = 0
+    user.locked_out = None
+    user.save(update_fields=["access_failed_count", "locked_out"])
+
+    if use_session_captcha:
+        session["login_failed_in_session"] = 0
+        session.pop("login_captcha_code", None)
+
+    return user, None
+
+
+class LoginAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        user, error_response = _authenticate_credentials(request, use_session_captcha=True)
+        if error_response is not None:
+            return error_response
+
+        request.session["current_user_id"] = user.id
+        next_url = request.GET.get("next") or request.data.get("next") or "/"
+        return Response({"message": "登录成功", "user_id": user.id, "next": next_url})
+
+
+class TokenGrantView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        user, error_response = _authenticate_credentials(request, use_session_captcha=False)
+        if error_response is not None:
+            return error_response
+
+        access_token, expires_in = create_access_token(user)
+        refresh_token, refresh_expires_in = create_refresh_token(user)
+        return Response(
+            {
+                "message": "获取token成功",
+                "token_type": "Bearer",
+                "access_token": access_token,
+                "expires_in": expires_in,
+                "refresh_token": refresh_token,
+                "refresh_expires_in": refresh_expires_in,
+                "user_id": user.id,
+            }
+        )
+
+
+class TokenRefreshView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        refresh_token = str(request.data.get("refresh_token", "")).strip()
+        if not refresh_token:
+            return Response({"message": "refresh_token不能为空"}, status=status.HTTP_400_BAD_REQUEST)
+
+        payload = decode_jwt(refresh_token, expected_type="refresh")
+        user = User.objects.filter(id=payload.get("user_id")).first()
+        if not user:
+            return Response({"message": "用户不存在"}, status=status.HTTP_404_NOT_FOUND)
+
+        access_token, expires_in = create_access_token(user)
+        new_refresh_token, refresh_expires_in = create_refresh_token(user)
+        return Response(
+            {
+                "message": "刷新token成功",
+                "token_type": "Bearer",
+                "access_token": access_token,
+                "expires_in": expires_in,
+                "refresh_token": new_refresh_token,
+                "refresh_expires_in": refresh_expires_in,
+                "user_id": user.id,
+            }
+        )
+
+
+class UserListPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'limit'
+    page_query_param = 'page'
+    max_page_size = 200
+
+    def get_paginated_response(self, data):
+        return Response({
+            'count': self.page.paginator.count,
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'results': data,
+            'message': '查询成功',
+        })
+
+
+class UserListView(generics.ListAPIView):
+    serializer_class = UserListSerializer
+    pagination_class = UserListPagination
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        try:
+            page = self.paginate_queryset(queryset)
+        except NotFound:
+            return Response(
+                {
+                    'count': queryset.count(),
+                    'next': None,
+                    'previous': None,
+                    'results': [],
+                    'message': '查询成功',
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def get_queryset(self):
+        qs = User.objects.select_related('agent').all().order_by('-created_at')
+        keyword = self.request.GET.get('keyword', '').strip()
+        user_id = self.request.GET.get('id', '').strip()
+        exclude_user_id = self.request.GET.get('exclude_id', '').strip()
+
+        if user_id:
+            try:
+                qs = qs.filter(id=int(user_id))
+            except (TypeError, ValueError):
+                return User.objects.none()
+
+        if exclude_user_id:
+            try:
+                qs = qs.exclude(id=int(exclude_user_id))
+            except (TypeError, ValueError):
+                return User.objects.none()
+
+        if keyword:
+            qs = qs.filter(
+                Q(username__icontains=keyword) |
+                Q(phone__icontains=keyword) |
+                Q(email__icontains=keyword)
+            )
+        return qs
+
+def _parse_agent_rate(value) -> Decimal:
+    raw = str(value or '').strip()
+    if not raw:
+        return Decimal('0.00')
+    if raw.endswith('%'):
+        raw = raw[:-1].strip()
+    rate = Decimal(raw)
+    if rate < 0:
+        raise ValueError('分润比例不能小于0%')
+    if rate > 1:
+        if rate > 100:
+            raise ValueError('分润比例必须在0到100%之间')
+        rate = rate / Decimal('100')
+    return rate
+
+
+def _is_descendant_user(superior_id: int, subordinate_id: int) -> bool:
+    """Check whether superior_id is in subordinate_id's descendant tree."""
+    visited = set()
+    pending = [subordinate_id]
+
+    while pending:
+        current_id = pending.pop()
+        if current_id in visited:
+            continue
+        visited.add(current_id)
+
+        child_ids = list(
+            User.objects.filter(agent_id=current_id).values_list('id', flat=True)
+        )
+        if superior_id in child_ids:
+            return True
+        pending.extend(child_ids)
+
+    return False
+
+
+class UserCreateView(generics.CreateAPIView):
+    serializer_class = UserCreateSerializer
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        raw_username = str(data.get('username', ''))
+        username = ''.join(raw_username.split()).lower()
+        fullname = data.get('fullname', '').strip()
+        phone = data.get('phone', '').strip()
+        email = data.get('email', '').strip()
+        agent_phone = (data.get('agent_phone') or data.get('agent_mobile') or '').strip()
+        agent_rate_raw = str(data.get('agent_rate', '')).strip()
+        # 校验用户名
+        import re
+        if not re.match(r'^[a-z0-9_]{4,32}$', username):
+            return Response({'message': '用户名格式错误，仅支持4-32位小写字母、数字和下划线'}, status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.filter(username=username).exists():
+            return Response({'message': '用户名已存在'}, status=status.HTTP_400_BAD_REQUEST)
+        if not fullname:
+            return Response({'message': '姓名不能为空'}, status=status.HTTP_400_BAD_REQUEST)
+        # 校验手机号
+        if not re.match(r'^1[3-9]\d{9}$', phone):
+            return Response({'message': '手机号格式错误'}, status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.filter(phone=phone).exists():
+            return Response({'message': '手机号已存在'}, status=status.HTTP_400_BAD_REQUEST)
+        # 校验邮箱
+        if email:
+            if not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
+                return Response({'message': '邮箱格式错误'}, status=status.HTTP_400_BAD_REQUEST)
+            if User.objects.filter(email=email).exists():
+                return Response({'message': '邮箱已存在'}, status=status.HTTP_400_BAD_REQUEST)
+        superior_user = None
+        agent_rate = Decimal('0.00')
+        if agent_phone:
+            superior_user = User.objects.filter(phone=agent_phone).first()
+            if not superior_user:
+                return Response({'message': f'无法找到对应的用户{agent_phone}'}, status=status.HTTP_400_BAD_REQUEST)
+            if agent_rate_raw:
+                try:
+                    agent_rate = _parse_agent_rate(agent_rate_raw)
+                except Exception as exc:
+                    return Response({'message': str(exc) or '分润比例格式错误'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 密码
+        password = data.get('password', '').strip()
+        if not password or len(password) < 6:
+            return Response({'message': '密码至少6位'}, status=status.HTTP_400_BAD_REQUEST)
+        # 密码加密
+        from api.auth import hash_password
+        password_hash, password_salt = hash_password(password)
+
+        with transaction.atomic():
+            user = User.objects.create(
+                id=generate_snowflake_id(),
+                username=username,
+                fullname=fullname,
+                phone=phone,
+                email=email or None,
+                password_hash=password_hash,
+                password_salt=password_salt,
+                agent=superior_user,
+                agent_rate=agent_rate if superior_user else Decimal('0.00'),
+                created_at=timezone.now()
+            )
+            # 创建资产
+            UserAsset.objects.create(id=user.id)
+        return Response({'message': '创建成功', 'id': str(user.id)}, status=status.HTTP_201_CREATED)
+
+class UserDetailView(generics.RetrieveAPIView):
+    queryset = User.objects.select_related('agent').all()
+    serializer_class = UserDetailSerializer
+    lookup_field = 'id'
+
+
+class AgentSaveView(APIView):
+    def post(self, request, id=None):
+        superior_phone = (request.data.get('superior_phone') or request.data.get('agent_phone') or '').strip()
+        superior_id_raw = request.data.get('superior_id')
+        subordinate_id = request.data.get('subordinate_id') or id
+        rate_raw = request.data.get('rate', request.data.get('agent_rate', '0'))
+
+        try:
+            subordinate_id = int(str(subordinate_id).strip())
+            rate = _parse_agent_rate(rate_raw)
+        except (TypeError, ValueError, AttributeError) as exc:
+            return Response({'message': str(exc) or '参数错误'}, status=status.HTTP_400_BAD_REQUEST)
+
+        superior = None
+        if superior_phone:
+            superior = User.objects.filter(phone=superior_phone).first()
+            if not superior:
+                return Response({'message': f'无法找到对应的用户{superior_phone}'}, status=status.HTTP_400_BAD_REQUEST)
+            superior_id = int(superior.id)
+        else:
+            try:
+                superior_id = int(str(superior_id_raw).strip())
+            except (TypeError, ValueError, AttributeError):
+                return Response({'message': '参数错误'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if id is not None and subordinate_id != id:
+            return Response({'message': '参数不匹配'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if superior_id == subordinate_id:
+            return Response({'message': '不能将自己设置为上级代理商'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if superior is None:
+            superior = User.objects.filter(id=superior_id).first()
+        subordinate = User.objects.filter(id=subordinate_id).first()
+        if not superior or not subordinate:
+            return Response({'message': '用户不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        if _is_descendant_user(superior_id, subordinate_id):
+            return Response(
+                {'message': '所选上级代理商不能是当前用户的下级代理商'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            subordinate = User.objects.select_for_update().filter(id=subordinate_id).first()
+            old_superior_id = subordinate.agent_id
+
+            subordinate.agent = superior
+            subordinate.agent_rate = rate
+            subordinate.save(update_fields=['agent', 'agent_rate'])
+
+            AgentHistory.objects.create(
+                id=generate_snowflake_id(),
+                old_superior_id=old_superior_id,
+                new_superior_id=superior_id,
+                created_at=timezone.now(),
+            )
+
+        return Response({'message': '上级代理商分配成功'})
+
+
+class UserResetPasswordView(APIView):
+    def post(self, request, id):
+        user = User.objects.filter(id=id).first()
+        if not user:
+            return Response({'message': '用户不存在'}, status=status.HTTP_404_NOT_FOUND)
+        password = request.data.get('password', '').strip()
+        if not password or len(password) < 6:
+            return Response({'message': '密码至少6位'}, status=status.HTTP_400_BAD_REQUEST)
+        from api.auth import hash_password
+        password_hash, password_salt = hash_password(password)
+        user.password_hash = password_hash
+        user.password_salt = password_salt
+        user.save(update_fields=['password_hash', 'password_salt'])
+        return Response({'message': '密码重置成功'})

@@ -1,0 +1,521 @@
+/* 通用管理列表页面样式（用户/订单等） */
+.admin-list-container {
+    margin-top: 2.5rem;
+    margin-bottom: 2.5rem;
+}
+.admin-list-hero {
+    text-align: center;
+    margin: 2.5rem 0 1.5rem 0;
+}
+.admin-list-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #2f6fed;
+    margin-bottom: 0.3rem;
+}
+.admin-list-desc {
+    color: #555;
+    font-size: 1.1rem;
+}
+.admin-list-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px #2f6fed22;
+    padding: 2rem 2.5rem;
+    margin: 0 auto 2rem auto;
+}
+.admin-toolbar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+    align-items: center;
+    justify-content: flex-start;
+}
+.admin-toolbar .admin-btn:last-child {
+    margin-left: auto;
+}
+.admin-search {
+    flex: 1;
+    max-width: 260px;
+    min-width: 120px;
+    padding: 0.5rem 1rem;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+.admin-btn {
+    background: #f4f8ff;
+    color: #2f6fed;
+    border: none;
+    border-radius: 6px;
+    padding: 0.4rem 1.1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    margin-left: 0.2rem;
+}
+.admin-btn-primary {
+    background: #2f6fed;
+    color: #fff;
+}
+.admin-btn-warn {
+    background: #fff3f3;
+    color: #e74c3c;
+}
+.admin-btn-sm {
+    font-size: 0.95rem;
+    padding: 0.25rem 0.7rem;
+}
+.admin-btn-page {
+    margin: 0 0.1rem;
+    padding: 0.3rem 0.9rem;
+    font-size: 1rem;
+}
+.admin-btn:hover, .admin-btn-primary:hover {
+    background: #1746a2;
+    color: #fff;
+}
+.admin-btn-warn:hover {
+    background: #e74c3c;
+    color: #fff;
+}
+.admin-table-wrap {
+    overflow-x: auto;
+}
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    margin-bottom: 1rem;
+}
+.admin-table th, .admin-table td {
+    border: 1px solid #e5e7eb;
+    padding: 0.7rem 0.5rem;
+    text-align: center;
+    font-size: 1rem;
+}
+.admin-table th {
+    background: #f4f8ff;
+    color: #2f6fed;
+    font-weight: 700;
+}
+.admin-pagination {
+    text-align: right;
+    margin-top: 0.5rem;
+}
+/* 通用弹窗样式 */
+.admin-dialog-bg {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: #0003;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2000;
+}
+.admin-dialog-card {
+    background: #fff;
+    padding: 2.2rem 2.7rem 1.7rem 2.7rem;
+    border-radius: 16px;
+    box-shadow: 0 6px 32px #2f6fed33, 0 1.5px 8px #0001;
+    min-width: 340px;
+    max-width: 96vw;
+    position: relative;
+    animation: dialog-pop 0.18s cubic-bezier(.4,1.6,.6,1) 1;
+}
+@keyframes dialog-pop {
+    0% { transform: scale(0.92); opacity: 0.5; }
+    100% { transform: scale(1); opacity: 1; }
+}
+.admin-dialog-close {
+    position: absolute;
+    top: 12px;
+    right: 18px;
+    font-size: 1.7rem;
+    color: #bbb;
+    cursor: pointer;
+    transition: color 0.2s;
+    z-index: 10;
+}
+.admin-dialog-close:hover {
+    color: #2f6fed;
+}
+.admin-dialog-card h3 {
+    margin-top: 0;
+    color: #2f6fed;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1.2rem;
+    text-align: center;
+}
+.admin-dialog-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    margin-bottom: 0.5rem;
+}
+.admin-dialog-form label {
+    display: flex;
+    align-items: center;
+    color: #333;
+    font-size: 1rem;
+    gap: 0.7rem;
+}
+.admin-dialog-form label span {
+    min-width: 4.5em;
+    text-align: right;
+    color: #555;
+}
+.admin-dialog-form input {
+    flex: 1;
+    padding: 0.4rem 0.7rem;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+.admin-dialog-actions {
+    display: flex;
+    gap: 1.2rem;
+    justify-content: flex-end;
+    margin-top: 0.7rem;
+}
+.admin-dialog-error {
+    color: #e74c3c;
+    margin-top: 0.5rem;
+    min-height: 1.2em;
+    text-align: right;
+}
+.admin-dialog-info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.1rem;
+}
+.admin-dialog-info-row {
+    display: flex;
+    align-items: center;
+    font-size: 1.05rem;
+}
+.admin-dialog-info-label {
+    min-width: 5.5em;
+    color: #555;
+    text-align: right;
+    margin-right: 1.2em;
+    font-weight: 500;
+}
+.admin-dialog-info-value {
+    flex: 1;
+    color: #222;
+    word-break: break-all;
+}
+/* 统一页面卡片与标题样式 */
+.order-list-container, .user-list-container {
+    margin-top: 2.5rem;
+    margin-bottom: 2.5rem;
+}
+.order-list-hero, .user-list-hero {
+    text-align: left;
+    margin-bottom: 1.2rem;
+}
+.order-list-title, .user-list-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #2f6fed;
+    margin-bottom: 0.2rem;
+}
+.order-list-desc, .user-list-desc {
+    color: #555;
+    font-size: 1.05rem;
+    margin-bottom: 0.2rem;
+}
+.order-list-card, .user-list-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px #2f6fed11;
+    padding: 2rem 2.5rem 1.5rem 2.5rem;
+}
+.order-table-wrap, .user-table-wrap {
+    margin-top: 1.2rem;
+    margin-bottom: 1.2rem;
+    overflow-x: auto;
+}
+/* Order management styles */
+.order-container {
+    margin-top: 2.5rem;
+    margin-bottom: 2.5rem;
+}
+.order-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    gap: 1.5rem;
+}
+.order-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+.order-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+}
+.order-search-input {
+    width: 200px;
+    padding: 0.4rem 0.7rem;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+}
+.order-date-input {
+    padding: 0.4rem 0.7rem;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+}
+.order-search-btn, .order-import-btn {
+    padding: 0.4rem 1.2rem;
+    border-radius: 6px;
+    border: none;
+    background: #2f6fed;
+    color: #fff;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.order-search-btn:hover, .order-import-btn:hover {
+    background: #1c4fa0;
+}
+.import-task-count {
+    color: #2f6fed;
+    cursor: pointer;
+    font-size: 1rem;
+    margin-right: 0.5rem;
+}
+.order-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.2rem;
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px #2f6fed11;
+}
+.order-table th, .order-table td {
+    padding: 0.7rem 0.6rem;
+    border-bottom: 1px solid #f0f0f0;
+    text-align: left;
+}
+.order-table th {
+    background: #f7faff;
+    color: #2f6fed;
+    font-weight: 600;
+}
+.order-table tr:last-child td {
+    border-bottom: none;
+}
+.order-page-btn {
+    margin: 0 0.2rem;
+    padding: 0.3rem 0.9rem;
+    border-radius: 5px;
+    border: 1px solid #d0d7de;
+    background: #fff;
+    color: #2f6fed;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+.order-page-btn.active, .order-page-btn:hover {
+    background: #2f6fed;
+    color: #fff;
+}
+/* Dialog styles */
+.order-dialog-bg {
+    position: fixed;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background: #0003;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.order-dialog-card {
+    background: #fff;
+    padding: 2.2rem 2.7rem 1.7rem 2.7rem;
+    border-radius: 16px;
+    box-shadow: 0 6px 32px #2f6fed33, 0 1.5px 8px #0001;
+    min-width: 340px;
+    max-width: 96vw;
+    position: relative;
+    animation: dialog-pop 0.18s cubic-bezier(.4,1.6,.6,1) 1;
+}
+.order-dialog-close {
+    position: absolute;
+    top: 12px;
+    right: 18px;
+    font-size: 1.7rem;
+    color: #bbb;
+    cursor: pointer;
+    transition: color 0.2s;
+    z-index: 10;
+}
+.order-dialog-close:hover {
+    color: #2f6fed;
+}
+.order-dialog-card h3 {
+    margin-top: 0;
+    color: #2f6fed;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1.2rem;
+    text-align: center;
+}
+.order-dialog-actions {
+    display: flex;
+    gap: 1.2rem;
+    justify-content: flex-end;
+    margin-top: 0.7rem;
+}
+.order-dialog-error {
+    color: #e74c3c;
+    margin-top: 0.5rem;
+    min-height: 1.2em;
+    text-align: right;
+}
+.order-btn {
+    padding: 0.4rem 1.2rem;
+    border-radius: 6px;
+    border: none;
+    background: #eaeaea;
+    color: #222;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.order-btn-primary {
+    background: #2f6fed;
+    color: #fff;
+}
+.order-btn-primary:hover {
+    background: #1c4fa0;
+}
+:root {
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --text: #1f2a37;
+    --accent: #2f6fed;
+    --border: #d9e1ec;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: "Helvetica Neue", "PingFang SC", sans-serif;
+    background: linear-gradient(120deg, #eef3ff, var(--bg));
+    color: var(--text);
+}
+
+.container {
+    margin: 4rem auto;
+    padding: 2rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.container {
+    width: calc(100vw - 48px);
+    max-width: none;
+    margin: 24px;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+h1 {
+    margin-top: 0;
+    color: var(--accent);
+}
+
+.panel {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fafcff;
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+code {
+    background: #eef2ff;
+    padding: 0.2rem 0.4rem;
+    border-radius: 6px;
+}
+
+.login-container {
+    max-width: 520px;
+}
+
+.tip {
+    color: #4a5568;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.login-form label {
+    font-weight: 600;
+}
+
+.login-form input {
+    width: 100%;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+}
+
+.login-form button {
+    margin-top: 0.5rem;
+    padding: 0.7rem 0.9rem;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    background: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.captcha-box {
+    width: fit-content;
+    padding: 0.4rem 0.65rem;
+    border: 1px dashed var(--accent);
+    border-radius: 6px;
+    letter-spacing: 0.3rem;
+    font-weight: 700;
+    color: #233f7a;
+    background: #edf3ff;
+}
+
+.result {
+    min-height: 1.5rem;
+    margin-top: 1rem;
+}
+
+.result.success {
+    color: #1f7a39;
+}
+
+.result.error {
+    color: #a12222;
+}

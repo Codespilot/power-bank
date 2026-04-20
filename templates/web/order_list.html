@@ -1,0 +1,133 @@
+{% extends "web/base.html" %}
+{% block header %}商户订单管理{% endblock %}
+{% block content %}
+
+<div style="display: flex; justify-content: space-between; flex-wrap: nowrap;">
+  <form class="layui-form layui-row layui-col-space16" style="width: 100%;">
+    <div class="layui-col-md3">
+      <div class="layui-form-item">
+        <div class="layui-input-group">
+          <div class="layui-input-prefix">
+            搜索
+          </div>
+          <input type="text" name="keyword" value="{{ request.GET.keyword|default:'' }}" placeholder="关键字"
+            class="layui-input">
+          <div class="layui-input-split layui-input-suffix" style="cursor: pointer;" lay-submit
+            lay-filter="list-search">
+            <i class="layui-icon layui-icon-search"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="layui-col-md6">
+      <div class="layui-form-item">
+        <div class="layui-inline">
+          <label class="layui-form-label" style="width: 100px;">账单日期</label>
+          <div class="layui-inline" id="ID-laydate-rangeLinked">
+            <div class="layui-input-inline">
+              <input type="text" name="date_start" autocomplete="off" id="ID-laydate-start-date-1" class="layui-input"
+                placeholder="开始日期">
+            </div>
+            <div class="layui-form-mid">-</div>
+            <div class="layui-input-inline">
+              <input type="text" name="date_end" autocomplete="off" id="ID-laydate-end-date-1" class="layui-input"
+                placeholder="结束日期">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+  <div style="display: flex;">
+    <button type="button" class="layui-btn demo-class-accept" lay-options="{accept: 'file',exts: 'xls|xlsx'}">
+      <i class="layui-icon layui-icon-upload"></i>
+      导入订单
+    </button>
+    <a href="/order/import/" class="layui-btn layui-btn-primary" id="export-btn">
+      <i class="layui-icon layui-icon-download"></i> 导入记录
+    </a>
+  </div>
+</div>
+
+<table class="layui-hide" id="list"></table>
+
+{% endblock %}
+{% block extra_js %}
+<script src="/static/js/order.js"></script>
+
+<script>
+  layui.use(function () {
+    var table = layui.table;
+    var laydate = layui.laydate;
+    var upload = layui.upload;
+    form = layui.form;
+    laydate.render({
+      elem: '#ID-laydate-rangeLinked',
+      range: ['#ID-laydate-start-date-1', '#ID-laydate-end-date-1'],
+      rangeLinked: true,
+      done: function (value, date, endDate) {
+        // // 这里可以处理日期选择完成后的逻辑，例如更新订单列表
+        // console.log('选择的日期范围:', value, date, endDate);
+      }
+    });
+
+    // 创建表格实例
+    table.render({
+      elem: '#list',
+      url: '/api/orders/',
+      response: {
+        statusCode: 200 // 重新规定成功的状态码为 200，table 组件默认为 0
+      },
+      parseData: function (res) {
+        return {
+          "code": 200, //解析接口状态
+          "msg": res.message, //解析提示文本
+          "count": res.count, //解析数据长度
+          "data": res.results //解析数据列表
+        };
+      },
+      cols: [[
+        { field: 'order_no', title: '订单号', width: 240, fixed: true },
+        { field: 'order_date', title: '支付/退款时间', width: 180, sort: false },
+        { field: 'bill_month', title: '账单月份', width: 180 },
+        { field: 'bill_date', title: '账单日期', width: 180 },
+        { field: 'order_type', title: '订单类型', width: 180 },
+        { field: 'is_capped', title: '是否封顶计费', width: 180, templet: function (d) { return d.is_capped ? '是' : '否'; } },
+        { field: 'order_amount', title: '订单金额', width: 180 },
+        { field: 'merchant_name', title: '门店名称', width: 240 },
+        { field: 'merchant_profit', title: '租借费用门店分润金额', width: 240 },
+        { field: 'agent_profit', title: '租借费用代理分润金额', width: 240 }
+      ]],
+      page: true,
+      height: 'full-300',
+    });
+    // 搜索提交
+    form.on('submit(list-search)', function (data) {
+      console.log('搜索条件:', data.field);
+      var field = data.field; // 获得表单字段
+      // 执行搜索重载
+      table.reload('list', {
+        page: {
+          curr: 1 // 重新从第 1 页开始
+        },
+        where: field // 搜索的字段
+      });
+      return false; // 阻止默认 form 跳转
+    });
+
+    upload.render({
+      elem: '.demo-class-accept',
+      url: '/api/order-imports/',
+      accept: 'file', // 普通文件
+      headers: {
+        'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : ''
+      },
+      done: function (res) {
+        layer.msg('上传成功');
+        console.log(res);
+      }
+    });
+  });
+</script>
+
+{% endblock %}

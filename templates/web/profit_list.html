@@ -1,0 +1,92 @@
+{% extends "web/base.html" %}
+{% block header %}分润管理{% endblock %}
+{% block content %}
+<form class="layui-form layui-row layui-col-space16">
+    <div class="layui-col-md4">
+        <div class="layui-form-item">
+            <div class="layui-input-group">
+                <div class="layui-input-prefix">代理商</div>
+                <input type="text" name="keyword" value="{{ request.GET.keyword|default:'' }}" placeholder="完整手机号精确搜索，否则模糊搜索用户名/姓名/手机号/邮箱" class="layui-input">
+                <div class="layui-input-split layui-input-suffix" style="cursor: pointer;" lay-submit lay-filter="list-search">
+                    <i class="layui-icon layui-icon-search"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="layui-col-md5">
+        <div class="layui-form-item">
+            <div class="layui-inline">
+                <label class="layui-form-label" style="width: 100px;">结算日期</label>
+                <div class="layui-inline" id="profit-date-range">
+                    <div class="layui-input-inline">
+                        <input type="text" name="date_start" autocomplete="off" id="profit-date-start" class="layui-input" placeholder="开始日期">
+                    </div>
+                    <div class="layui-form-mid">-</div>
+                    <div class="layui-input-inline">
+                        <input type="text" name="date_end" autocomplete="off" id="profit-date-end" class="layui-input" placeholder="结束日期">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<table class="layui-hide" id="profit-list"></table>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    layui.use(function () {
+        var table = layui.table;
+        var form = layui.form;
+        var laydate = layui.laydate;
+
+        laydate.render({
+            elem: '#profit-date-range',
+            range: ['#profit-date-start', '#profit-date-end'],
+            rangeLinked: true
+        });
+
+        table.render({
+            elem: '#profit-list',
+            id: 'profitTable',
+            url: '/api/profits/',
+            response: {
+                statusCode: 200
+            },
+            parseData: function (res) {
+                return {
+                    code: 200,
+                    msg: res.message || '',
+                    count: res.count || 0,
+                    data: res.results || []
+                };
+            },
+            cols: [[
+                { field: 'settle_date', title: '结算日期', width: 180, sort: false },
+                { field: 'agent_display', title: '代理商', minWidth: 220 },
+                { field: 'order_amount', title: '订单总额', width: 120 },
+                { field: 'profit_amount', title: '利润总额', width: 120 },
+                { field: 'settle_amount', title: '分润金额', width: 120 },
+                { field: 'settle_source_text', title: '分润来源', width: 120 },
+                { field: 'source_agent_display', title: '下级代理商', minWidth: 260 },
+                { field: 'created_at', title: '生成时间', width: 180 }
+            ]],
+            page: true,
+            limit: 10,
+            limits: [10, 20, 50, 100],
+            height: 'full-300'
+        });
+
+        form.on('submit(list-search)', function (data) {
+            table.reload('profitTable', {
+                page: {
+                    curr: 1
+                },
+                where: data.field
+            });
+            return false;
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "web/base.html" %}
+{% block header %}首页{% endblock %}
+{% block content %}
+<div class="home-hero">
+    <h1 class="home-title">Power Bank 管理平台</h1>
+    <p class="home-desc">高效管理用户、代理商、商户与分润业务</p>
+</div>
+<div class="home-cards">
+    <div class="home-card">
+        <div class="home-card-title">API 健康检查</div>
+        <a class="home-link" href="/api/health/" target="_blank">/api/health/</a>
+    </div>
+    <div class="home-card">
+        <div class="home-card-title">Item 接口</div>
+        <code class="home-link">GET/POST /api/items/</code>
+    </div>
+    <div class="home-card">
+        <div class="home-card-title">用户管理</div>
+        <a class="home-link" href="/user/">进入用户管理 &rarr;</a>
+    </div>
+    <div class="home-card">
+        <div class="home-card-title">商户管理</div>
+        <a class="home-link" href="/merchant/">进入商户管理 &rarr;</a>
+    </div>
+</div>
+<style>
+.home-hero {
+    text-align: center;
+    margin: 3rem 0 2rem 0;
+}
+.home-title {
+    font-size: 2.6rem;
+    font-weight: 800;
+    color: #2f6fed;
+    margin-bottom: 0.5rem;
+}
+.home-desc {
+    color: #555;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+.home-cards {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+}
+.home-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px #2f6fed22;
+    padding: 2rem 2.5rem;
+    min-width: 220px;
+    text-align: center;
+    transition: box-shadow 0.2s;
+}
+.home-card:hover {
+    box-shadow: 0 4px 24px #2f6fed33;
+}
+.home-card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.7rem;
+    color: #2f6fed;
+}
+.home-link {
+    color: #2f6fed;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+.home-link:hover {
+    color: #1746a2;
+    text-decoration: underline;
+}
+</style>
+{% endblock %}

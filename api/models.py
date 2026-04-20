@@ -1,0 +1,260 @@
+from django.db import models
+
+from decimal import Decimal
+
+from django.utils import timezone
+
+class BaseEntity(models.Model):
+    class Meta:
+        abstract = True
+        app_label = "api"
+
+class User(BaseEntity):
+    id = models.BigIntegerField(primary_key=True)
+    username = models.CharField(max_length=32, unique=True)
+    fullname = models.CharField(max_length=64, default="")
+    phone = models.CharField(max_length=11, unique=True)
+    email = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    password_hash = models.CharField(max_length=512)
+    password_salt = models.CharField(max_length=64)
+    locked_out = models.DateTimeField(null=True, blank=True)
+    access_failed_count = models.IntegerField(default=0)
+    agent = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        db_column="agent_id",
+        related_name="subordinates",
+        null=True,
+        blank=True,
+    )
+    agent_rate = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "user"
+        app_label = "api"
+class UserRole(BaseEntity):
+    ROLE_ADMIN = "admin"
+    ROLE_USER = "user"
+    ROLE_CHOICES = (
+        (ROLE_ADMIN, "admin"),
+        (ROLE_USER, "user"),
+    )
+
+    id = models.BigIntegerField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="roles")
+    role = models.CharField(max_length=32, choices=ROLE_CHOICES, default=ROLE_USER)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "user_role"
+        app_label = "api"
+        constraints = [
+            models.UniqueConstraint(fields=["user", "role"], name="uq_user_role_user_id_role"),
+        ]
+
+
+class Agent(BaseEntity):
+    id = models.BigIntegerField(primary_key=True)
+    superior = models.ForeignKey(User, on_delete=models.PROTECT, db_column="superior_id", related_name="agent_subordinates")
+    subordinate = models.ForeignKey(User, on_delete=models.PROTECT, db_column="subordinate_id", related_name="agent_superiors")
+    rate = models.DecimalField(max_digits=18, decimal_places=2)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "agent"
+        app_label = "api"
+        constraints = [
+            models.UniqueConstraint(fields=["superior", "subordinate"], name="uq_agent_superior_subordinate"),
+        ]
+
+
+class AgentHistory(BaseEntity):
+    id = models.BigIntegerField(primary_key=True)
+    old_superior = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        db_column="old_superior_id",
+        related_name="old_agent_histories",
+        null=True,
+        blank=True,
+    )
+    new_superior = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        db_column="new_superior_id",
+        related_name="new_agent_histories",
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "agent_history"
+        app_label = "api"
+
+
+class Merchant(BaseEntity):
+    id = models.BigIntegerField(primary_key=True)
+    name = models.CharField(max_length=255)
+    agent = models.ForeignKey(User, on_delete=models.SET_NULL, db_column="agent_id", null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "merchant"
+        app_label = "api"
+
+
+class MerchantHistory(BaseEntity):
+    id = models.BigIntegerField(primary_key=True)
+    merchant = models.ForeignKey(Merchant, on_delete=models.CASCADE, db_column="merchant_id", related_name="histories")
+    old_agent = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        db_column="old_agent_id",
+        related_name="merchant_old_agent_histories",
+        null=True,
+        blank=True,
+    )
+    new_agent = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        db_column="new_agent_id",
+        related_name="merchant_new_agent_histories",
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "merchant_history"
+        app_label = "api"
+
+
+class MerchantOrder(BaseEntity):
+    id = models.BigIntegerField(primary_key=True)
+    import_id = models.BigIntegerField()
+    order_no = models.CharField(max_length=64, unique=True, default="", blank=False)
+    order_date = models.DateTimeField()
+    bill_month = models.IntegerField(null=True, blank=True)
+    bill_date = models.DateTimeField(null=True, blank=True)
+    order_type = models.CharField(max_length=10)
+    order_amount = models.DecimalField(max_digits=18, decimal_places=2)
+    merchant_name = models.CharField(max_length=255)
+    merchant_id = models.BigIntegerField()
+    merchant_profit = models.DecimalField(max_digits=18, decimal_places=2)
+    agent_profit = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "merchant_order"
+        app_label = "api"
+
+
+class ProfitAllocation(BaseEntity):
+    SOURCE_DIRECT = "direct"
+    SOURCE_SUBAGENT = "subagent"
+    SOURCE_CHOICES = (
+        (SOURCE_DIRECT, "direct"),
+        (SOURCE_SUBAGENT, "subagent"),
+    )
+
+    id = models.BigIntegerField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="profit_allocations")
+    settle_source_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        db_column="settle_source_user_id",
+        related_name="source_profit_allocations",
+        null=True,
+        blank=True,
+    )
+    rate = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    profit_amount = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    order_amount = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    settle_amount = models.DecimalField(max_digits=18, decimal_places=2)
+    settle_date = models.DateTimeField(null=True, blank=True)
+    settle_source = models.CharField(max_length=20, choices=SOURCE_CHOICES)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "profit_allocation"
+        app_label = "api"
+
+
+class OrderImport(BaseEntity):
+    STATUS_NOT_STARTED = 1
+    STATUS_RUNNING = 2
+    STATUS_SUCCESS = 3
+    STATUS_FAILED = 4
+    STATUS_CHOICES = (
+        (STATUS_NOT_STARTED, "未开始"),
+        (STATUS_RUNNING, "运行中"),
+        (STATUS_SUCCESS, "成功"),
+        (STATUS_FAILED, "失败"),
+    )
+
+    id = models.BigIntegerField(primary_key=True)
+    file_name = models.CharField(max_length=128)
+    succeed_rows = models.IntegerField(null=True, blank=True)
+    failed_rows = models.IntegerField(null=True, blank=True)
+    status = models.IntegerField(choices=STATUS_CHOICES)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "order_import"
+        app_label = "api"
+
+
+class UserAsset(BaseEntity):
+    id = models.BigIntegerField(primary_key=True)
+    total_amount = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
+    frozen_amount = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
+    pending_amount = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
+    available_amount = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
+
+    class Meta:
+        db_table = "user_asset"
+        app_label = "api"
+
+
+class Withdraw(BaseEntity):
+    STATUS_PENDING_SUBMIT = 1
+    STATUS_PENDING_APPROVAL = 2
+    STATUS_APPROVED = 3
+    STATUS_REJECTED = 4
+    STATUS_CANCELLED = 5
+    STATUS_CHOICES = (
+        (STATUS_PENDING_SUBMIT, "待提交"),
+        (STATUS_PENDING_APPROVAL, "待审批"),
+        (STATUS_APPROVED, "通过"),
+        (STATUS_REJECTED, "拒绝"),
+        (STATUS_CANCELLED, "作废"),
+    )
+
+    id = models.BigIntegerField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="withdraws")
+    amount = models.DecimalField(max_digits=18, decimal_places=2)
+    remark = models.CharField(max_length=500, null=True, blank=True)
+    status = models.IntegerField(choices=STATUS_CHOICES)
+    audit_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        db_column="audit_user_id",
+        related_name="audited_withdraws",
+        null=True,
+        blank=True,
+    )
+    audit_time = models.DateTimeField(null=True, blank=True)
+    audit_remark = models.CharField(max_length=500, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "withdraw"
+        app_label = "api"
+
+class Item(models.Model):
+    name = models.CharField(max_length=120)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return self.name

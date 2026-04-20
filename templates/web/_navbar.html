@@ -1,0 +1,71 @@
+{% load static %}
+<style>
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 56px;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    z-index: 1000;
+    box-shadow: 0 2px 8px 0 rgba(36, 60, 120, 0.03);
+}
+.navbar .nav {
+    display: flex;
+    gap: 1.5rem;
+    margin-left: 2.5rem;
+}
+.navbar .nav a {
+    color: #2f6fed;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.08rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+.navbar .nav a:hover, .navbar .nav a.active {
+    background: #eaf2ff;
+}
+.navbar .user {
+    margin-left: auto;
+    margin-right: 2.5rem;
+    color: #333;
+    font-size: 1rem;
+}
+/* body {
+    padding-top: 56px !important;
+} */
+</style>
+<!--
+<div class="navbar">
+    <div class="nav">
+        <a href="/" {% if active_menu == 'home' %}class="active"{% endif %}>首页</a>
+        {% if user_is_admin %}
+        <a href="/user/" {% if active_menu == 'user' %}class="active"{% endif %}>用户管理</a>
+        <a href="/agent/" {% if active_menu == 'agent' %}class="active"{% endif %}>代理商管理</a>
+        {% endif %}
+        <a href="/merchant/" {% if active_menu == 'merchant' %}class="active"{% endif %}>商户管理</a>
+        <a href="/order/" {% if active_menu == 'order' %}class="active"{% endif %}>商户订单</a>
+        <a href="/profit/" {% if active_menu == 'profit' %}class="active"{% endif %}>分润管理</a>
+    </div>
+    <div class="user">
+        {% if current_user %}{{ current_user.username }}{% endif %}
+    </div>
+</div>
+-->
+
+<ul class="layui-nav layui-nav-tree" lay-filter="test">
+    <li class="layui-nav-item {% if active_menu == 'home' %}layui-this{% endif %}"><a href="/">首页</a></li>
+    <li class="layui-nav-item {% if active_menu == 'user' %}layui-this{% endif %}"><a href="/user">用户管理</a></li>
+    <li class="layui-nav-item {% if active_menu == 'merchant' %}layui-this{% endif %}"><a href="/merchant">商户管理</a></li>
+    <li class="layui-nav-item {% if active_menu == 'order' %}layui-this{% endif %}"><a href="/order">商户订单</a></li>
+    <li class="layui-nav-item {% if active_menu == 'profit' %}layui-this{% endif %}"><a href="/profit">分润管理</a></li>
+    <li class="layui-nav-item {% if active_menu == 'withdraw' %}layui-this{% endif %}"><a href="/withdraw">提现管理</a></li>
+    <!-- <li class="layui-nav-item layui-layout-right">
+        <a href="javascript:;">{% if current_user %}{{ current_user.username }}{% endif %}</a>
+    </li> -->
+</ul>

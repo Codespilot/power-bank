@@ -1,0 +1,49 @@
+{% extends "web/base.html" %}
+{% block header %}商户划拨记录{% endblock %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div class="layui-text"></div>
+    <button type="button" class="layui-btn layui-btn-primary layui-btn-sm" onclick="window.history.back()">返回商户列表</button>
+</div>
+
+<table class="layui-hide" id="list"></table>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    layui.use(function () {
+        var table = layui.table;
+        var layer = layui.layer;
+        var merchantId = '{{ merchant_id|default:"" }}';
+
+        if (!merchantId) {
+            layer.msg('缺少商户Id参数', { icon: 5 });
+            return;
+        }
+
+        table.render({
+            elem: '#list',
+            url: `/api/merchants/${merchantId}/history/`,
+            response: {
+                statusCode: 200
+            },
+            parseData: function (res) {
+                return {
+                    code: 200,
+                    msg: res.message || '',
+                    count: res.count || 0,
+                    data: res.results || []
+                };
+            },
+            cols: [[
+                { field: 'merchant_name', title: '商户名称', minWidth: 240, fixed: true },
+                { field: 'new_agent', title: '新代理商', minWidth: 220 },
+                { field: 'old_agent', title: '旧代理商', minWidth: 220 },
+                { field: 'created_at', title: '划拨时间', width: 180 }
+            ]],
+            page: false,
+            height: 'full-260'
+        });
+    });
+</script>
+{% endblock %}

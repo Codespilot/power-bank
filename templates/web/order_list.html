@@ -5,10 +5,21 @@
 
 <div style="display: flex; justify-content: space-between; flex-wrap: nowrap;">
 	<form class="layui-form layui-row layui-col-space16" style="width: 100%;">
+		<div class="layui-col-md3">
+			<div class="layui-form-item">
+				<div class="layui-input-group">
+					<div class="layui-input-prefix search-label">
+						搜索
+					</div>
+					<input type="text" name="keyword" value="{{ request.GET.keyword|default:'' }}" placeholder="关键字"
+						class="layui-input">
+				</div>
+			</div>
+		</div>
 		<div class="layui-col-md6">
 			<div class="layui-form-item">
 				<div class="layui-inline">
-					<label class="layui-form-label" style="width: 100px;">账单日期</label>
+					<label class="layui-form-label search-label">账单日期</label>
 					<div class="layui-inline" id="ID-laydate-rangeLinked">
 						<div class="layui-input-inline">
 							<input type="text" name="date_start" autocomplete="off" id="ID-laydate-start-date-1"
@@ -23,31 +34,22 @@
 				</div>
 			</div>
 		</div>
-		<div class="layui-col-md3">
-			<div class="layui-form-item">
-				<div class="layui-input-group">
-					<div class="layui-input-prefix">
-						搜索
-					</div>
-					<input type="text" name="keyword" value="{{ request.GET.keyword|default:'' }}" placeholder="关键字"
-						class="layui-input">
-				</div>
-			</div>
+		<div class="layui-col-md3" style="text-align: right;">
+			<button class="layui-btn layui-btn-primary" lay-submit lay-filter="list-search">
+				<i class="layui-icon layui-icon-search"></i> 搜索
+			</button>
+			<button type="button" class="layui-btn demo-class-accept"
+				style="border-radius: 0 !important;" lay-options="{accept: 'file',exts: 'xls|xlsx'}">
+				<i class="layui-icon layui-icon-upload"></i>
+				导入订单
+			</button>
+			<a href="/order/import/" class="layui-btn layui-btn-normal" id="export-btn"
+				style="border-radius: 0 !important;">
+				<i class="layui-icon layui-icon-download"></i> 导入记录
+			</a>
 		</div>
 
 	</form>
-	<div style="display: flex;">
-		<button class="layui-btn" lay-submit lay-filter="list-search">搜索</button>
-		<button type="button" class="layui-btn  layui-btn-normal demo-class-accept" style="border-radius: 0 !important;"
-			lay-options="{accept: 'file',exts: 'xls|xlsx'}">
-			<i class="layui-icon layui-icon-upload"></i>
-			导入订单
-		</button>
-		<a href="/order/import/" class="layui-btn layui-btn-primary" id="export-btn"
-			style="border-radius: 0 !important;">
-			<i class="layui-icon layui-icon-download"></i> 导入记录
-		</a>
-	</div>
 </div>
 
 <table class="layui-hide" id="list"></table>

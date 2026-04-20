@@ -3,21 +3,18 @@
 {% block header %}分润管理{% endblock %}
 {% block content %}
 <form class="layui-form layui-row layui-col-space16">
-    <div class="layui-col-md4">
+    <div class="layui-col-md3">
         <div class="layui-form-item">
             <div class="layui-input-group">
-                <div class="layui-input-prefix">代理商</div>
+                <div class="layui-input-prefix search-label">代理商</div>
                 <input type="text" name="keyword" value="{{ request.GET.keyword|default:'' }}" placeholder="完整手机号精确搜索，否则模糊搜索用户名/姓名/手机号/邮箱" class="layui-input">
-                <div class="layui-input-split layui-input-suffix" style="cursor: pointer;" lay-submit lay-filter="list-search">
-                    <i class="layui-icon layui-icon-search"></i>
-                </div>
             </div>
         </div>
     </div>
     <div class="layui-col-md5">
         <div class="layui-form-item">
             <div class="layui-inline">
-                <label class="layui-form-label" style="width: 100px;">结算日期</label>
+                <label class="layui-form-label search-label">结算日期</label>
                 <div class="layui-inline" id="profit-date-range">
                     <div class="layui-input-inline">
                         <input type="text" name="date_start" autocomplete="off" id="profit-date-start" class="layui-input" placeholder="开始日期">
@@ -30,6 +27,11 @@
             </div>
         </div>
     </div>
+	<div class="layui-col-md1 layui-col-md-offset3" style="text-align: right;">
+		<button type="button" class="layui-btn layui-btn-primary" lay-submit lay-filter="list-search">
+			<i class="layui-icon layui-icon-search"></i> 搜索
+		</button>
+	</div>
 </form>
 
 <table class="layui-hide" id="profit-list"></table>

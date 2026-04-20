@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
@@ -8,21 +10,26 @@ from django.db.models import Q
 from .models import MerchantOrder, OrderImport
 from .order_serializers import MerchantOrderSerializer, OrderImportSerializer
 
+logger = logging.getLogger(__name__)
+
 class MerchantOrderListView(ListAPIView):
     """商户订单分页查询接口，支持关键字与日期范围筛选。"""
 
     serializer_class = MerchantOrderSerializer
+
     def get_queryset(self):
         qs = MerchantOrder.objects.all().order_by('-id')
-        kw = self.request.GET.get('kw', '').strip()
+        kw = str(self.request.GET.get('kw') or self.request.GET.get('keyword') or '').strip()
         date_start = self.request.GET.get('date_start')
         date_end = self.request.GET.get('date_end')
+
         if kw:
-            qs = qs.filter(Q(merchant_name__icontains=kw) | Q(id__icontains=kw))
+            qs = qs.filter(Q(merchant_name__icontains=kw) | Q(order_no__icontains=kw))
         if date_start:
             qs = qs.filter(order_date__gte=date_start)
         if date_end:
             qs = qs.filter(order_date__lte=date_end)
+
         return qs
 
 

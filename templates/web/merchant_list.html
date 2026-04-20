@@ -3,89 +3,92 @@
 {% block header %}商户管理{% endblock %}
 {% block content %}
 <form class="layui-form layui-row layui-col-space16">
-    <div class="layui-col-md4">
-        <div class="layui-form-item">
-            <div class="layui-input-group">
-                <div class="layui-input-prefix">商户名称</div>
-                <input type="text" name="merchant_name" value="{{ request.GET.merchant_name|default:'' }}" placeholder="请输入商户名称"
-                    class="layui-input">
-            </div>
-        </div>
-    </div>
-    
-    <div class="layui-col-md5">
-        {% if user_is_admin %}
-        <div class="layui-form-item">
-            <div class="layui-input-group">
-                <div class="layui-input-prefix">代理商</div>
-                <input type="text" name="agent_keyword" value="{{ request.GET.agent_keyword|default:'' }}"
-                    placeholder="关键字" class="layui-input">
-            </div>
-        </div>
-        {% endif %}
-    </div>
-    
-    <div class="layui-col-md3" style="text-align: right;">
-        <button class="layui-btn" lay-submit lay-filter="list-search">搜索</button>
-        <button class="layui-btn layui-btn-normal" type="button" id="batch-assign-btn">批量划拨</button>
-    </div>
+	<div class="layui-col-md3">
+		<div class="layui-form-item">
+			<div class="layui-input-group">
+				<div class="layui-input-prefix search-label">商户名称</div>
+				<input type="text" name="merchant_name" value="{{ request.GET.merchant_name|default:'' }}"
+					placeholder="请输入商户名称" class="layui-input">
+			</div>
+		</div>
+	</div>
+
+	<div class="layui-col-md3">
+		{% if user_is_admin %}
+		<div class="layui-form-item">
+			<div class="layui-input-group">
+				<div class="layui-input-prefix search-label">代理商</div>
+				<input type="text" name="agent_keyword" value="{{ request.GET.agent_keyword|default:'' }}"
+					placeholder="关键字" class="layui-input">
+			</div>
+		</div>
+		{% endif %}
+	</div>
+
+	<div class="layui-col-md3 layui-col-md-offset3" style="text-align: right;">
+		<button class="layui-btn layui-btn-primary" lay-submit lay-filter="list-search">
+			<i class="layui-icon layui-icon-search"></i> 搜索
+		</button>
+		<button class="layui-btn" type="button" id="batch-assign-btn">批量划拨</button>
+	</div>
 </form>
 
 <table class="layui-hide" id="list" lay-filter="list"></table>
+
 {% endblock %}
 
 {% block extra_js %}
 <script type="text/html" id="merchantToolBar">
   <div class="layui-btn-container">
     <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="show-history">历史记录</a>
-    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="assign-agent">划拨</a>
+    <a class="layui-btn layui-btn-xs" lay-event="assign-agent">划拨</a>
   </div>
 </script>
 
 <script>
-    layui.use(function () {
-        var table = layui.table;
-        var form = layui.form;
-        var layer = layui.layer;
+	layui.use(function () {
+		var table = layui.table;
+		var form = layui.form;
+		var layer = layui.layer;
 
-        table.render({
-            elem: '#list',
-            id: 'merchantTable',
-            url: '/api/merchants/',
-            response: {
-                statusCode: 200
-            },
-            parseData: function (res) {
-                return {
-                    code: 200,
-                    msg: res.message || '',
-                    count: res.count || 0,
-                    data: res.results || []
-                };
-            },
-            cols: [[
-                { type: 'checkbox', fixed: 'left'},
-                { field: 'merchant_id', title: '商户Id', width: 180, fixed: true },
-                { field: 'merchant_name', title: '商户名称', minWidth: 220 },
-                { field: 'agent_fullname', title: '所属代理商姓名', minWidth: 160 },
-                { field: 'agent_phone', title: '所属代理商手机号', width: 160 },
-                { field: 'order_count', title: '订单总数', width: 120 },
-                { field: 'order_amount', title: '订单总金额', width: 140 },
-                { field: 'merchant_profit', title: '分润总金额', width: 140 },
-                { fixed: 'right', title: '操作', minWidth: 170, toolbar: '#merchantToolBar' }
-            ]],
-            page: true,
-            limit: 10,
-            limits: [10, 20, 50, 100],
-            height: 'full-300'
-        });
+		table.render({
+			elem: '#list',
+			id: 'merchantTable',
+			url: '/api/merchants/',
+			response: {
+				statusCode: 200
+			},
+			parseData: function (res) {
+				return {
+					code: 200,
+					msg: res.message || '',
+					count: res.count || 0,
+					data: res.results || []
+				};
+			},
+			cols: [[
+				{ type: 'checkbox', fixed: 'left' },
+				{ field: 'merchant_id', title: '商户Id', width: 180, fixed: true },
+				{ field: 'merchant_name', title: '商户名称', minWidth: 220 },
+				{ field: 'agent_fullname', title: '所属代理商姓名', minWidth: 160 },
+				{ field: 'agent_phone', title: '所属代理商手机号', width: 160 },
+				{ field: 'order_count', title: '订单总数', width: 120 },
+				{ field: 'order_amount', title: '订单总金额', width: 140 },
+				{ field: 'merchant_profit', title: '分润总金额', width: 140 },
+				{ fixed: 'right', title: '操作', minWidth: 170, toolbar: '#merchantToolBar' }
+			]],
+			page: true,
+			limit: 10,
+			limits: [10, 20, 50, 100],
+			height: 'full-300'
+		});
 
-        function openAssignDialog(merchantIds, merchantNameText, defaultPhone) {
-            layer.open({
-                title: '商户划拨',
-                type: 1,
-                area: ['480px', 'auto'],
-                content: `
+		function openAssignDialog(merchantIds, merchantNameText, defaultPhone) {
+			layer.open({
+				title: '商户划拨',
+				type: 1,
+				area: ['480px', 'auto'],
+				content: `
                     <form class="layui-form layui-padding-3" lay-filter="merchant-assign-form">
                         <div class="layui-form-item">
                             <label class="layui-form-label" style="width: 90px;">商户</label>
@@ -107,73 +110,73 @@
                         </div>
                     </form>
                 `,
-                success: function () {
-                    form.render();
-                    form.on('submit(merchant-assign-submit)', function (formData) {
-                        fetch('/api/merchants/batch-assign-agent/', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                merchant_ids: merchantIds,
-                                agent_phone: formData.field.agent_phone
-                            })
-                        }).then(function (response) {
-                            return response.json();
-                        }).then(function (res) {
-                            if (res.message === '划拨成功') {
-                                layer.msg('划拨成功', { icon: 1 });
-                                layer.closeAll();
-                                table.reload('merchantTable');
-                            } else {
-                                layer.msg(res.message || '划拨失败', { icon: 5 });
-                            }
-                        });
-                        return false;
-                    });
-                }
-            });
-        }
+				success: function () {
+					form.render();
+					form.on('submit(merchant-assign-submit)', function (formData) {
+						fetch('/api/merchants/batch-assign-agent/', {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json'
+							},
+							body: JSON.stringify({
+								merchant_ids: merchantIds,
+								agent_phone: formData.field.agent_phone
+							})
+						}).then(function (response) {
+							return response.json();
+						}).then(function (res) {
+							if (res.message === '划拨成功') {
+								layer.msg('划拨成功', { icon: 1 });
+								layer.closeAll();
+								table.reload('merchantTable');
+							} else {
+								layer.msg(res.message || '划拨失败', { icon: 5 });
+							}
+						});
+						return false;
+					});
+				}
+			});
+		}
 
-        form.on('submit(list-search)', function (data) {
-            table.reload('merchantTable', {
-                page: {
-                    curr: 1
-                },
-                where: data.field
-            });
-            return false;
-        });
+		form.on('submit(list-search)', function (data) {
+			table.reload('merchantTable', {
+				page: {
+					curr: 1
+				},
+				where: data.field
+			});
+			return false;
+		});
 
-        document.getElementById('batch-assign-btn').addEventListener('click', function () {
-            var checkStatus = table.checkStatus('merchantTable');
-            var selectedRows = checkStatus.data || [];
+		document.getElementById('batch-assign-btn').addEventListener('click', function () {
+			var checkStatus = table.checkStatus('merchantTable');
+			var selectedRows = checkStatus.data || [];
 
-            if (!selectedRows.length) {
-                layer.msg('请先选择要划拨的商户', { icon: 0 });
-                return;
-            }
+			if (!selectedRows.length) {
+				layer.msg('请先选择要划拨的商户', { icon: 0 });
+				return;
+			}
 
-            var merchantIds = selectedRows.map(function (item) { return item.id; });
-            var merchantNameText = `已选 ${selectedRows.length} 个商户`;
-            openAssignDialog(merchantIds, merchantNameText, '');
-        });
+			var merchantIds = selectedRows.map(function (item) { return item.id; });
+			var merchantNameText = `已选 ${selectedRows.length} 个商户`;
+			openAssignDialog(merchantIds, merchantNameText, '');
+		});
 
-        table.on('tool(list)', function (obj) {
-            var data = obj.data;
+		table.on('tool(list)', function (obj) {
+			var data = obj.data;
 
-            if (obj.event === 'show-history') {
-                window.location.href = `/merchant/history/?merchant_id=${encodeURIComponent(data.id)}`;
-                return;
-            }
+			if (obj.event === 'show-history') {
+				window.location.href = `/merchant/history/?merchant_id=${encodeURIComponent(data.id)}`;
+				return;
+			}
 
-            if (obj.event !== 'assign-agent') {
-                return;
-            }
+			if (obj.event !== 'assign-agent') {
+				return;
+			}
 
-            openAssignDialog([data.id], data.merchant_name, data.agent_phone !== '--' ? data.agent_phone : '');
-        });
-    });
+			openAssignDialog([data.id], data.merchant_name, data.agent_phone !== '--' ? data.agent_phone : '');
+		});
+	});
 </script>
 {% endblock %}

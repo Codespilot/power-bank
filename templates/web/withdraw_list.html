@@ -4,80 +4,94 @@
 
 {% block content %}
 <style>
-    .summary-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-        margin-bottom: 18px;
-    }
-    .summary-card {
-        background: linear-gradient(135deg, #f8fbff, #eef4ff);
-        border: 1px solid #e4edff;
-        border-radius: 12px;
-        padding: 18px 20px;
-    }
-    .summary-label {
-        color: #6b7280;
-        font-size: 14px;
-        margin-bottom: 8px;
-    }
-    .summary-value {
-        color: #1d4ed8;
-        font-size: 28px;
-        font-weight: 700;
-    }
+	.summary-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 16px;
+		margin-bottom: 18px;
+	}
+
+	.summary-card {
+		background: linear-gradient(135deg, #f8fbff, #eef4ff);
+		border: 1px solid #e4edff;
+		border-radius: 12px;
+		padding: 18px 20px;
+	}
+
+	.summary-label {
+		color: #6b7280;
+		font-size: 14px;
+		margin-bottom: 8px;
+	}
+
+	.summary-value {
+		color: #1d4ed8;
+		font-size: 28px;
+		font-weight: 700;
+	}
 </style>
 
 {% if user_is_admin %}
 <div class="summary-grid" id="withdraw-summary-box">
-    <div class="summary-card">
-        <div class="summary-label">已提现总额</div>
-        <div class="summary-value" id="approved-total">0.00</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">待审批总额</div>
-        <div class="summary-value" id="pending-total">0.00</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">待审批数量</div>
-        <div class="summary-value" id="pending-count">0</div>
-    </div>
+	<div class="summary-card">
+		<div class="summary-label">已提现总额</div>
+		<div class="summary-value" id="approved-total">0.00</div>
+	</div>
+	<div class="summary-card">
+		<div class="summary-label">待审批总额</div>
+		<div class="summary-value" id="pending-total">0.00</div>
+	</div>
+	<div class="summary-card">
+		<div class="summary-label">待审批数量</div>
+		<div class="summary-value" id="pending-count">0</div>
+	</div>
 </div>
 {% endif %}
 
 <form class="layui-form layui-row layui-col-space16">
-    <div class="layui-col-md4">
-        <div class="layui-form-item">
-            <div class="layui-input-group">
-                <div class="layui-input-prefix">用户</div>
-                <input type="text" name="keyword" placeholder="用户名/手机号/姓名/邮箱" class="layui-input">
-                <div class="layui-input-split layui-input-suffix" style="cursor:pointer;" lay-submit lay-filter="withdraw-search">
-                    <i class="layui-icon layui-icon-search"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="layui-col-md4">
-        <div class="layui-form-item">
-            <div class="layui-inline" id="withdraw-date-range">
-                <div class="layui-input-inline">
-                    <input type="text" name="date_start" id="withdraw-date-start" class="layui-input" placeholder="开始日期" autocomplete="off">
-                </div>
-                <div class="layui-form-mid">-</div>
-                <div class="layui-input-inline">
-                    <input type="text" name="date_end" id="withdraw-date-end" class="layui-input" placeholder="结束日期" autocomplete="off">
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="layui-col-md2">
-        <select name="status">
-            <option value="">全部状态</option>
-            <option value="2">待审批</option>
-            <option value="3">已通过</option>
-            <option value="4">已拒绝</option>
-        </select>
-    </div>
+	<div class="layui-col-md3">
+		<div class="layui-form-item">
+			<div class="layui-input-group">
+				<div class="layui-input-prefix search-label">用户</div>
+				<input type="text" name="keyword" placeholder="用户名/手机号/姓名/邮箱" class="layui-input">
+			</div>
+		</div>
+	</div>
+	<div class="layui-col-md3">
+		<div class="layui-form-item">
+			<div class="layui-input-group">
+				<div class="layui-input-prefix search-label">申请状态</div>
+				<select name="status">
+					<option value="">全部状态</option>
+					<option value="2">待审批</option>
+					<option value="3">已通过</option>
+					<option value="4">已拒绝</option>
+				</select>
+			</div>
+		</div>
+	</div>
+	<div class="layui-col-md5">
+		<div class="layui-form-item">
+			<div class="layui-inline" id="withdraw-date-range">
+				<label class="layui-form-label search-label">申请日期</label>
+				<div class="layui-input-inline">
+					<input type="text" name="date_start" id="withdraw-date-start" class="layui-input" placeholder="开始日期"
+						autocomplete="off">
+				</div>
+				<div class="layui-form-mid">-</div>
+				<div class="layui-input-inline">
+					<input type="text" name="date_end" id="withdraw-date-end" class="layui-input" placeholder="结束日期"
+						autocomplete="off">
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="layui-col-md1" style="text-align: right;">
+		<button class="layui-btn layui-btn-primary" lay-submit lay-filter="withdraw-search">
+			<i class="layui-icon layui-icon-search"></i> 搜索
+		</button>
+	</div>
 </form>
 
 <table class="layui-hide" id="withdraw-list" lay-filter="withdraw-list"></table>
@@ -85,148 +99,148 @@
 
 {% block extra_js %}
 <script>
-layui.use(function () {
-    var table = layui.table;
-    var form = layui.form;
-    var layer = layui.layer;
-    var laydate = layui.laydate;
+	layui.use(function () {
+		var table = layui.table;
+		var form = layui.form;
+		var layer = layui.layer;
+		var laydate = layui.laydate;
 
-    var heightOffset;
+		var heightOffset;
 
-    var summary = document.getElementById('withdraw-summary-box');
+		var summary = document.getElementById('withdraw-summary-box');
 
-    if(summary) {
-        heightOffset = 'full-400';
-    }
-    else {
-        heightOffset = 'full-280';
-    }
-    
-    function updateSummary(summary) {
-        if (!summary) return;
-        var approved = document.getElementById('approved-total');
-        var pending = document.getElementById('pending-total');
-        var count = document.getElementById('pending-count');
-        if (approved) approved.textContent = summary.approved_total || '0.00';
-        if (pending) pending.textContent = summary.pending_total || '0.00';
-        if (count) count.textContent = summary.pending_count || 0;
-    }
+		if (summary) {
+			heightOffset = 'full-400';
+		}
+		else {
+			heightOffset = 'full-280';
+		}
 
-    laydate.render({
-        elem: '#withdraw-date-range',
-        range: ['#withdraw-date-start', '#withdraw-date-end'],
-        rangeLinked: true
-    });
+		function updateSummary(summary) {
+			if (!summary) return;
+			var approved = document.getElementById('approved-total');
+			var pending = document.getElementById('pending-total');
+			var count = document.getElementById('pending-count');
+			if (approved) approved.textContent = summary.approved_total || '0.00';
+			if (pending) pending.textContent = summary.pending_total || '0.00';
+			if (count) count.textContent = summary.pending_count || 0;
+		}
 
-    function renderActions(row) {
-        var html = '';
-        if (row.can_approve) {
-            html += '<a class="layui-btn layui-btn-xs" lay-event="approve">同意</a>';
-        }
-        if (row.can_reject) {
-            html += '<a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="reject">拒绝</a>';
-        }
-        if (row.can_cancel) {
-            html += '<a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="cancel">作废</a>';
-        }
-        return html || '--';
-    }
+		laydate.render({
+			elem: '#withdraw-date-range',
+			range: ['#withdraw-date-start', '#withdraw-date-end'],
+			rangeLinked: true
+		});
 
-    table.render({
-        elem: '#withdraw-list',
-        id: 'withdrawTable',
-        url: '/api/withdraws/',
-        response: { statusCode: 200 },
-        parseData: function (res) {
-            updateSummary(res.summary);
-            return {
-                code: 200,
-                msg: res.message || '',
-                count: res.count || 0,
-                data: res.results || []
-            };
-        },
-        cols: [[
-            { field: 'created_at', title: '申请时间', width: 180 },
-            { field: 'applicant_display', title: '申请人', minWidth: 180 },
-            { field: 'amount', title: '申请金额', width: 110 },
-            { field: 'available_amount', title: '当前可用', width: 110 },
-            { field: 'frozen_amount', title: '冻结金额', width: 110 },
-            { field: 'total_amount', title: '总金额', width: 110 },
-            { field: 'status_text', title: '审批状态', width: 100 },
-            { field: 'audit_user_name', title: '审批人', width: 110 },
-            { field: 'audit_remark', title: '审批意见', minWidth: 160 },
-            { fixed: 'right', title: '操作', minWidth: 170, templet: function(d){ return renderActions(d); } }
-        ]],
-        page: true,
-        limit: 10,
-        limits: [10, 20, 50, 100],
-        height: heightOffset
-    });
+		function renderActions(row) {
+			var html = '';
+			if (row.can_approve) {
+				html += '<a class="layui-btn layui-btn-xs" lay-event="approve">同意</a>';
+			}
+			if (row.can_reject) {
+				html += '<a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="reject">拒绝</a>';
+			}
+			if (row.can_cancel) {
+				html += '<a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="cancel">作废</a>';
+			}
+			return html || '--';
+		}
 
-    form.on('submit(withdraw-search)', function (data) {
-        table.reload('withdrawTable', {
-            page: { curr: 1 },
-            where: data.field
-        });
-        return false;
-    });
+		table.render({
+			elem: '#withdraw-list',
+			id: 'withdrawTable',
+			url: '/api/withdraws/',
+			response: { statusCode: 200 },
+			parseData: function (res) {
+				updateSummary(res.summary);
+				return {
+					code: 200,
+					msg: res.message || '',
+					count: res.count || 0,
+					data: res.results || []
+				};
+			},
+			cols: [[
+				{ field: 'created_at', title: '申请时间', width: 180 },
+				{ field: 'applicant_display', title: '申请人', minWidth: 180 },
+				{ field: 'amount', title: '申请金额', width: 110 },
+				{ field: 'available_amount', title: '当前可用', width: 110 },
+				{ field: 'frozen_amount', title: '冻结金额', width: 110 },
+				{ field: 'total_amount', title: '总金额', width: 110 },
+				{ field: 'status_text', title: '审批状态', width: 100 },
+				{ field: 'audit_user_name', title: '审批人', width: 110 },
+				{ field: 'audit_remark', title: '审批意见', minWidth: 160 },
+				{ fixed: 'right', title: '操作', minWidth: 170, templet: function (d) { return renderActions(d); } }
+			]],
+			page: true,
+			limit: 10,
+			limits: [10, 20, 50, 100],
+			height: heightOffset
+		});
 
-    table.on('tool(withdraw-list)', function (obj) {
-        var data = obj.data;
-        if (obj.event === 'approve') {
-            layer.confirm('确认同意该提现申请吗？', function (index) {
-                fetch('/api/withdraws/' + data.id + '/approve/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
-                }).then(function (response) { return response.json(); })
-                .then(function (res) {
-                    if (res.message === '审批通过成功') {
-                        layer.msg(res.message, { icon: 1 });
-                        table.reload('withdrawTable');
-                    } else {
-                        layer.msg(res.message || '操作失败', { icon: 5 });
-                    }
-                });
-                layer.close(index);
-            });
-        } else if (obj.event === 'reject') {
-            layer.prompt({ title: '审批意见', formType: 2 }, function (value, index) {
-                fetch('/api/withdraws/' + data.id + '/reject/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ audit_remark: value })
-                }).then(function (response) { return response.json(); })
-                .then(function (res) {
-                    if (res.message === '审批拒绝成功') {
-                        layer.msg(res.message, { icon: 1 });
-                        table.reload('withdrawTable');
-                    } else {
-                        layer.msg(res.message || '操作失败', { icon: 5 });
-                    }
-                });
-                layer.close(index);
-            });
-        } else if (obj.event === 'cancel') {
-            layer.confirm('确认作废该提现申请吗？', function (index) {
-                fetch('/api/withdraws/' + data.id + '/cancel/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
-                }).then(function (response) { return response.json(); })
-                .then(function (res) {
-                    if (res.message === '作废成功') {
-                        layer.msg(res.message, { icon: 1 });
-                        table.reload('withdrawTable');
-                    } else {
-                        layer.msg(res.message || '操作失败', { icon: 5 });
-                    }
-                });
-                layer.close(index);
-            });
-        }
-    });
-});
+		form.on('submit(withdraw-search)', function (data) {
+			table.reload('withdrawTable', {
+				page: { curr: 1 },
+				where: data.field
+			});
+			return false;
+		});
+
+		table.on('tool(withdraw-list)', function (obj) {
+			var data = obj.data;
+			if (obj.event === 'approve') {
+				layer.confirm('确认同意该提现申请吗？', function (index) {
+					fetch('/api/withdraws/' + data.id + '/approve/', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({})
+					}).then(function (response) { return response.json(); })
+						.then(function (res) {
+							if (res.message === '审批通过成功') {
+								layer.msg(res.message, { icon: 1 });
+								table.reload('withdrawTable');
+							} else {
+								layer.msg(res.message || '操作失败', { icon: 5 });
+							}
+						});
+					layer.close(index);
+				});
+			} else if (obj.event === 'reject') {
+				layer.prompt({ title: '审批意见', formType: 2 }, function (value, index) {
+					fetch('/api/withdraws/' + data.id + '/reject/', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ audit_remark: value })
+					}).then(function (response) { return response.json(); })
+						.then(function (res) {
+							if (res.message === '审批拒绝成功') {
+								layer.msg(res.message, { icon: 1 });
+								table.reload('withdrawTable');
+							} else {
+								layer.msg(res.message || '操作失败', { icon: 5 });
+							}
+						});
+					layer.close(index);
+				});
+			} else if (obj.event === 'cancel') {
+				layer.confirm('确认作废该提现申请吗？', function (index) {
+					fetch('/api/withdraws/' + data.id + '/cancel/', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({})
+					}).then(function (response) { return response.json(); })
+						.then(function (res) {
+							if (res.message === '作废成功') {
+								layer.msg(res.message, { icon: 1 });
+								table.reload('withdrawTable');
+							} else {
+								layer.msg(res.message || '操作失败', { icon: 5 });
+							}
+						});
+					layer.close(index);
+				});
+			}
+		});
+	});
 </script>
 {% endblock %}

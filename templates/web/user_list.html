@@ -3,87 +3,87 @@
 {% block header %}用户管理{% endblock %}
 {% block content %}
 <form class="layui-form layui-row layui-col-space16">
-    <div class="layui-col-md12" style="display: flex; justify-content: space-between;">
-        <div class="layui-form-item">
-            <div class="layui-input-group">
-                <div class="layui-input-prefix">
-                    搜索
-                </div>
-                <input type="text" name="keyword" value="{{ request.GET.keyword|default:'' }}" placeholder="关键字"
-                    class="layui-input">
-                <div class="layui-input-split layui-input-suffix" style="cursor: pointer;" lay-submit
-                    lay-filter="list-search">
-                    <i class="layui-icon layui-icon-search"></i>
-                </div>
-            </div>
-        </div>
-
-        <button class="layui-btn" type="button" lay-on="add-user">新增用户</button>
-    </div>
+	<div class="layui-col-md3">
+		<div class="layui-form-item">
+			<div class="layui-input-group">
+				<div class="layui-input-prefix search-label">
+					搜索
+				</div>
+				<input type="text" name="keyword" value="{{ request.GET.keyword|default:'' }}" placeholder="关键字"
+					class="layui-input">
+			</div>
+		</div>
+	</div>
+	<div class="layui-col-1 layui-col-md-offset8" style="text-align: right;">
+		<button class="layui-btn layui-btn-primary" lay-submit lay-filter="list-search">
+			<i class="layui-icon layui-icon-search"></i> 搜索
+		</button>
+		<button class="layui-btn" type="button" lay-on="add-user">新增用户</button>
+	</div>
 </form>
 <table class="layui-hide" id="list"></table>
 
 <script>
-    layui.use(function () {
-        var table = layui.table;
-        var form = layui.form;
-        var laydate = layui.laydate;
-        var util = layui.util;
-        var dropdown = layui.dropdown;
-        // 创建表格实例
-        table.render({
-            elem: '#list',
-            url: '/api/users/',
-            response: {
-                statusCode: 200 // 重新规定成功的状态码为 200，table 组件默认为 0
-            },
-            parseData: function (res) {
-                return {
-                    "code": 200, //解析接口状态
-                    "msg": res.message, //解析提示文本
-                    "count": res.count, //解析数据长度
-                    "data": res.results //解析数据列表
-                };
-            },
-            cols: [[
-                { field: 'username', title: '用户名', width: 140, fixed: true },
-                { field: 'fullname', title: '姓名', width: 140 },
-                { field: 'phone', title: '手机号', width: 140, sort: false },
-                { field: 'email', title: '邮箱', minWidth: 180 },
-                { field: 'invite_code', title: '邀请码', width: 120 },
-                { field: 'superior_agent', title: '上一级代理商', minWidth: 200 },
-                { field: 'agent_rate', title: '代理商分润比例', width: 130 },
-                { field: 'created_at', title: '注册时间', width: 180 },
-                { field: 'locked_out', title: '锁定解除时间', width: 180 },
-                { fixed: 'right', title: '操作', width: 134, minWidth: 125, templet: '#toolDemo' }
-            ]],
-            page: true,
-            limits: [10, 20, 50, 100],
-            height: 'full-300',
-        });
-        // 搜索提交
-        form.on('submit(list-search)', function (data) {
-            var field = data.field; // 获得表单字段
-            // 执行搜索重载
-            table.reload('list', {
-                page: {
-                    curr: 1 // 重新从第 1 页开始
-                },
-                where: field // 搜索的字段
-            });
-            return false; // 阻止默认 form 跳转
-        });
+	layui.use(function () {
+		var table = layui.table;
+		var form = layui.form;
+		var laydate = layui.laydate;
+		var util = layui.util;
+		var dropdown = layui.dropdown;
+		// 创建表格实例
+		table.render({
+			elem: '#list',
+			url: '/api/users/',
+			response: {
+				statusCode: 200 // 重新规定成功的状态码为 200，table 组件默认为 0
+			},
+			parseData: function (res) {
+				return {
+					"code": 200, //解析接口状态
+					"msg": res.message, //解析提示文本
+					"count": res.count, //解析数据长度
+					"data": res.results //解析数据列表
+				};
+			},
+			cols: [[
+				{ field: 'username', title: '用户名', width: 140, fixed: true },
+				{ field: 'fullname', title: '姓名', width: 140 },
+				{ field: 'phone', title: '手机号', width: 140, sort: false },
+				{ field: 'email', title: '邮箱', minWidth: 180 },
+				{ field: 'invite_code', title: '邀请码', width: 120 },
+				{ field: 'superior_agent', title: '上一级代理商', minWidth: 200 },
+				{ field: 'agent_rate', title: '代理商分润比例', width: 130 },
+				{ field: 'created_at', title: '注册时间', width: 180 },
+				{ field: 'locked_out', title: '锁定解除时间', width: 180 },
+				{ fixed: 'right', title: '操作', width: 134, minWidth: 125, templet: '#toolDemo' }
+			]],
+			page: true,
+			limits: [10, 20, 50, 100],
+			height: 'full-300',
+		});
+		// 搜索提交
+		form.on('submit(list-search)', function (data) {
+			var field = data.field; // 获得表单字段
+			// 执行搜索重载
+			table.reload('list', {
+				page: {
+					curr: 1 // 重新从第 1 页开始
+				},
+				where: field // 搜索的字段
+			});
+			return false; // 阻止默认 form 跳转
+		});
 
-        table.on('tool(list)', function (obj) {
-            var data = obj.data; // 获得当前行数据
-            if (obj.event === 'view-detail') {
-                fetch(`/api/users/${data.id}/`).then(r => r.json()).then(u => {
-                    layer.open({
-                        title: '用户详情',
-                        type: 1,
-                        area: ['600px', 'auto'],
-                        content:
-                            `
+		table.on('tool(list)', function (obj) {
+			var data = obj.data; // 获得当前行数据
+			if (obj.event === 'view-detail') {
+				fetch(`/api/users/${data.id}/`).then(r => r.json()).then(u => {
+					layer.open({
+						title: '用户详情',
+						type: 1,
+						area: ['600px', 'auto'],
+						content:
+							`
                         <div class="layui-form" style="padding: 16px;">
                             <div class="layui-form-item">
                                 <label class="layui-form-label">用户名</label>
@@ -141,46 +141,46 @@
                             </div>
                         </div>
                         `
-                    });
-                });
-                // } else if (obj.event === 'reset-password') {
-                //     layer.prompt({ title: `重置${data.username}密码`, formType: 1 }, function (pass, index) {
-                //         fetch(`/api/users/${data.id}/reset-password/`, {
-                //             method: 'POST',
-                //             headers: { 'Content-Type': 'application/json' },
-                //             body: JSON.stringify({ password: pass })
-                //         }).then(r => r.json()).then(res => {
-                //             if (res.message === '密码重置成功') {
-                //                 layer.close(index);
-                //             }
-                //             else {
-                //                 layer.msg(res.message || '重置失败', { icon: 5 });
-                //             }
-                //         });
-                //     });
-            } else if (obj.event === 'more') {
-                dropdown.render({
-                    elem: this, // 触发事件的 DOM 对象
-                    show: true, // 外部事件触发即显示
-                    data: [{
-                        title: '分配上级代理商',
-                        id: 'assign-superior-agent'
-                    }, {
-                        title: '重置密码',
-                        id: 'reset-password'
-                    }],
-                    click: function (menudata) {
-                        if (menudata.id === 'assign-superior-agent') {
-                            var currentRate = '';
-                            if (data.agent_rate && data.agent_rate !== '--') {
-                                currentRate = String(data.agent_rate).replace('%', '').trim();
-                            }
-                            layer.open({
-                                title: '分配上级代理商',
-                                type: 1,
-                                area: ['400px', 'auto'],
-                                content:
-                                `
+					});
+				});
+				// } else if (obj.event === 'reset-password') {
+				//     layer.prompt({ title: `重置${data.username}密码`, formType: 1 }, function (pass, index) {
+				//         fetch(`/api/users/${data.id}/reset-password/`, {
+				//             method: 'POST',
+				//             headers: { 'Content-Type': 'application/json' },
+				//             body: JSON.stringify({ password: pass })
+				//         }).then(r => r.json()).then(res => {
+				//             if (res.message === '密码重置成功') {
+				//                 layer.close(index);
+				//             }
+				//             else {
+				//                 layer.msg(res.message || '重置失败', { icon: 5 });
+				//             }
+				//         });
+				//     });
+			} else if (obj.event === 'more') {
+				dropdown.render({
+					elem: this, // 触发事件的 DOM 对象
+					show: true, // 外部事件触发即显示
+					data: [{
+						title: '分配上级代理商',
+						id: 'assign-superior-agent'
+					}, {
+						title: '重置密码',
+						id: 'reset-password'
+					}],
+					click: function (menudata) {
+						if (menudata.id === 'assign-superior-agent') {
+							var currentRate = '';
+							if (data.agent_rate && data.agent_rate !== '--') {
+								currentRate = String(data.agent_rate).replace('%', '').trim();
+							}
+							layer.open({
+								title: '分配上级代理商',
+								type: 1,
+								area: ['400px', 'auto'],
+								content:
+									`
                                 <form class="layui-form layui-padding-3" lay-filter="assign-superior-agent-form">
                                     <input type="hidden" name="subordinate_id" value="${data.id}">
                                     <label>代理商手机号</label>
@@ -192,74 +192,74 @@
                                         <input type="text" name="rate" value="${currentRate}" lay-affix="number" placeholder="请输入分润比例，例如25" min="0" max="100" step="1" lay-precision="2" lay-verify="required" class="layui-input">
                                         <label>例如25表示上级代理商分润比例为25%</label>
                                     </div>
-                                   
+
                                     <div class="layui-form-item">
                                         <button class="layui-btn layui-btn-fluid" lay-submit lay-filter="assign-superior-agent-submit">保存</button>
                                     </div>
                                 </form>
                                 `,
-                                success: (layero) => {
-                                    form.render(layero.find('input'));
-                                    form.on('submit(assign-superior-agent-submit)', function (formdata) {
-                                        var field = formdata.field; // 获取表单字段值
-                                        console.log(field);
-                                        fetch(`/api/agents/save/`, {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify(field)
-                                        }).then(r => r.json()).then(res => {
-                                            if (res.message === '上级代理商分配成功') {
-                                                layer.msg('分配成功', { icon: 1 });
-                                                layer.closeAll();
-                                                table.reload('list');
-                                            }
-                                            else {
-                                                layer.msg(res.message || '分配失败', { icon: 5 });
-                                            }
-                                        });
-                                        return false; // 阻止默认 form 跳转
-                                    });
-                                }
-                            });
+								success: (layero) => {
+									form.render(layero.find('input'));
+									form.on('submit(assign-superior-agent-submit)', function (formdata) {
+										var field = formdata.field; // 获取表单字段值
+										console.log(field);
+										fetch(`/api/agents/save/`, {
+											method: 'POST',
+											headers: { 'Content-Type': 'application/json' },
+											body: JSON.stringify(field)
+										}).then(r => r.json()).then(res => {
+											if (res.message === '上级代理商分配成功') {
+												layer.msg('分配成功', { icon: 1 });
+												layer.closeAll();
+												table.reload('list');
+											}
+											else {
+												layer.msg(res.message || '分配失败', { icon: 5 });
+											}
+										});
+										return false; // 阻止默认 form 跳转
+									});
+								}
+							});
 
-                        } else if (menudata.id === 'reset-password') {
-                            layer.prompt({ title: `重置${data.username}密码`, formType: 1 }, function (pass, index) {
-                                fetch(`/api/users/${data.id}/reset-password/`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ password: pass })
-                                }).then(r => r.json()).then(res => {
-                                    if (res.message === '密码重置成功') {
-                                        layer.close(index);
-                                    }
-                                    else {
-                                        layer.msg(res.message || '重置失败', { icon: 5 });
-                                    }
-                                });
-                            });
-                        }
-                    },
-                    id: 'dropdown-table-tool',
-                    align: 'right', // 右对齐弹出
-                    style: 'box-shadow: 1px 1px 10px rgb(0 0 0 / 12%);' // 设置额外样式
-                });
-            }
-        });
+						} else if (menudata.id === 'reset-password') {
+							layer.prompt({ title: `重置${data.username}密码`, formType: 1 }, function (pass, index) {
+								fetch(`/api/users/${data.id}/reset-password/`, {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify({ password: pass })
+								}).then(r => r.json()).then(res => {
+									if (res.message === '密码重置成功') {
+										layer.close(index);
+									}
+									else {
+										layer.msg(res.message || '重置失败', { icon: 5 });
+									}
+								});
+							});
+						}
+					},
+					id: 'dropdown-table-tool',
+					align: 'right', // 右对齐弹出
+					style: 'box-shadow: 1px 1px 10px rgb(0 0 0 / 12%);' // 设置额外样式
+				});
+			}
+		});
 
-        util.on('lay-on', {
-            'add-user': () => {
-                layer.open({
-                    type: 1,
-                    area: '600px',
-                    resize: false,
-                    shadeClose: true,
-                    content: `
+		util.on('lay-on', {
+			'add-user': () => {
+				layer.open({
+					type: 1,
+					area: '600px',
+					resize: false,
+					shadeClose: true,
+					content: `
           <div class="layui-form" lay-filter="filter-test-layer" style="margin: 16px;">
-            <div class="demo-login-container">
+          	<div class="demo-login-container">
               <div class="layui-form-item">
                 <label class="layui-form-label" style="width:70px !important; padding-left: 0;">用户名<span style="color: #ff4d4f; margin-left: 2px;">*</span></label>
                 <div class="layui-input-block" style="margin-left: 90px;">
-                  <input type="text" name="username" value="" lay-verify="required" placeholder="必填，保存时自动转小写并去除空格，仅支持4-32位字母数字下划线" lay-reqtext="请填写用户名" autocomplete="off" class="layui-input" lay-affix="clear">
+                  <input type="text" name="username" value="" lay-verify="required" placeholder="必填，仅支持4-32位字母数字下划线" lay-reqtext="请填写用户名" autocomplete="off" class="layui-input" lay-affix="clear">
                 </div>
               </div>
               <div class="layui-form-item">
@@ -298,49 +298,49 @@
                   <input type="text" name="agent_rate" value="" placeholder="请填写分润比例，例如25" autocomplete="off" class="layui-input" lay-affix="number">
                 </div>
               </div>
-              
+
               <div class="layui-form-item">
                 <button class="layui-btn layui-btn-fluid" lay-submit lay-filter="add-user-submit">保存</button>
               </div>
             </div>
           </div>
         `,
-                    success: () => {
-                        // 对弹层中的表单进行初始化渲染
-                        form.render();
-                        // 表单提交事件
-                        form.on('submit(add-user-submit)', function (data) {
-                            var field = data.field; // 获取表单字段值
-                            // 显示填写结果，仅作演示用
-                            fetch('/api/users/create/', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(field)
-                            }).then(r => r.json()).then(res => {
-                                if (res.id) {
-                                    layer.msg('用户创建成功', { icon: 1 });
-                                    layer.closeAll();
-                                    table.reload('list');
-                                }
-                                else {
-                                    layer.msg(res.message || '创建失败', { icon: 5 });
-                                }
-                            });
-                            return false; // 阻止默认 form 跳转
-                        });
-                    }
-                });
-            },
-        })
-    });
+					success: () => {
+						// 对弹层中的表单进行初始化渲染
+						form.render();
+						// 表单提交事件
+						form.on('submit(add-user-submit)', function (data) {
+							var field = data.field; // 获取表单字段值
+							// 显示填写结果，仅作演示用
+							fetch('/api/users/create/', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify(field)
+							}).then(r => r.json()).then(res => {
+								if (res.id) {
+									layer.msg('用户创建成功', { icon: 1 });
+									layer.closeAll();
+									table.reload('list');
+								}
+								else {
+									layer.msg(res.message || '创建失败', { icon: 5 });
+								}
+							});
+							return false; // 阻止默认 form 跳转
+						});
+					}
+				});
+			},
+		})
+	});
 </script>
 
 <script type="text/html" id="toolDemo">
   <div class="layui-clear-space">
     <a class="layui-btn layui-btn-xs" lay-event="view-detail">查看</a>
     <!-- <a class="layui-btn layui-btn-xs layui-bg-red" lay-event="reset-password">重置密码</a> -->
-    <a class="layui-btn layui-btn-xs" lay-event="more">
-      更多 
+    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="more">
+      更多
       <i class="layui-icon layui-icon-down"></i>
     </a>
   </div>

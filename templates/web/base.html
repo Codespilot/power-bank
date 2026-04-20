@@ -2,47 +2,47 @@
 <html lang="zh-CN">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>{% block title %}{% endblock %} - Power Bank</title>
-    <!-- <link rel="stylesheet" href="/static/css/style.css"> -->
-    <link href="//unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
-    <script src="//unpkg.com/layui@2.13.4/dist/layui.js"></script>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="csrf-token" content="{{ csrf_token }}">
+	<title>{% block title %}{% endblock %} - Power Bank</title>
+	<!-- <link rel="stylesheet" href="/static/css/style.css"> -->
+	<link href="//unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
+	<script src="//unpkg.com/layui@2.13.4/dist/layui.js"></script>
 </head>
 
 <body>
-    <div class="layui-layout layui-layout-admin">
-        <div class="layui-header">
-            <div class="layui-logo layui-hide-xs layui-bg-black">分润管理</div>
-            <!-- 头部区域（可配合layui 已有的水平导航） -->
-            <ul class="layui-nav layui-layout-left">
-                
-            </ul>
-            <ul class="layui-nav layui-layout-right">
-                <li class="layui-nav-item layui-hide layui-show-sm-inline-block">
-                    <a href="javascript:;">
-                        <img src="//unpkg.com/outeres@0.0.10/img/layui/icon-v2.png" class="layui-nav-img">
-                        {{current_user.username}}
-                    </a>
-                    <dl class="layui-nav-child">
-                        <dd><a href="/profile">个人资料</a></dd>
-                        <dd><a href="/wallet">我的钱包</a></dd>
-                        <dd><a href="/invite">邀请注册</a></dd>
-                        <dd><a href="/logout">退出登录</a></dd>
-                    </dl>
-                </li>
-                <li class="layui-nav-item" lay-header-event="menuRight" lay-unselect>
-                    <a href="javascript:;">
-                        <i class="layui-icon layui-icon-more-vertical"></i>
-                    </a>
-                </li>
-            </ul>
-        </div>
-        <div class="layui-side layui-bg-black">
-            <div class="layui-side-scroll">
-                <!-- 左侧导航区域（可配合layui已有的垂直导航） -->
-                <!-- <ul class="layui-nav layui-nav-tree" lay-filter="test">
+	<div class="layui-layout layui-layout-admin">
+		<div class="layui-header">
+			<div class="layui-logo layui-hide-xs layui-bg-black">分润管理</div>
+			<!-- 头部区域（可配合layui 已有的水平导航） -->
+			<ul class="layui-nav layui-layout-left">
+
+			</ul>
+			<ul class="layui-nav layui-layout-right">
+				<li class="layui-nav-item layui-hide layui-show-sm-inline-block">
+					<a href="javascript:;">
+						<img src="//unpkg.com/outeres@0.0.10/img/layui/icon-v2.png" class="layui-nav-img">
+						{{current_user.username}}
+					</a>
+					<dl class="layui-nav-child">
+						<dd><a href="/profile">个人资料</a></dd>
+						<dd><a href="/wallet">我的钱包</a></dd>
+						<dd><a href="/invite">邀请注册</a></dd>
+						<dd><a href="/logout">退出登录</a></dd>
+					</dl>
+				</li>
+				<li class="layui-nav-item" lay-header-event="menuRight" lay-unselect>
+					<a href="javascript:;">
+						<i class="layui-icon layui-icon-more-vertical"></i>
+					</a>
+				</li>
+			</ul>
+		</div>
+		<div class="layui-side layui-bg-black">
+			<div class="layui-side-scroll">
+				<!-- 左侧导航区域（可配合layui已有的垂直导航） -->
+				<!-- <ul class="layui-nav layui-nav-tree" lay-filter="test">
                     <li class="layui-nav-item layui-nav-itemed">
                         <a class="" href="javascript:;">menu group 1</a>
                         <dl class="layui-nav-child">
@@ -63,77 +63,84 @@
                     <li class="layui-nav-item"><a href="javascript:;">点击菜单项</a></li>
                     <li class="layui-nav-item"><a href="javascript:;">链接</a></li>
                 </ul> -->
-                {% include "web/_navbar.html" %}
-            </div>
-        </div>
-        <div class="layui-body">
-            <!-- 内容主体区域 -->
-            <div style="padding: 15px;">
-                <!-- <blockquote class="layui-elem-quote layui-text">
+				{% include "web/_navbar.html" %}
+			</div>
+		</div>
+		<div class="layui-body">
+			<!-- 内容主体区域 -->
+			<div style="padding: 15px;">
+				<!-- <blockquote class="layui-elem-quote layui-text">
                     Layui 框体布局内容主体区域
                 </blockquote> -->
-                <div class="layui-card layui-panel">
-                    <div class="layui-card-header">
-                        {% block header %}{% endblock %}
-                    </div>
-                    <div class="layui-card-body">
-                        {% block content %}{% endblock %}
-                    </div>
-                </div>
-                <br><br>
-            </div>
-        </div>
-        <div class="layui-footer">
-            <!-- 底部固定区域 -->
-            底部固定区域
-        </div>
-    </div>
+				<div class="layui-card layui-panel">
+					<div class="layui-card-header">
+						{% block header %}{% endblock %}
+					</div>
+					<div class="layui-card-body">
+						{% block content %}{% endblock %}
+					</div>
+				</div>
+				<br><br>
+			</div>
+		</div>
+		<div class="layui-footer">
+			<!-- 底部固定区域 -->
+			底部固定区域
+		</div>
+	</div>
 
-    <script>
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) {
-                return parts.pop().split(';').shift();
-            }
-            return '';
-        }
+	<style>
+		.search-label {
+			min-width: 100px !important;
+			text-align: right;
+		}
+	</style>
 
-        function getCsrfToken() {
-            const meta = document.querySelector('meta[name="csrf-token"]');
-            return (meta && meta.getAttribute('content')) || getCookie('csrftoken') || '';
-        }
+	<script>
+		function getCookie(name) {
+			const value = `; ${document.cookie}`;
+			const parts = value.split(`; ${name}=`);
+			if (parts.length === 2) {
+				return parts.pop().split(';').shift();
+			}
+			return '';
+		}
 
-        window.getCookie = window.getCookie || getCookie;
-        window.getCsrfToken = window.getCsrfToken || getCsrfToken;
+		function getCsrfToken() {
+			const meta = document.querySelector('meta[name="csrf-token"]');
+			return (meta && meta.getAttribute('content')) || getCookie('csrftoken') || '';
+		}
 
-        (function () {
-            if (!window.fetch) {
-                return;
-            }
-            const originalFetch = window.fetch.bind(window);
-            window.fetch = function (resource, options) {
-                const requestOptions = options || {};
-                const method = (requestOptions.method || 'GET').toUpperCase();
-                const headers = new Headers(requestOptions.headers || {});
+		window.getCookie = window.getCookie || getCookie;
+		window.getCsrfToken = window.getCsrfToken || getCsrfToken;
 
-                if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method) && !headers.has('X-CSRFToken')) {
-                    const token = getCsrfToken();
-                    if (token) {
-                        headers.set('X-CSRFToken', token);
-                    }
-                }
+		(function () {
+			if (!window.fetch) {
+				return;
+			}
+			const originalFetch = window.fetch.bind(window);
+			window.fetch = function (resource, options) {
+				const requestOptions = options || {};
+				const method = (requestOptions.method || 'GET').toUpperCase();
+				const headers = new Headers(requestOptions.headers || {});
 
-                if (!requestOptions.credentials) {
-                    requestOptions.credentials = 'same-origin';
-                }
+				if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method) && !headers.has('X-CSRFToken')) {
+					const token = getCsrfToken();
+					if (token) {
+						headers.set('X-CSRFToken', token);
+					}
+				}
 
-                return originalFetch(resource, { ...requestOptions, headers });
-            };
-        })();
-    </script>
+				if (!requestOptions.credentials) {
+					requestOptions.credentials = 'same-origin';
+				}
 
-    {% block extra_js %}{% endblock %}
+				return originalFetch(resource, { ...requestOptions, headers });
+			};
+		})();
+	</script>
+
+	{% block extra_js %}{% endblock %}
 </body>
 
 </html>

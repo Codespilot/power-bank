@@ -3,19 +3,22 @@
 {% block header %}代理商管理{% endblock %}
 {% block content %}
 <form class="layui-form layui-row layui-col-space16">
-    <div class="layui-col-md12" style="display: flex; justify-content: space-between;">
+    <div class="layui-col-md3">
         <div class="layui-form-item">
             <div class="layui-input-group">
-                <div class="layui-input-prefix">搜索</div>
+                <div class="layui-input-prefix search-label">搜索</div>
                 <input type="text" name="keyword" value="{{ request.GET.keyword|default:'' }}" placeholder="关键字"
                     class="layui-input">
-                <div class="layui-input-split layui-input-suffix" style="cursor: pointer;" lay-submit
-                    lay-filter="agent-search">
-                    <i class="layui-icon layui-icon-search"></i>
-                </div>
             </div>
         </div>
     </div>
+	<div class="layui-col-md1 layui-col-md-offset8" style="text-align: right;">
+		<div class="layui-form-item">
+			<button class="layui-btn layui-btn-primary" lay-submit lay-filter="agent-search">
+				<i class="layui-icon layui-icon-search"></i> 搜索
+			</button>
+		</div>
+	</div>
 </form>
 <table class="layui-hide" id="agent-list"></table>
 

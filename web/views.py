@@ -39,6 +39,8 @@ class HomePageView(TemplateView):
             active_menu = "profit"
         elif path.startswith("/profile/"):
             active_menu = "profile"
+        elif path.startswith("/invite/"):
+            active_menu = "invite"
         else:
             active_menu = ""
         context["active_menu"] = active_menu
@@ -233,6 +235,24 @@ class ProfilePageView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "profile"
+        user_id = self.request.session.get("current_user_id")
+        user = None
+        is_admin = False
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
+            except Exception:
+                pass
+        context["current_user"] = user
+        context["user_is_admin"] = is_admin
+        return context
+
+class InvitePageView(TemplateView):
+    template_name = "web/invite.html"
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_menu"] = "invite"
         user_id = self.request.session.get("current_user_id")
         user = None
         is_admin = False

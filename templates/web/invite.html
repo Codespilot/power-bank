@@ -1,0 +1,98 @@
+{% extends "web/base.html" %}
+{% block header %}邀请推广{% endblock %}
+{% block content %}
+<div class="layui-row layui-col-space16">
+    <div class="layui-col-md4 layui-col-md-offset4">
+        <div class="layui-card">
+            <div class="layui-card-body invite-panel">
+                <div class="invite-tip">扫描二维码或复制链接，邀请下级代理注册</div>
+                <div id="invite-qrcode" class="invite-qrcode"></div>
+                <div class="layui-form-item" style="margin-top: 16px;">
+                    <label class="layui-form-label">邀请码</label>
+                    <div class="layui-input-block">
+                        <input type="text" id="invite-code" readonly class="layui-input layui-disabled" value="">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">邀请链接</label>
+                    <div class="layui-input-block">
+                        <input type="text" id="invite-link" readonly class="layui-input layui-disabled" value="">
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <button type="button" class="layui-btn layui-btn-primary" id="copy-invite-link-btn">复制链接</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+    .invite-panel {
+        text-align: center;
+    }
+    .invite-tip {
+        color: #666;
+        margin-bottom: 12px;
+    }
+    .invite-qrcode {
+        display: inline-block;
+        padding: 12px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        min-height: 204px;
+    }
+    .invite-qrcode img {
+        margin: 0 auto;
+    }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    layui.use(function () {
+        var layer = layui.layer;
+
+        fetch('/api/profile/')
+            .then(function (response) { return response.json(); })
+            .then(function (res) {
+                if (res.message !== '查询成功') {
+                    layer.msg(res.message || '加载失败', { icon: 5 });
+                    return;
+                }
+
+                var inviteLink = res.invite_link || '';
+                document.getElementById('invite-code').value = res.invite_code || '';
+                document.getElementById('invite-link').value = inviteLink;
+
+                var qrContainer = document.getElementById('invite-qrcode');
+                qrContainer.innerHTML = '';
+                if (inviteLink && window.QRCode) {
+                    new QRCode(qrContainer, {
+                        text: inviteLink,
+                        width: 180,
+                        height: 180,
+                    });
+                }
+            });
+
+        document.getElementById('copy-invite-link-btn').addEventListener('click', async function () {
+            var linkInput = document.getElementById('invite-link');
+            var inviteLink = (linkInput && linkInput.value) || '';
+            if (!inviteLink) {
+                layer.msg('邀请链接为空', { icon: 0 });
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(inviteLink);
+                layer.msg('复制成功', { icon: 1 });
+            } catch (err) {
+                linkInput.select();
+                document.execCommand('copy');
+                layer.msg('复制成功', { icon: 1 });
+            }
+        });
+    });
+</script>
+{% endblock %}

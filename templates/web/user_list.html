@@ -23,12 +23,6 @@
 </form>
 <table class="layui-hide" id="list"></table>
 
-<style>
-    .layui-form-label {
-        width: 100px !important;
-    }
-</style>
-
 <script>
     layui.use(function () {
         var table = layui.table;
@@ -177,6 +171,10 @@
                     }],
                     click: function (menudata) {
                         if (menudata.id === 'assign-superior-agent') {
+                            var currentRate = '';
+                            if (data.agent_rate && data.agent_rate !== '--') {
+                                currentRate = String(data.agent_rate).replace('%', '').trim();
+                            }
                             layer.open({
                                 title: '分配上级代理商',
                                 type: 1,
@@ -191,7 +189,7 @@
                                     </div>
                                     <label>分润比例</label>
                                     <div class="layui-form-item">
-                                        <input type="text" name="rate" value="${data.agent_rate && data.agent_rate !== '--' ? data.agent_rate : ''}" lay-affix="number" placeholder="请输入百分比，例如25" min="0" max="100" step="0.01" lay-precision="2" lay-verify="required" class="layui-input">
+                                        <input type="text" name="rate" value="${currentRate}" lay-affix="number" placeholder="请输入分润比例，例如25" min="0" max="100" step="1" lay-precision="2" lay-verify="required" class="layui-input">
                                         <label>例如25表示上级代理商分润比例为25%</label>
                                     </div>
                                    

@@ -180,6 +180,25 @@ class UserListPageView(TemplateView):
         context["user_is_admin"] = is_admin
         return context
 
+
+class AgentListPageView(TemplateView):
+    template_name = "web/agent_list.html"
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_menu"] = "agent"
+        user_id = self.request.session.get("current_user_id")
+        user = None
+        is_admin = False
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
+            except Exception:
+                pass
+        context["current_user"] = user
+        context["user_is_admin"] = is_admin
+        return context
+
 class MerchantListPageView(TemplateView):
     template_name = "web/merchant_list.html"
     def get_context_data(self, **kwargs):

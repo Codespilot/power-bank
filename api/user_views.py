@@ -14,7 +14,7 @@ from django.utils import timezone
 from .models import AgentHistory, InviteCode, User, UserAsset
 from .user_serializers import UserListSerializer, UserCreateSerializer, UserDetailSerializer
 from utils.generate_snowflake_id import generate_snowflake_id
-from .auth import EMAIL_REGEX, MOBILE_REGEX, compute_lock_until, create_access_token, create_refresh_token, decode_jwt, get_user_by_identifier, is_valid_username, verify_password
+from .auth import EMAIL_REGEX, MOBILE_REGEX, compute_lock_until, create_access_token, create_refresh_token, decode_jwt, get_request_user_id, get_user_by_identifier, is_valid_username, verify_password
 
 
 def _authenticate_credentials(request, use_session_captcha: bool):
@@ -285,6 +285,13 @@ class UserListView(generics.ListAPIView):
         keyword = self.request.GET.get('keyword', '').strip()
         user_id = self.request.GET.get('id', '').strip()
         exclude_user_id = self.request.GET.get('exclude_id', '').strip()
+        direct_subordinates = str(self.request.GET.get('direct_subordinates', '')).strip().lower()
+
+        if direct_subordinates in {'1', 'true', 'yes'}:
+            current_user_id = get_request_user_id(self.request)
+            if not current_user_id:
+                return User.objects.none()
+            qs = qs.filter(agent_id=current_user_id)
 
         if user_id:
             try:

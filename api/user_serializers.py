@@ -71,6 +71,7 @@ class UserDetailSerializer(SafeBigIntModelSerializer):
     superior_phone = serializers.SerializerMethodField()
     superior_agent = serializers.SerializerMethodField()
     agent_rate = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", required=False, allow_null=True)
 
     class Meta:
         model = User

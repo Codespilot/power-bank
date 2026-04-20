@@ -141,15 +141,16 @@
                 layer.open({
                     title: '修改分润比例',
                     type: 1,
-                    area: ['420px', '220px'],
+                    area: ['420px', 'auto'],
                     content: `
                         <form class="layui-form" lay-filter="agent-rate-form" style="padding:20px;">
                             <input type="hidden" name="subordinate_id" value="${data.id}">
                             <input type="hidden" name="superior_id" value="${data.superior_id || ''}">
                             <label>分润比例</label>
                             <div class="layui-form-item">
-                                <input type="text" name="rate" value="${currentRate}" lay-affix="number" placeholder="请输入分润比例，例如25" min="0" max="100" step="1" autocomplete="off" class="layui-input">
-                                <label>例如25表示上级代理商分润比例为25%</label>
+                                <input type="text" name="rate" value="${currentRate}" lay-affix="number" placeholder="请输入分润比例，例如25" min="0" max="100" step="1" autocomplete="off" class="layui-input"
+								 style="margin-bottom: 10px; margin-top: 10px;">
+                                <blockquote class="layui-elem-quote">例如25表示上级代理商分润比例为25%</blockquote>
                             </div>
                             <div class="layui-form-item" style="margin-bottom: 0; text-align: right;">
                                 <button class="layui-btn" lay-submit lay-filter="agent-rate-submit">保存</button>

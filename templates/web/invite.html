@@ -131,14 +131,15 @@
             layer.open({
                 title: '新增邀请码',
                 type: 1,
-                area: ['420px', '220px'],
+                area: ['420px', 'auto'],
                 content: `
                     <form class="layui-form" lay-filter="invite-create-form" style="padding:20px;">
-                        <div class="layui-form-item">
-                            <label class="layui-form-label">分润比例</label>
-                            <div class="layui-input-block">
-                                <input type="text" name="rate" placeholder="请输入分润比例，如 10 或 10%" autocomplete="off" class="layui-input">
-                            </div>
+                        <label>分润比例</label>
+						<div class="layui-form-item">
+                            <input type="text" name="rate" value="" lay-affix="number" placeholder="请输入分润比例，例如25" min="0" max="100" step="1" autocomplete="off" class="layui-input"
+							lay-verify="required" lay-reqtext="请填写分润比例"
+							 style="margin-bottom: 10px; margin-top: 10px;">
+							<blockquote class="layui-elem-quote">例如25表示上级代理商分润比例为25%</blockquote>
                         </div>
                         <div class="layui-form-item" style="margin-bottom:0; text-align:right;">
                             <button class="layui-btn" lay-submit lay-filter="invite-create-submit">保存</button>

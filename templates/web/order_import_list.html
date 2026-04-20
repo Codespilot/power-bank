@@ -3,41 +3,36 @@
 {% block header %}订单导入管理{% endblock %}
 {% block content %}
 
-<div style="display: flex; justify-content: space-between; flex-wrap: nowrap; gap: 12px;">
-	<form class="layui-form layui-row layui-col-space16" style="width: 100%;">
-		<div class="layui-col-md6">
-			<div class="layui-form-item">
-				<div class="layui-inline">
-					<label class="layui-form-label search-label">导入日期</label>
-					<div class="layui-inline" id="import-date-range">
-						<div class="layui-input-inline">
-							<input type="text" name="date_start" autocomplete="off" id="import-date-start"
-								class="layui-input" placeholder="开始日期">
-						</div>
-						<div class="layui-form-mid">-</div>
-						<div class="layui-input-inline">
-							<input type="text" name="date_end" autocomplete="off" id="import-date-end"
-								class="layui-input" placeholder="结束日期">
-						</div>
+<form class="layui-form layui-row layui-col-space16">
+	<div class="layui-col-md5">
+		<div class="layui-form-item">
+			<div class="layui-inline">
+				<label class="layui-form-label search-label">导入日期</label>
+				<div class="layui-inline" id="import-date-range">
+					<div class="layui-input-inline">
+						<input type="text" name="date_start" autocomplete="off" id="import-date-start"
+							class="layui-input" placeholder="开始日期">
+					</div>
+					<div class="layui-form-mid">-</div>
+					<div class="layui-input-inline">
+						<input type="text" name="date_end" autocomplete="off" id="import-date-end" class="layui-input"
+							placeholder="结束日期">
 					</div>
 				</div>
 			</div>
 		</div>
-		<div class="layui-col-md2">
-			<div class="layui-form-item">
-				<button class="layui-btn layui-btn-primary" lay-submit lay-filter="btn-search">
-					<i class="layui-icon layui-icon-search"></i> 查询
-				</button>
-			</div>
-		</div>
-	</form>
-
-	<div style="display: flex; gap: 8px; white-space: nowrap;">
-		<button type="button" class="layui-btn" id="import-order-btn">
-			<i class="layui-icon layui-icon-upload"></i> 导入订单
-		</button>
 	</div>
-</div>
+	<div class="layui-col-md3 layui-col-md-offset4" style="text-align: right;">
+		<div class="layui-form-item">
+			<button class="layui-btn layui-btn-primary" lay-submit lay-filter="btn-search">
+				<i class="layui-icon layui-icon-search"></i> 查询
+			</button>
+			<button type="button" class="layui-btn" id="import-order-btn">
+				<i class="layui-icon layui-icon-upload"></i> 导入订单
+			</button>
+		</div>
+	</div>
+</form>
 
 <table class="layui-hide" id="list"></table>
 

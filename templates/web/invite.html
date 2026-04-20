@@ -70,8 +70,11 @@
                     templet: function (d) {
                         var toggleClass = d.is_valid ? 'layui-btn-danger' : 'layui-btn-normal';
                         var toggleText = d.is_valid ? '作废' : '启用';
+                        var showButton = d.is_valid
+                            ? '<button class="layui-btn layui-btn-xs" lay-event="show">查看</button>'
+                            : '';
                         return '<div class="layui-btn-container">'
-                            + '<button class="layui-btn layui-btn-xs" lay-event="show">查看</button>'
+                            + showButton
                             + '<button class="layui-btn layui-btn-xs ' + toggleClass + '" lay-event="toggle">' + toggleText + '</button>'
                             + '</div>';
                     }
@@ -174,6 +177,9 @@
         table.on('tool(invite-list)', function (obj) {
             var data = obj.data;
             if (obj.event === 'show') {
+                if (!data.is_valid) {
+                    return;
+                }
                 showInvitePopup(data);
             } else if (obj.event === 'toggle') {
                 fetch('/api/invite-codes/' + data.id + '/toggle-status/', {

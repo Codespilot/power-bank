@@ -8,11 +8,25 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from .models import AgentHistory, InviteCode, User, Wallet
-from .user_serializers import UserListSerializer, UserCreateSerializer, UserDetailSerializer
+from .user_serializers import (
+    AgentAssignSerializer,
+    IdMessageSerializer,
+    LoginRequestSerializer,
+    MessageSerializer,
+    TokenGrantResponseSerializer,
+    TokenGrantSerializer,
+    TokenRefreshSerializer,
+    UserCreateSerializer,
+    UserDetailSerializer,
+    UserListSerializer,
+    UserRegisterSerializer,
+    UserResetPasswordSerializer,
+)
 from utils.generate_snowflake_id import generate_snowflake_id
 from .auth import EMAIL_REGEX, MOBILE_REGEX, compute_lock_until, create_access_token, create_refresh_token, decode_jwt, get_request_user_id, get_user_by_identifier, is_valid_username, verify_password
 
@@ -89,7 +103,14 @@ def _authenticate_credentials(request, use_session_captcha: bool):
 
 class LoginAPIView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = LoginRequestSerializer
 
+    @extend_schema(
+        tags=["auth"],
+        summary="用户登录",
+        request=LoginRequestSerializer,
+        responses={200: IdMessageSerializer, 400: MessageSerializer, 423: MessageSerializer},
+    )
     def post(self, request):
         user, error_response = _authenticate_credentials(request, use_session_captcha=True)
         if error_response is not None:
@@ -102,7 +123,14 @@ class LoginAPIView(APIView):
 
 class TokenGrantView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = TokenGrantSerializer
 
+    @extend_schema(
+        tags=["token"],
+        summary="获取访问令牌",
+        request=TokenGrantSerializer,
+        responses={200: TokenGrantResponseSerializer, 400: MessageSerializer, 423: MessageSerializer},
+    )
     def post(self, request):
         user, error_response = _authenticate_credentials(request, use_session_captcha=False)
         if error_response is not None:
@@ -125,7 +153,14 @@ class TokenGrantView(APIView):
 
 class TokenRefreshView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = TokenRefreshSerializer
 
+    @extend_schema(
+        tags=["token"],
+        summary="刷新访问令牌",
+        request=TokenRefreshSerializer,
+        responses={200: TokenGrantResponseSerializer, 400: MessageSerializer, 404: MessageSerializer},
+    )
     def post(self, request):
         refresh_token = str(request.data.get("refresh_token", "")).strip()
         if not refresh_token:
@@ -183,6 +218,7 @@ def _create_user_account(data, *, invite_code: str = ""):
     fullname = str(data.get('fullname', '')).strip()
     phone = str(data.get('phone', '')).strip()
     email = str(data.get('email', '')).strip()
+    password = str(data.get('password', '')).strip()
     agent_phone = str(data.get('agent_phone') or data.get('agent_mobile') or data.get('superior_phone') or '').strip()
     agent_rate_raw = str(data.get('agent_rate', '')).strip()
 
@@ -201,6 +237,8 @@ def _create_user_account(data, *, invite_code: str = ""):
             raise ValueError('邮箱格式错误')
         if User.objects.filter(email=email).exists():
             raise ValueError('邮箱已存在')
+    if not password or len(password) < 6:
+        raise ValueError('密码至少6位')
 
     superior_user, invite_record = _resolve_superior_user(agent_phone=agent_phone, invite_code=invite_code)
     agent_rate = Decimal('0.00')
@@ -209,9 +247,7 @@ def _create_user_account(data, *, invite_code: str = ""):
     elif superior_user and agent_rate_raw:
         agent_rate = _parse_agent_rate(agent_rate_raw)
 
-    password = str(data.get('password', '')).strip()
-    if not password or len(password) < 6:
-        raise ValueError('密码至少6位')
+
 
     from api.auth import hash_password
     password_hash, password_salt = hash_password(password)
@@ -262,6 +298,20 @@ class UserListPagination(PageNumberPagination):
         })
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=["users"],
+        summary="获取用户列表",
+        parameters=[
+            OpenApiParameter(name="keyword", description="用户名、手机号或邮箱关键字", required=False, type=str),
+            OpenApiParameter(name="id", description="按用户ID筛选", required=False, type=str),
+            OpenApiParameter(name="exclude_id", description="排除指定用户ID", required=False, type=str),
+            OpenApiParameter(name="direct_subordinates", description="是否只查询直属下级，传 1 或 true 生效", required=False, type=str),
+            OpenApiParameter(name="page", description="页码", required=False, type=int),
+            OpenApiParameter(name="limit", description="每页数量", required=False, type=int),
+        ],
+    )
+)
 class UserListView(generics.ListAPIView):
     serializer_class = UserListSerializer
     pagination_class = UserListPagination
@@ -360,6 +410,14 @@ def _is_descendant_user(superior_id: int, subordinate_id: int) -> bool:
     return False
 
 
+@extend_schema_view(
+    post=extend_schema(
+        tags=["users"],
+        summary="创建用户",
+        request=UserCreateSerializer,
+        responses={201: IdMessageSerializer, 400: MessageSerializer},
+    )
+)
 class UserCreateView(generics.CreateAPIView):
     serializer_class = UserCreateSerializer
 
@@ -372,7 +430,14 @@ class UserCreateView(generics.CreateAPIView):
 
 class RegisterAPIView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = UserRegisterSerializer
 
+    @extend_schema(
+        tags=["users"],
+        summary="用户注册",
+        request=UserRegisterSerializer,
+        responses={200: IdMessageSerializer, 400: MessageSerializer},
+    )
     def post(self, request):
         captcha = str(request.data.get('captcha', '')).strip()
         session_captcha = str(request.session.get('login_captcha_code', '')).strip()
@@ -401,6 +466,9 @@ class RegisterAPIView(APIView):
         return Response({'message': '注册成功', 'id': str(user.id)})
 
 
+@extend_schema_view(
+    get=extend_schema(tags=["users"], summary="获取用户详情")
+)
 class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.select_related('agent').all()
     serializer_class = UserDetailSerializer
@@ -408,6 +476,14 @@ class UserDetailView(generics.RetrieveAPIView):
 
 
 class AgentSaveView(APIView):
+    serializer_class = AgentAssignSerializer
+
+    @extend_schema(
+        tags=["agents"],
+        summary="分配上级代理商",
+        request=AgentAssignSerializer,
+        responses={200: MessageSerializer, 400: MessageSerializer, 404: MessageSerializer},
+    )
     def post(self, request, id=None):
         superior_phone = (request.data.get('superior_phone') or request.data.get('agent_phone') or '').strip()
         superior_id_raw = request.data.get('superior_id')
@@ -469,6 +545,14 @@ class AgentSaveView(APIView):
 
 
 class UserResetPasswordView(APIView):
+    serializer_class = UserResetPasswordSerializer
+
+    @extend_schema(
+        tags=["users"],
+        summary="重置用户密码",
+        request=UserResetPasswordSerializer,
+        responses={200: MessageSerializer, 400: MessageSerializer, 404: MessageSerializer},
+    )
     def post(self, request, id):
         user = User.objects.filter(id=id).first()
         if not user:

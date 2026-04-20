@@ -11,6 +11,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
+from drf_spectacular.extensions import OpenApiAuthenticationExtension
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -174,3 +175,16 @@ class JWTAuthentication(BaseAuthentication):
             raise AuthenticationFailed("用户不存在")
 
         return (user, payload)
+
+
+class JWTAuthenticationScheme(OpenApiAuthenticationExtension):
+    target_class = "api.auth.JWTAuthentication"
+    name = "BearerAuth"
+
+    def get_security_definition(self, auto_schema):
+        return {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "在请求头中使用 Bearer Token，例如：Bearer eyJ...",
+        }

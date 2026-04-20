@@ -106,6 +106,9 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,
+    },
     "SCHEMA_PATH_PREFIX": r"/api",
     "TAGS": [
         {"name": "auth", "description": "登录认证相关接口"},

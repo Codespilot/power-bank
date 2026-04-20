@@ -1,5 +1,6 @@
 from django.urls import path
 
+from .invite_views import InviteCodeListCreateView, InviteCodeToggleView
 from .merchant_views import MerchantAssignAgentView, MerchantBatchAssignAgentView, MerchantHistoryListView, MerchantListView
 from .profile_views import CurrentUserPasswordView, CurrentUserProfileView
 from .profit_views import ProfitListView
@@ -36,6 +37,10 @@ urlpatterns = [
 
     # 分润管理
     path("profits/", ProfitListView.as_view(), name="api-profits-list"),
+
+    # 邀请码管理
+    path("invite-codes/", InviteCodeListCreateView.as_view(), name="api-invite-codes"),
+    path("invite-codes/<int:id>/toggle-status/", InviteCodeToggleView.as_view(), name="api-invite-codes-toggle"),
 
     # 个人资料
     path("profile/", CurrentUserProfileView.as_view(), name="api-profile"),

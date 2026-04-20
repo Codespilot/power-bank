@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-from .models import AgentHistory, User, UserAsset
+from .models import AgentHistory, InviteCode, User, UserAsset
 from .user_serializers import UserListSerializer, UserCreateSerializer, UserDetailSerializer
 from utils.generate_snowflake_id import generate_snowflake_id
 from .auth import EMAIL_REGEX, MOBILE_REGEX, compute_lock_until, create_access_token, create_refresh_token, decode_jwt, get_user_by_identifier, is_valid_username, verify_password
@@ -154,18 +154,18 @@ def _resolve_superior_user(agent_phone: str = "", invite_code: str = ""):
     if invite_code:
         if not re.fullmatch(r"[a-z0-9]{8}", invite_code):
             raise ValueError("邀请码无效")
-        superior_user = User.objects.filter(invite_code=invite_code).first()
-        if not superior_user:
+        invite_record = InviteCode.objects.select_related('user').filter(code=invite_code, is_valid=True).first()
+        if not invite_record or not invite_record.user:
             raise ValueError("邀请码无效")
-        return superior_user
+        return invite_record.user, invite_record
 
     if agent_phone:
         superior_user = User.objects.filter(phone=agent_phone).first()
         if not superior_user:
             raise ValueError(f"无法找到对应的用户{agent_phone}")
-        return superior_user
+        return superior_user, None
 
-    return None
+    return None, None
 
 
 def _create_user_account(data, *, invite_code: str = ""):
@@ -193,9 +193,11 @@ def _create_user_account(data, *, invite_code: str = ""):
         if User.objects.filter(email=email).exists():
             raise ValueError('邮箱已存在')
 
-    superior_user = _resolve_superior_user(agent_phone=agent_phone, invite_code=invite_code)
+    superior_user, invite_record = _resolve_superior_user(agent_phone=agent_phone, invite_code=invite_code)
     agent_rate = Decimal('0.00')
-    if superior_user and agent_rate_raw:
+    if invite_record:
+        agent_rate = Decimal(str(invite_record.rate or '0.00'))
+    elif superior_user and agent_rate_raw:
         agent_rate = _parse_agent_rate(agent_rate_raw)
 
     password = str(data.get('password', '')).strip()
@@ -206,12 +208,21 @@ def _create_user_account(data, *, invite_code: str = ""):
     password_hash, password_salt = hash_password(password)
 
     with transaction.atomic():
+        locked_invite_record = None
+        if invite_record:
+            locked_invite_record = InviteCode.objects.select_for_update().select_related('user').filter(id=invite_record.id).first()
+            if not locked_invite_record or not locked_invite_record.is_valid or not locked_invite_record.user_id:
+                raise ValueError('邀请码无效')
+            superior_user = locked_invite_record.user
+            agent_rate = Decimal(str(locked_invite_record.rate or '0.00'))
+
         user = User.objects.create(
             id=generate_snowflake_id(),
             username=username,
             fullname=fullname,
             phone=phone,
             email=email or None,
+            invite_code=locked_invite_record.code if locked_invite_record else None,
             password_hash=password_hash,
             password_salt=password_salt,
             agent=superior_user,
@@ -219,6 +230,10 @@ def _create_user_account(data, *, invite_code: str = ""):
             created_at=timezone.now()
         )
         UserAsset.objects.create(id=user.id)
+
+        if locked_invite_record:
+            locked_invite_record.register_count = int(locked_invite_record.register_count or 0) + 1
+            locked_invite_record.save(update_fields=['register_count'])
     return user
 
 
@@ -352,7 +367,14 @@ class RegisterAPIView(APIView):
         if password != confirm_password:
             return Response({'message': '两次输入的密码不一致'}, status=status.HTTP_400_BAD_REQUEST)
 
-        invite_code = str(request.data.get('invite_code', '')).strip().lower()
+        invite_code = str(
+            request.data.get('invite_code')
+            or request.query_params.get('invite_code')
+            or ''
+        ).strip().lower()
+        if not invite_code:
+            return Response({'message': '邀请码无效，请通过邀请链接注册'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             user = _create_user_account(request.data, invite_code=invite_code)
         except Exception as exc:

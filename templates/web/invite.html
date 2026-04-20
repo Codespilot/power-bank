@@ -1,41 +1,22 @@
 {% extends "web/base.html" %}
 {% block header %}邀请推广{% endblock %}
 {% block content %}
-<div class="layui-row layui-col-space16">
-    <div class="layui-col-md4 layui-col-md-offset4">
-        <div class="layui-card">
-            <div class="layui-card-body invite-panel">
-                <div class="invite-tip">扫描二维码或复制链接，邀请下级代理注册</div>
-                <div id="invite-qrcode" class="invite-qrcode"></div>
-                <div class="layui-form-item" style="margin-top: 16px;">
-                    <label class="layui-form-label">邀请码</label>
-                    <div class="layui-input-block">
-                        <input type="text" id="invite-code" readonly class="layui-input layui-disabled" value="">
-                    </div>
-                </div>
-                <div class="layui-form-item">
-                    <label class="layui-form-label">邀请链接</label>
-                    <div class="layui-input-block">
-                        <input type="text" id="invite-link" readonly class="layui-input layui-disabled" value="">
-                    </div>
-                </div>
-                <div style="text-align: center;">
-                    <button type="button" class="layui-btn layui-btn-primary" id="copy-invite-link-btn">复制链接</button>
-                </div>
-            </div>
+<div class="layui-card">
+    <div class="layui-card-body">
+        <div style="margin-bottom: 16px; text-align: right;">
+            <button type="button" class="layui-btn" id="add-invite-btn">新增邀请码</button>
         </div>
+        <table class="layui-hide" id="invite-list" lay-filter="invite-list"></table>
     </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
 <style>
-    .invite-panel {
+    .invite-popup {
+        padding: 20px;
         text-align: center;
-    }
-    .invite-tip {
-        color: #666;
-        margin-bottom: 12px;
     }
     .invite-qrcode {
         display: inline-block;
@@ -48,49 +29,166 @@
     .invite-qrcode img {
         margin: 0 auto;
     }
+    .invite-link-wrap {
+        margin-top: 16px;
+        display: flex;
+        justify-content: center;
+    }
+    .invite-link-wrap .layui-input {
+        width: 100%;
+        max-width: 360px;
+        text-align: center;
+    }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
     layui.use(function () {
+        var table = layui.table;
         var layer = layui.layer;
+        var form = layui.form;
 
-        fetch('/api/profile/')
-            .then(function (response) { return response.json(); })
-            .then(function (res) {
-                if (res.message !== '查询成功') {
-                    layer.msg(res.message || '加载失败', { icon: 5 });
-                    return;
+        var tableIns = table.render({
+            elem: '#invite-list',
+            url: '/api/invite-codes/',
+            response: { statusCode: 200 },
+            parseData: function (res) {
+                return {
+                    code: 200,
+                    msg: res.message,
+                    count: res.count || 0,
+                    data: res.results || []
+                };
+            },
+            cols: [[
+                { field: 'code', title: '邀请码', minWidth: 140 },
+                { field: 'rate', title: '分润比例', width: 130 },
+                { field: 'register_count', title: '注册人数', width: 110 },
+                { field: 'status_text', title: '状态', width: 100 },
+                { field: 'created_at', title: '创建时间', minWidth: 180 },
+                {
+                    fixed: 'right', title: '操作', width: 150,
+                    templet: function (d) {
+                        var toggleClass = d.is_valid ? 'layui-btn-danger' : 'layui-btn-normal';
+                        var toggleText = d.is_valid ? '作废' : '启用';
+                        return '<div class="layui-btn-container">'
+                            + '<button class="layui-btn layui-btn-xs" lay-event="show">显示</button>'
+                            + '<button class="layui-btn layui-btn-xs ' + toggleClass + '" lay-event="toggle">' + toggleText + '</button>'
+                            + '</div>';
+                    }
                 }
+            ]],
+            page: false,
+            height: 'full-260'
+        });
 
-                var inviteLink = res.invite_link || '';
-                document.getElementById('invite-code').value = res.invite_code || '';
-                document.getElementById('invite-link').value = inviteLink;
+        function reloadInviteTable() {
+            tableIns.reload();
+        }
 
-                var qrContainer = document.getElementById('invite-qrcode');
-                qrContainer.innerHTML = '';
-                if (inviteLink && window.QRCode) {
-                    new QRCode(qrContainer, {
-                        text: inviteLink,
-                        width: 180,
-                        height: 180,
-                    });
+        function showInvitePopup(data) {
+            layer.open({
+                title: '邀请码详情',
+                type: 1,
+                area: ['460px', '520px'],
+                content: `
+                    <div class="invite-popup">
+                        <div id="invite-popup-qrcode" class="invite-qrcode"></div>
+                        <div class="invite-link-wrap">
+                            <input type="text" id="popup-invite-link" readonly class="layui-input layui-disabled" value="${data.invite_link || ''}">
+                        </div>
+                        <button type="button" class="layui-btn layui-btn-primary" id="popup-copy-btn" style="margin-top: 16px;">复制链接</button>
+                    </div>
+                `,
+                success: function () {
+                    var qrContainer = document.getElementById('invite-popup-qrcode');
+                    if (qrContainer && data.invite_link && window.QRCode) {
+                        qrContainer.innerHTML = '';
+                        new QRCode(qrContainer, {
+                            text: data.invite_link,
+                            width: 180,
+                            height: 180,
+                        });
+                    }
+                    var copyBtn = document.getElementById('popup-copy-btn');
+                    if (copyBtn) {
+                        copyBtn.addEventListener('click', async function () {
+                            var input = document.getElementById('popup-invite-link');
+                            try {
+                                await navigator.clipboard.writeText(input.value || '');
+                                layer.msg('复制成功', { icon: 1 });
+                            } catch (err) {
+                                input.select();
+                                document.execCommand('copy');
+                                layer.msg('复制成功', { icon: 1 });
+                            }
+                        });
+                    }
                 }
             });
+        }
 
-        document.getElementById('copy-invite-link-btn').addEventListener('click', async function () {
-            var linkInput = document.getElementById('invite-link');
-            var inviteLink = (linkInput && linkInput.value) || '';
-            if (!inviteLink) {
-                layer.msg('邀请链接为空', { icon: 0 });
-                return;
-            }
-            try {
-                await navigator.clipboard.writeText(inviteLink);
-                layer.msg('复制成功', { icon: 1 });
-            } catch (err) {
-                linkInput.select();
-                document.execCommand('copy');
-                layer.msg('复制成功', { icon: 1 });
+        document.getElementById('add-invite-btn').addEventListener('click', function () {
+            layer.open({
+                title: '新增邀请码',
+                type: 1,
+                area: ['420px', '220px'],
+                content: `
+                    <form class="layui-form" lay-filter="invite-create-form" style="padding:20px;">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">分润比例</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="rate" placeholder="请输入分润比例，如 10 或 10%" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item" style="margin-bottom:0; text-align:right;">
+                            <button class="layui-btn" lay-submit lay-filter="invite-create-submit">保存</button>
+                        </div>
+                    </form>
+                `,
+                success: function () {
+                    form.render();
+                }
+            });
+        });
+
+        form.on('submit(invite-create-submit)', function (data) {
+            fetch('/api/invite-codes/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data.field)
+            }).then(function (response) {
+                return response.json().then(function (res) { return { ok: response.ok, body: res }; });
+            }).then(function (result) {
+                if (result.ok) {
+                    layer.closeAll();
+                    layer.msg(result.body.message || '新增成功', { icon: 1 });
+                    reloadInviteTable();
+                } else {
+                    layer.msg(result.body.message || '新增失败', { icon: 5 });
+                }
+            });
+            return false;
+        });
+
+        table.on('tool(invite-list)', function (obj) {
+            var data = obj.data;
+            if (obj.event === 'show') {
+                showInvitePopup(data);
+            } else if (obj.event === 'toggle') {
+                fetch('/api/invite-codes/' + data.id + '/toggle-status/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                }).then(function (response) {
+                    return response.json().then(function (res) { return { ok: response.ok, body: res }; });
+                }).then(function (result) {
+                    if (result.ok) {
+                        layer.msg(result.body.message || '操作成功', { icon: 1 });
+                        reloadInviteTable();
+                    } else {
+                        layer.msg(result.body.message || '操作失败', { icon: 5 });
+                    }
+                });
             }
         });
     });

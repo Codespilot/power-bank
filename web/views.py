@@ -4,7 +4,7 @@ from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.views import View
 from django.views.generic import TemplateView
-from api.models import User, UserRole
+from api.models import InviteCode, User, UserRole
 from api.auth import new_captcha_code
 
 class HomePageView(TemplateView):
@@ -80,17 +80,22 @@ class RegisterPageView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        invite_code = str(self.request.GET.get("invite_code", "")).strip().lower()
+        invite_code = str(self.request.GET.get("invite_code") or "").strip().lower()
+        invite_record = None
         invite_owner = None
         invite_error = ""
 
         if invite_code:
             if len(invite_code) == 8 and invite_code.isalnum() and invite_code == invite_code.lower():
-                invite_owner = User.objects.filter(invite_code=invite_code).first()
-                if not invite_owner:
+                invite_record = InviteCode.objects.select_related("user").filter(code=invite_code, is_valid=True).first()
+                if not invite_record:
                     invite_error = "邀请码无效，请确认后重试"
+                else:
+                    invite_owner = invite_record.user
             else:
                 invite_error = "邀请码无效，请确认后重试"
+        else:
+            invite_error = "邀请码无效，请通过邀请链接注册"
 
         if invite_error:
             invite_code = ""

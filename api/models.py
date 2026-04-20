@@ -6,6 +6,16 @@ import string
 
 from django.utils import timezone
 
+
+def _generate_unique_invite_code(model_cls):
+    alphabet = string.ascii_lowercase + string.digits
+    for _ in range(20):
+        code = "".join(secrets.choice(alphabet) for _ in range(8))
+        if not model_cls.objects.filter(code=code).exists():
+            return code
+    raise ValueError("无法生成唯一邀请码")
+
+
 class BaseEntity(models.Model):
     class Meta:
         abstract = True
@@ -17,7 +27,7 @@ class User(BaseEntity):
     fullname = models.CharField(max_length=64, default="")
     phone = models.CharField(max_length=11, unique=True)
     email = models.CharField(max_length=255, unique=True, null=True, blank=True)
-    invite_code = models.CharField(max_length=8, unique=True, null=True, blank=True)
+    invite_code = models.CharField(max_length=8, null=True, blank=True)
     password_hash = models.CharField(max_length=512)
     password_salt = models.CharField(max_length=64)
     locked_out = models.DateTimeField(null=True, blank=True)
@@ -34,17 +44,8 @@ class User(BaseEntity):
     created_at = models.DateTimeField(default=timezone.now)
 
     def save(self, *args, **kwargs):
-        if not self.invite_code:
-            alphabet = string.ascii_lowercase + string.digits
-            for _ in range(20):
-                code = "".join(secrets.choice(alphabet) for _ in range(8))
-                if not User.objects.filter(invite_code=code).exclude(pk=self.pk).exists():
-                    self.invite_code = code
-                    break
-            else:
-                raise ValueError("无法生成唯一邀请码")
-        else:
-            self.invite_code = str(self.invite_code).strip().lower()
+        normalized_invite_code = str(self.invite_code or "").strip().lower()
+        self.invite_code = normalized_invite_code or None
         super().save(*args, **kwargs)
 
     class Meta:
@@ -194,6 +195,27 @@ class ProfitAllocation(BaseEntity):
 
     class Meta:
         db_table = "profit_allocation"
+        app_label = "api"
+
+
+class InviteCode(BaseEntity):
+    id = models.BigIntegerField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="invite_codes")
+    code = models.CharField(max_length=8, unique=True)
+    rate = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
+    register_count = models.IntegerField(default=0)
+    is_valid = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = _generate_unique_invite_code(InviteCode)
+        else:
+            self.code = str(self.code).strip().lower()
+        super().save(*args, **kwargs)
+
+    class Meta:
+        db_table = "invite_code"
         app_label = "api"
 
 

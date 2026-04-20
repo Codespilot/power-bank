@@ -4,39 +4,39 @@
 {% block content %}
 
 <div style="display: flex; justify-content: space-between; flex-wrap: nowrap; gap: 12px;">
-  <form class="layui-form layui-row layui-col-space16" style="width: 100%;">
-    <div class="layui-col-md6">
-      <div class="layui-form-item">
-        <div class="layui-inline">
-          <label class="layui-form-label" style="width: 100px;">导入日期</label>
-          <div class="layui-inline" id="import-date-range">
-            <div class="layui-input-inline">
-              <input type="text" name="date_start" autocomplete="off" id="import-date-start" class="layui-input"
-                placeholder="开始日期">
-            </div>
-            <div class="layui-form-mid">-</div>
-            <div class="layui-input-inline">
-              <input type="text" name="date_end" autocomplete="off" id="import-date-end" class="layui-input"
-                placeholder="结束日期">
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="layui-col-md2">
-      <div class="layui-form-item">
-        <button class="layui-btn layui-btn-primary" lay-submit lay-filter="btn-search">
-          <i class="layui-icon layui-icon-search"></i> 查询
-        </button>
-      </div>
-    </div>
-  </form>
+	<form class="layui-form layui-row layui-col-space16" style="width: 100%;">
+		<div class="layui-col-md6">
+			<div class="layui-form-item">
+				<div class="layui-inline">
+					<label class="layui-form-label" style="width: 100px;">导入日期</label>
+					<div class="layui-inline" id="import-date-range">
+						<div class="layui-input-inline">
+							<input type="text" name="date_start" autocomplete="off" id="import-date-start"
+								class="layui-input" placeholder="开始日期">
+						</div>
+						<div class="layui-form-mid">-</div>
+						<div class="layui-input-inline">
+							<input type="text" name="date_end" autocomplete="off" id="import-date-end"
+								class="layui-input" placeholder="结束日期">
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="layui-col-md2">
+			<div class="layui-form-item">
+				<button class="layui-btn layui-btn-primary" lay-submit lay-filter="btn-search">
+					<i class="layui-icon layui-icon-search"></i> 查询
+				</button>
+			</div>
+		</div>
+	</form>
 
-  <div style="display: flex; gap: 8px; white-space: nowrap;">
-    <button type="button" class="layui-btn" id="import-order-btn">
-      <i class="layui-icon layui-icon-upload"></i> 导入订单
-    </button>
-  </div>
+	<div style="display: flex; gap: 8px; white-space: nowrap;">
+		<button type="button" class="layui-btn" id="import-order-btn">
+			<i class="layui-icon layui-icon-upload"></i> 导入订单
+		</button>
+	</div>
 </div>
 
 <table class="layui-hide" id="list"></table>
@@ -44,82 +44,84 @@
 {% endblock %}
 {% block extra_js %}
 <script>
-  layui.use(function () {
-    var table = layui.table;
-    var laydate = layui.laydate;
-    var upload = layui.upload;
-    form = layui.form;
-    // 初始化日期范围选择器
-    laydate.render({
-      elem: '#import-date-range',
-      range: ['#import-date-start', '#import-date-end'],
-      rangeLinked: true,
-      done: function (value, date, endDate) {
-        // 日期选择完成后的回调，可以在这里处理日期范围的值
-        console.log('Selected date range:', value);
-      }
-    });
+	layui.use(function () {
+		var table = layui.table;
+		var laydate = layui.laydate;
+		var upload = layui.upload;
+		form = layui.form;
+		// 初始化日期范围选择器
+		laydate.render({
+			elem: '#import-date-range',
+			range: ['#import-date-start', '#import-date-end'],
+			rangeLinked: true,
+			done: function (value, date, endDate) {
+				// 日期选择完成后的回调，可以在这里处理日期范围的值
+				console.log('Selected date range:', value);
+			}
+		});
 
-    form.on('submit(btn-search)', function (data) {
-      console.log('搜索条件:', data.field);
-      var field = data.field; // 获得表单字段
-      // 执行搜索重载
-      table.reload('list', {
-        page: {
-          curr: 1 // 重新从第 1 页开始
-        },
-        where: field // 搜索的字段
-      });
-      return false; // 阻止默认 form 跳转
-    });
+		form.on('submit(btn-search)', function (data) {
+			console.log('搜索条件:', data.field);
+			var field = data.field; // 获得表单字段
+			// 执行搜索重载
+			table.reload('list', {
+				page: {
+					curr: 1 // 重新从第 1 页开始
+				},
+				where: field // 搜索的字段
+			});
+			return false; // 阻止默认 form 跳转
+		});
 
-    table.render({
-      elem: '#list',
-      url: '/api/order-imports/',
-      response: {
-        statusCode: 200 // 重新规定成功的状态码为 200，table 组件默认为 0
-      },
-      parseData: function (res) {
-        return {
-          "code": 200, //解析接口状态
-          "msg": res.message, //解析提示文本
-          "count": res.count, //解析数据长度
-          "data": res.results //解析数据列表
-        };
-      },
-      cols: [[
-        { field: 'id', title: 'ID', width: 200 },
-        { field: 'file_name', title: '文件名' },
-        { field: 'status', title: '状态', align: 'center', width: 180, templet: function(d){ 
-          switch(d.status){
-            case 1: return '待处理';
-            case 2: return '处理中';
-            case 3: 
-            case 4: return '已完成';
-            default: return d.status;
-          }
-        } },
-        { field: 'succeed_rows', title: '成功行数', width: 180, align: 'center' },
-        { field: 'failed_rows', title: '失败行数', width: 180, align: 'center' },
-        { field: 'created_at', title: '导入时间', width: 180, align: 'center' }
-      ]],
-      page: true,
-      limit: 20,
-      limits: [10, 20, 50, 100],
-    });
+		table.render({
+			elem: '#list',
+			url: '/api/order-imports/',
+			response: {
+				statusCode: 200 // 重新规定成功的状态码为 200，table 组件默认为 0
+			},
+			parseData: function (res) {
+				return {
+					"code": 200, //解析接口状态
+					"msg": res.message, //解析提示文本
+					"count": res.count, //解析数据长度
+					"data": res.results //解析数据列表
+				};
+			},
+			cols: [[
+				{ field: 'id', title: 'ID', width: 200 },
+				{ field: 'file_name', title: '文件名' },
+				{
+					field: 'status', title: '状态', align: 'center', width: 180, templet: function (d) {
+						switch (d.status) {
+							case 1: return '待处理';
+							case 2: return '处理中';
+							case 3:
+							case 4: return '已完成';
+							default: return d.status;
+						}
+					}
+				},
+				{ field: 'succeed_rows', title: '成功行数', width: 180, align: 'center' },
+				{ field: 'failed_rows', title: '失败行数', width: 180, align: 'center' },
+				{ field: 'created_at', title: '导入时间', width: 180, align: 'center' }
+			]],
+			page: true,
+			limit: 20,
+			limits: [10, 20, 50, 100],
+		});
 
-    upload.render({
-      elem: '#import-order-btn',
-      url: '/api/order-imports/',
-      accept: 'file', // 普通文件
-      headers: {
-        'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : ''
-      },
-      done: function (res) {
-        layer.msg('上传成功');
-        table.reload('list'); // 上传成功后刷新表格数据
-      }
-    });
-  });
+		upload.render({
+			elem: '#import-order-btn',
+			url: '/api/order-imports/',
+			accept: 'file', // 普通文件
+			headers: {
+				'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : ''
+			},
+			done: function (res) {
+				layer.msg('上传成功');
+				table.reload('list'); // 上传成功后刷新表格数据
+			}
+		});
+	});
 </script>
 {% endblock %}

@@ -73,6 +73,44 @@ class LoginPageView(TemplateView):
         return context
 
 
+class RegisterPageView(TemplateView):
+    template_name = "web/register.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        invite_code = str(self.request.GET.get("invite_code", "")).strip().lower()
+        invite_owner = None
+        invite_error = ""
+
+        if invite_code:
+            if len(invite_code) == 8 and invite_code.isalnum() and invite_code == invite_code.lower():
+                invite_owner = User.objects.filter(invite_code=invite_code).first()
+                if not invite_owner:
+                    invite_error = "邀请码无效，请确认后重试"
+            else:
+                invite_error = "邀请码无效，请确认后重试"
+
+        if invite_error:
+            invite_code = ""
+
+        display_name = ""
+        if invite_owner:
+            name = (invite_owner.fullname or "").strip() or invite_owner.username
+            phone = (invite_owner.phone or "").strip()
+            display_name = f"{name}（{phone}）" if phone else name
+
+        context.update(
+            {
+                "invite_code": invite_code,
+                "invite_owner_display": display_name,
+                "invite_error": invite_error,
+                "current_user": None,
+                "user_is_admin": False,
+            }
+        )
+        return context
+
+
 class CaptchaImageView(View):
     def get(self, request):
         code = new_captcha_code()

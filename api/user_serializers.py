@@ -39,7 +39,7 @@ class UserListSerializer(SafeBigIntModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "fullname", "phone", "email", "superior_id", "superior_phone", "superior_agent", "agent_rate", "created_at", "total_asset", "locked_out"]
+        fields = ["id", "username", "fullname", "phone", "email", "invite_code", "superior_id", "superior_phone", "superior_agent", "agent_rate", "created_at", "total_asset", "locked_out"]
 
     def get_total_asset(self, obj):
         asset = UserAsset.objects.filter(id=obj.id).first()
@@ -74,7 +74,7 @@ class UserDetailSerializer(SafeBigIntModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "fullname", "phone", "email", "superior_id", "superior_phone", "superior_agent", "agent_rate", "created_at", "total_asset"]
+        fields = ["id", "username", "fullname", "phone", "email", "invite_code", "superior_id", "superior_phone", "superior_agent", "agent_rate", "created_at", "total_asset"]
 
     def get_total_asset(self, obj):
         asset = UserAsset.objects.filter(id=obj.id).first()

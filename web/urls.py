@@ -1,10 +1,12 @@
 from django.urls import path
 
-from .views import CaptchaImageView, HomePageView, LoginPageView, LogoutView, UserListPageView, MerchantListPageView, MerchantHistoryPageView, ProfitListPageView, ProfilePageView, OrderListPageView, OrderImportListPageView
+from .views import CaptchaImageView, HomePageView, LoginPageView, RegisterPageView, LogoutView, UserListPageView, MerchantListPageView, MerchantHistoryPageView, ProfitListPageView, ProfilePageView, OrderListPageView, OrderImportListPageView
 
 urlpatterns = [
     path("", HomePageView.as_view(), name="home"),
     path("login", LoginPageView.as_view(), name="login"),
+    path("register", RegisterPageView.as_view(), name="register"),
+    path("register/", RegisterPageView.as_view()),
     path("login/captcha/", CaptchaImageView.as_view(), name="login-captcha"),
     path("logout", LogoutView.as_view(), name="logout"),
     path("logout/", LogoutView.as_view()),

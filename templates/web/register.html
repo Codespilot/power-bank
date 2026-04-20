@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户注册 - Power Bank</title>
+    <link href="//unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
+    <script src="//unpkg.com/layui@2.13.4/dist/layui.js"></script>
+</head>
+
+<body>
+    <div class="register-page">
+        <form id="register-form" class="layui-form" action="">
+            <div class="demo-register-container">
+                <h2 class="register-title">用户注册</h2>
+                {% if invite_error %}
+                <div class="layui-bg-red-light register-tip">{{ invite_error }}</div>
+                {% elif invite_owner_display %}
+                <div class="layui-bg-blue-light register-tip">邀请人：{{ invite_owner_display }}</div>
+                {% endif %}
+
+                <input type="hidden" name="invite_code" value="{{ invite_code|default:'' }}">
+
+                <div class="layui-form-item">
+                    <input type="text" name="username" placeholder="用户名" autocomplete="off" class="layui-input">
+                </div>
+                <div class="layui-form-item">
+                    <input type="text" name="fullname" placeholder="姓名" autocomplete="off" class="layui-input">
+                </div>
+                <div class="layui-form-item">
+                    <input type="text" name="phone" placeholder="手机号" autocomplete="off" class="layui-input">
+                </div>
+                <div class="layui-form-item superior-phone-item" {% if invite_owner_display %}style="display:none;"{% endif %}>
+                    <input type="text" name="superior_phone" placeholder="上级代理商手机号" autocomplete="off" class="layui-input">
+                </div>
+                <div class="layui-form-item">
+                    <input type="password" name="password" placeholder="密码" autocomplete="off" class="layui-input">
+                </div>
+                <div class="layui-form-item">
+                    <input type="password" name="confirm_password" placeholder="确认密码" autocomplete="off" class="layui-input">
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-row">
+                        <div class="layui-col-xs7">
+                            <input type="text" name="captcha" placeholder="图形验证码" autocomplete="off" class="layui-input">
+                        </div>
+                        <div class="layui-col-xs5">
+                            <div style="margin-left: 10px;">
+                                <img id="register-captcha-img" src="/login/captcha/" alt="验证码" class="captcha-image"
+                                    title="点击刷新验证码" onclick="this.src='/login/captcha/?t=' + Date.now();">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <button type="submit" class="layui-btn layui-btn-fluid" lay-submit lay-filter="btn-register" {% if invite_error %}disabled{% endif %}>注册</button>
+                </div>
+                <div class="register-footer">
+                    已有账号？<a href="/login">去登录</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        .register-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            box-sizing: border-box;
+            background: #f8fafc;
+        }
+        .demo-register-container {
+            width: 360px;
+            padding: 24px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
+        }
+        .register-title {
+            margin: 0 0 16px;
+            text-align: center;
+        }
+        .register-tip {
+            margin-bottom: 16px;
+            padding: 10px 12px;
+            border-radius: 6px;
+        }
+        .register-footer {
+            text-align: center;
+            color: #666;
+        }
+        .register-footer a {
+            color: #1E9FFF;
+        }
+        .captcha-image {
+            width: 100%;
+            height: 38px;
+            object-fit: cover;
+            border: 1px solid #dbe3f0;
+            cursor: pointer;
+            background: #edf3ff;
+        }
+    </style>
+
+    <script>
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) {
+                return parts.pop().split(';').shift();
+            }
+            return '';
+        }
+
+        layui.use(function () {
+            var form = layui.form;
+            var layer = layui.layer;
+            var registerForm = document.getElementById('register-form');
+
+            async function submitRegister(payload) {
+                const response = await fetch('/api/auth/register/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(payload),
+                });
+
+                const res = await response.json();
+                if (response.ok) {
+                    layer.msg(res.message || '注册成功', { icon: 1 });
+                    window.setTimeout(() => window.location.href = '/login', 700);
+                } else {
+                    layer.msg(res.message || '注册失败', { icon: 5 });
+                    const captchaImg = document.getElementById('register-captcha-img');
+                    if (captchaImg) {
+                        captchaImg.src = '/login/captcha/?t=' + Date.now();
+                    }
+                }
+                return false;
+            }
+
+            form.on('submit(btn-register)', function (data) {
+                submitRegister(data.field);
+                return false;
+            });
+
+            if (registerForm) {
+                registerForm.addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    const formData = new FormData(registerForm);
+                    submitRegister(Object.fromEntries(formData.entries()));
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

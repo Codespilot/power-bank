@@ -5,11 +5,17 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.auth import EMAIL_REGEX, MOBILE_REGEX, get_request_user_id, hash_password, verify_password
+from django.http import HttpRequest
 from .models import User, UserRole
 from .user_serializers import _format_agent_rate, _get_superior_agent_display
 
 
 class CurrentUserProfileView(APIView):
+    def _build_invite_link(self, request: HttpRequest, user: User) -> str:
+        scheme = "https" if request.is_secure() else "http"
+        host = request.get_host() or "localhost"
+        return f"{scheme}://{host}/register?invite_code={user.invite_code}"
+
     def _get_current_user(self, request):
         user_id = get_request_user_id(request)
         if not user_id:
@@ -22,6 +28,7 @@ class CurrentUserProfileView(APIView):
             return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
 
         is_admin = UserRole.objects.filter(user_id=user.id, role=UserRole.ROLE_ADMIN).exists()
+        invite_link = self._build_invite_link(request, user)
         return Response(
             {
                 "id": str(user.id),
@@ -29,6 +36,8 @@ class CurrentUserProfileView(APIView):
                 "fullname": user.fullname or "",
                 "phone": user.phone or "",
                 "email": user.email or "",
+                "invite_code": user.invite_code or "",
+                "invite_link": invite_link,
                 "superior_agent": _get_superior_agent_display(user),
                 "agent_rate": _format_agent_rate(user.agent_rate, bool(user.agent_id)),
                 "user_is_admin": is_admin,

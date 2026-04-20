@@ -4,13 +4,14 @@ from .merchant_views import MerchantAssignAgentView, MerchantBatchAssignAgentVie
 from .profile_views import CurrentUserPasswordView, CurrentUserProfileView
 from .profit_views import ProfitListView
 from .views import HealthCheckView, ItemListCreateView
-from .user_views import AgentSaveView, LoginAPIView, TokenGrantView, TokenRefreshView, UserListView, UserCreateView, UserDetailView, UserResetPasswordView
+from .user_views import AgentSaveView, LoginAPIView, RegisterAPIView, TokenGrantView, TokenRefreshView, UserListView, UserCreateView, UserDetailView, UserResetPasswordView
 from .order_views import MerchantOrderListView, OrderImportListCreateView, OrderImportRunningCountView
 
 urlpatterns = [
     path("health/", HealthCheckView.as_view(), name="api-health"),
     path("items/", ItemListCreateView.as_view(), name="api-items"),
     path("auth/login/", LoginAPIView.as_view(), name="api-auth-login"),
+    path("auth/register/", RegisterAPIView.as_view(), name="api-auth-register"),
     path("token/grant", TokenGrantView.as_view(), name="api-token-grant"),
     path("token/grant/", TokenGrantView.as_view()),
     path("token/refresh", TokenRefreshView.as_view(), name="api-token-refresh"),

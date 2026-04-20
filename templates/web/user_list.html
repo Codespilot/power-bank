@@ -55,6 +55,7 @@
                 { field: 'fullname', title: '姓名', width: 140 },
                 { field: 'phone', title: '手机号', width: 140, sort: false },
                 { field: 'email', title: '邮箱', minWidth: 180 },
+                { field: 'invite_code', title: '邀请码', width: 120 },
                 { field: 'superior_agent', title: '上一级代理商', minWidth: 200 },
                 { field: 'agent_rate', title: '代理商分润比例', width: 130 },
                 { field: 'created_at', title: '注册时间', width: 180 },
@@ -111,6 +112,12 @@
                                 <label class="layui-form-label">手机号</label>
                                 <div class="layui-input-block">
                                     <input type="text" value="${u.phone}" class="layui-input" readonly>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">邀请码</label>
+                                <div class="layui-input-block">
+                                    <input type="text" value="${u.invite_code || '--'}" class="layui-input" readonly>
                                 </div>
                             </div>
                             <div class="layui-form-item">

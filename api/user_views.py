@@ -1,4 +1,5 @@
 from decimal import Decimal
+import re
 from urllib.parse import urlparse
 
 from rest_framework import generics, status
@@ -13,7 +14,7 @@ from django.utils import timezone
 from .models import AgentHistory, User, UserAsset
 from .user_serializers import UserListSerializer, UserCreateSerializer, UserDetailSerializer
 from utils.generate_snowflake_id import generate_snowflake_id
-from .auth import compute_lock_until, create_access_token, create_refresh_token, decode_jwt, get_user_by_identifier, is_valid_username, verify_password
+from .auth import EMAIL_REGEX, MOBILE_REGEX, compute_lock_until, create_access_token, create_refresh_token, decode_jwt, get_user_by_identifier, is_valid_username, verify_password
 
 
 def _authenticate_credentials(request, use_session_captcha: bool):
@@ -146,6 +147,81 @@ class TokenRefreshView(APIView):
         )
 
 
+def _resolve_superior_user(agent_phone: str = "", invite_code: str = ""):
+    invite_code = str(invite_code or "").strip().lower()
+    agent_phone = str(agent_phone or "").strip()
+
+    if invite_code:
+        if not re.fullmatch(r"[a-z0-9]{8}", invite_code):
+            raise ValueError("邀请码无效")
+        superior_user = User.objects.filter(invite_code=invite_code).first()
+        if not superior_user:
+            raise ValueError("邀请码无效")
+        return superior_user
+
+    if agent_phone:
+        superior_user = User.objects.filter(phone=agent_phone).first()
+        if not superior_user:
+            raise ValueError(f"无法找到对应的用户{agent_phone}")
+        return superior_user
+
+    return None
+
+
+def _create_user_account(data, *, invite_code: str = ""):
+    raw_username = str(data.get('username', ''))
+    username = ''.join(raw_username.split()).lower()
+    fullname = str(data.get('fullname', '')).strip()
+    phone = str(data.get('phone', '')).strip()
+    email = str(data.get('email', '')).strip()
+    agent_phone = str(data.get('agent_phone') or data.get('agent_mobile') or data.get('superior_phone') or '').strip()
+    agent_rate_raw = str(data.get('agent_rate', '')).strip()
+
+    if not re.match(r'^[a-z0-9_]{4,32}$', username):
+        raise ValueError('用户名格式错误，仅支持4-32位小写字母、数字和下划线')
+    if User.objects.filter(username=username).exists():
+        raise ValueError('用户名已存在')
+    if not fullname:
+        raise ValueError('姓名不能为空')
+    if not MOBILE_REGEX.fullmatch(phone):
+        raise ValueError('手机号格式错误')
+    if User.objects.filter(phone=phone).exists():
+        raise ValueError('手机号已存在')
+    if email:
+        if not EMAIL_REGEX.fullmatch(email):
+            raise ValueError('邮箱格式错误')
+        if User.objects.filter(email=email).exists():
+            raise ValueError('邮箱已存在')
+
+    superior_user = _resolve_superior_user(agent_phone=agent_phone, invite_code=invite_code)
+    agent_rate = Decimal('0.00')
+    if superior_user and agent_rate_raw:
+        agent_rate = _parse_agent_rate(agent_rate_raw)
+
+    password = str(data.get('password', '')).strip()
+    if not password or len(password) < 6:
+        raise ValueError('密码至少6位')
+
+    from api.auth import hash_password
+    password_hash, password_salt = hash_password(password)
+
+    with transaction.atomic():
+        user = User.objects.create(
+            id=generate_snowflake_id(),
+            username=username,
+            fullname=fullname,
+            phone=phone,
+            email=email or None,
+            password_hash=password_hash,
+            password_salt=password_salt,
+            agent=superior_user,
+            agent_rate=agent_rate if superior_user else Decimal('0.00'),
+            created_at=timezone.now()
+        )
+        UserAsset.objects.create(id=user.id)
+    return user
+
+
 class UserListPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = 'limit'
@@ -256,69 +332,35 @@ class UserCreateView(generics.CreateAPIView):
     serializer_class = UserCreateSerializer
 
     def create(self, request, *args, **kwargs):
-        data = request.data
-        raw_username = str(data.get('username', ''))
-        username = ''.join(raw_username.split()).lower()
-        fullname = data.get('fullname', '').strip()
-        phone = data.get('phone', '').strip()
-        email = data.get('email', '').strip()
-        agent_phone = (data.get('agent_phone') or data.get('agent_mobile') or '').strip()
-        agent_rate_raw = str(data.get('agent_rate', '')).strip()
-        # 校验用户名
-        import re
-        if not re.match(r'^[a-z0-9_]{4,32}$', username):
-            return Response({'message': '用户名格式错误，仅支持4-32位小写字母、数字和下划线'}, status=status.HTTP_400_BAD_REQUEST)
-        if User.objects.filter(username=username).exists():
-            return Response({'message': '用户名已存在'}, status=status.HTTP_400_BAD_REQUEST)
-        if not fullname:
-            return Response({'message': '姓名不能为空'}, status=status.HTTP_400_BAD_REQUEST)
-        # 校验手机号
-        if not re.match(r'^1[3-9]\d{9}$', phone):
-            return Response({'message': '手机号格式错误'}, status=status.HTTP_400_BAD_REQUEST)
-        if User.objects.filter(phone=phone).exists():
-            return Response({'message': '手机号已存在'}, status=status.HTTP_400_BAD_REQUEST)
-        # 校验邮箱
-        if email:
-            if not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
-                return Response({'message': '邮箱格式错误'}, status=status.HTTP_400_BAD_REQUEST)
-            if User.objects.filter(email=email).exists():
-                return Response({'message': '邮箱已存在'}, status=status.HTTP_400_BAD_REQUEST)
-        superior_user = None
-        agent_rate = Decimal('0.00')
-        if agent_phone:
-            superior_user = User.objects.filter(phone=agent_phone).first()
-            if not superior_user:
-                return Response({'message': f'无法找到对应的用户{agent_phone}'}, status=status.HTTP_400_BAD_REQUEST)
-            if agent_rate_raw:
-                try:
-                    agent_rate = _parse_agent_rate(agent_rate_raw)
-                except Exception as exc:
-                    return Response({'message': str(exc) or '分润比例格式错误'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 密码
-        password = data.get('password', '').strip()
-        if not password or len(password) < 6:
-            return Response({'message': '密码至少6位'}, status=status.HTTP_400_BAD_REQUEST)
-        # 密码加密
-        from api.auth import hash_password
-        password_hash, password_salt = hash_password(password)
-
-        with transaction.atomic():
-            user = User.objects.create(
-                id=generate_snowflake_id(),
-                username=username,
-                fullname=fullname,
-                phone=phone,
-                email=email or None,
-                password_hash=password_hash,
-                password_salt=password_salt,
-                agent=superior_user,
-                agent_rate=agent_rate if superior_user else Decimal('0.00'),
-                created_at=timezone.now()
-            )
-            # 创建资产
-            UserAsset.objects.create(id=user.id)
+        try:
+            user = _create_user_account(request.data)
+        except Exception as exc:
+            return Response({'message': str(exc) or '创建失败'}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'message': '创建成功', 'id': str(user.id)}, status=status.HTTP_201_CREATED)
+
+class RegisterAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        captcha = str(request.data.get('captcha', '')).strip()
+        session_captcha = str(request.session.get('login_captcha_code', '')).strip()
+        if not session_captcha or captcha != session_captcha:
+            return Response({'message': '验证码错误'}, status=status.HTTP_400_BAD_REQUEST)
+
+        password = str(request.data.get('password', '')).strip()
+        confirm_password = str(request.data.get('confirm_password', '')).strip()
+        if password != confirm_password:
+            return Response({'message': '两次输入的密码不一致'}, status=status.HTTP_400_BAD_REQUEST)
+
+        invite_code = str(request.data.get('invite_code', '')).strip().lower()
+        try:
+            user = _create_user_account(request.data, invite_code=invite_code)
+        except Exception as exc:
+            return Response({'message': str(exc) or '注册失败'}, status=status.HTTP_400_BAD_REQUEST)
+
+        request.session.pop('login_captcha_code', None)
+        return Response({'message': '注册成功', 'id': str(user.id)})
+
 
 class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.select_related('agent').all()

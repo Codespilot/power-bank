@@ -1,6 +1,8 @@
 from django.db import models
 
 from decimal import Decimal
+import secrets
+import string
 
 from django.utils import timezone
 
@@ -15,6 +17,7 @@ class User(BaseEntity):
     fullname = models.CharField(max_length=64, default="")
     phone = models.CharField(max_length=11, unique=True)
     email = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    invite_code = models.CharField(max_length=8, unique=True, null=True, blank=True)
     password_hash = models.CharField(max_length=512)
     password_salt = models.CharField(max_length=64)
     locked_out = models.DateTimeField(null=True, blank=True)
@@ -29,6 +32,20 @@ class User(BaseEntity):
     )
     agent_rate = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
     created_at = models.DateTimeField(default=timezone.now)
+
+    def save(self, *args, **kwargs):
+        if not self.invite_code:
+            alphabet = string.ascii_lowercase + string.digits
+            for _ in range(20):
+                code = "".join(secrets.choice(alphabet) for _ in range(8))
+                if not User.objects.filter(invite_code=code).exclude(pk=self.pk).exists():
+                    self.invite_code = code
+                    break
+            else:
+                raise ValueError("无法生成唯一邀请码")
+        else:
+            self.invite_code = str(self.invite_code).strip().lower()
+        super().save(*args, **kwargs)
 
     class Meta:
         db_table = "user"

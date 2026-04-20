@@ -1,0 +1,232 @@
+{% extends "web/base.html" %}
+{% block title %}我的钱包{% endblock %}
+{% block header %}我的钱包{% endblock %}
+
+{% block content %}
+<style>
+    .wallet-overview {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+
+    .wallet-stat {
+        background: linear-gradient(135deg, #f8fbff, #eef4ff);
+        border: 1px solid #e4edff;
+        border-radius: 12px;
+        padding: 18px 20px;
+    }
+
+    .wallet-stat-label {
+        color: #6b7280;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+
+    .wallet-stat-value {
+        color: #1d4ed8;
+        font-size: 28px;
+        font-weight: 700;
+    }
+
+    .wallet-action-box {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        border: 1px dashed #c9d8ff;
+        border-radius: 12px;
+        padding: 18px 20px;
+        background: #fcfdff;
+        gap: 11px;
+    }
+
+    .wallet-action-desc {
+        color: #6b7280;
+        margin: 8px 0 16px;
+        line-height: 1.8;
+    }
+</style>
+
+<div class="layui-row layui-col-space16">
+    <div class="layui-col-md8">
+        <div class="wallet-overview">
+            <div class="wallet-stat">
+                <div class="wallet-stat-label">总金额</div>
+                <div class="wallet-stat-value" id="wallet-total-amount">0.00</div>
+            </div>
+            <div class="wallet-stat">
+                <div class="wallet-stat-label">冻结金额</div>
+                <div class="wallet-stat-value" id="wallet-frozen-amount">0.00</div>
+            </div>
+            <div class="wallet-stat">
+                <div class="wallet-stat-label">可用金额</div>
+                <div class="wallet-stat-value" id="wallet-available-amount">0.00</div>
+            </div>
+        </div>
+    </div>
+    <div class="layui-col-md4">
+        <div class="wallet-action-box">
+            <h3>提现申请</h3>
+            <button type="button" class="layui-btn layui-btn-normal" id="wallet-withdraw-btn">立即提现</button>
+        </div>
+    </div>
+</div>
+
+<form class="layui-form layui-row layui-col-space16" style="margin-top: 18px;">
+    <div class="layui-col-md5">
+        <div class="layui-form-item">
+            <div class="layui-inline">
+                <label class="layui-form-label" style="width: 90px;">流水日期</label>
+                <div class="layui-inline" id="wallet-date-range">
+                    <div class="layui-input-inline">
+                        <input type="text" id="wallet-date-start" class="layui-input" placeholder="开始日期" autocomplete="off">
+                    </div>
+                    <div class="layui-form-mid">-</div>
+                    <div class="layui-input-inline">
+                        <input type="text" id="wallet-date-end" class="layui-input" placeholder="结束日期" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="layui-col-md2">
+        <button type="button" class="layui-btn layui-btn-primary" id="wallet-search-btn">查询</button>
+    </div>
+</form>
+
+<table class="layui-hide" id="wallet-record-list"></table>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    layui.use(function () {
+        var table = layui.table;
+        var laydate = layui.laydate;
+        var layer = layui.layer;
+        var currentWallet = {
+            total_amount: '0.00',
+            frozen_amount: '0.00',
+            available_amount: '0.00'
+        };
+
+        function setText(id, value) {
+            document.getElementById(id).textContent = value || '0.00';
+        }
+
+        function loadWallet() {
+            fetch('/api/wallet/')
+                .then(function (response) { return response.json(); })
+                .then(function (res) {
+                    if (res.message !== '查询成功') {
+                        layer.msg(res.message || '钱包信息加载失败', { icon: 5 });
+                        return;
+                    }
+                    currentWallet = res;
+                    setText('wallet-total-amount', res.total_amount);
+                    setText('wallet-frozen-amount', res.frozen_amount);
+                    setText('wallet-available-amount', res.available_amount);
+                });
+        }
+
+        laydate.render({
+            elem: '#wallet-date-range',
+            range: ['#wallet-date-start', '#wallet-date-end'],
+            rangeLinked: true
+        });
+
+        table.render({
+            elem: '#wallet-record-list',
+            id: 'walletRecordTable',
+            url: '/api/wallet/record/',
+            response: { statusCode: 200 },
+            parseData: function (res) {
+                return {
+                    code: 200,
+                    msg: res.message || '',
+                    count: res.count || 0,
+                    data: res.results || []
+                };
+            },
+            cols: [[
+                { field: 'created_at', title: '时间', width: 180 },
+                {
+                    field: 'amount',
+                    title: '金额',
+                    width: 120,
+                    templet: function (d) {
+                        var color = Number(d.amount) < 0 ? '#e74c3c' : '#16a34a';
+                        return '<span style="color:' + color + ';font-weight:600;">' + d.amount + '</span>';
+                    }
+                },
+                { field: 'before_amount', title: '变动前金额', width: 140 },
+                { field: 'after_amount', title: '变动后金额', width: 140 },
+                { field: 'remark', title: '备注', minWidth: 260 }
+            ]],
+            page: true,
+            limit: 10,
+            limits: [10, 20, 50, 100],
+            height: 'full-360'
+        });
+
+        document.getElementById('wallet-search-btn').addEventListener('click', function () {
+            table.reload('walletRecordTable', {
+                page: { curr: 1 },
+                where: {
+                    from: document.getElementById('wallet-date-start').value,
+                    to: document.getElementById('wallet-date-end').value
+                }
+            });
+        });
+
+        document.getElementById('wallet-withdraw-btn').addEventListener('click', function () {
+            var maxAmount = Number(currentWallet.available_amount || 0);
+            if (maxAmount < 0.01) {
+                layer.msg('当前可用金额不足，暂不能提现', { icon: 5 });
+                return;
+            }
+
+            layer.open({
+                type: 1,
+                title: '提现申请',
+                area: ['420px', '220px'],
+                content: '' +
+                    '<div style="padding:20px 24px;">' +
+                    '  <div class="layui-form-item">' +
+                    '    <label class="layui-form-label" style="width:90px;">提现金额</label>' +
+                    '    <div class="layui-input-block" style="margin-left:120px;">' +
+                    '      <input id="withdraw-amount-input" type="number" min="0.01" step="0.01" max="' + maxAmount.toFixed(2) + '" class="layui-input" placeholder="最小 0.01，最大 ' + maxAmount.toFixed(2) + '">' +
+                    '    </div>' +
+                    '  </div>' +
+                    '  <div style="margin-left:120px;color:#6b7280;">可用金额：' + maxAmount.toFixed(2) + '</div>' +
+                    '</div>',
+                btn: ['提交', '取消'],
+                yes: function (index) {
+                    var input = document.getElementById('withdraw-amount-input');
+                    var amountValue = (input && input.value || '').trim();
+                    fetch('/api/wallet/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ amount: amountValue })
+                    }).then(function (response) {
+                        return response.json().then(function (data) {
+                            return { ok: response.ok, data: data };
+                        });
+                    }).then(function (result) {
+                        if (result.ok && result.data.message === '提现申请已提交') {
+                            layer.msg('提现申请已提交', { icon: 1 });
+                            layer.close(index);
+                            loadWallet();
+                            table.reload('walletRecordTable', { page: { curr: 1 } });
+                        } else {
+                            layer.msg(result.data.message || '提现申请提交失败', { icon: 5 });
+                        }
+                    });
+                }
+            });
+        });
+
+        loadWallet();
+    });
+</script>
+{% endblock %}

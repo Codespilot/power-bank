@@ -11,7 +11,7 @@ from django.db import connection, transaction
 from django.db.models import Sum
 from django.utils import timezone
 
-from .models import Merchant, MerchantOrder, ProfitAllocation, User, Wallet
+from .models import Merchant, MerchantOrder, ProfitAllocation, User, Wallet, WalletRecord
 from utils.generate_snowflake_id import generate_snowflake_id
 
 logger = logging.getLogger(__name__)
@@ -197,7 +197,7 @@ def _allocate_agent_profit(
         current_rate = rate
 
 
-def _update_wallets(allocation_deltas: dict[int, Decimal]):
+def _update_wallets(allocation_deltas: dict[int, Decimal], remark_prefix: str = "分润结算"):
     """根据当日分润差额增量更新钱包，保证重复执行不会重复入账。"""
     for user_id, delta in allocation_deltas.items():
         amount = _quantize_amount(delta)
@@ -213,9 +213,23 @@ def _update_wallets(allocation_deltas: dict[int, Decimal]):
                 "available_amount": Decimal("0.00"),
             },
         )
+        before_amount = _quantize_amount(Decimal(wallet.available_amount or 0))
+        after_amount = _quantize_amount(before_amount + amount)
+
         wallet.total_amount = _quantize_amount(Decimal(wallet.total_amount or 0) + amount)
-        wallet.available_amount = _quantize_amount(Decimal(wallet.available_amount or 0) + amount)
+        wallet.available_amount = after_amount
         wallet.save(update_fields=["total_amount", "available_amount"])
+
+        remark = f"{remark_prefix}入账" if amount > 0 else f"{remark_prefix}调整"
+        WalletRecord.objects.create(
+            id=generate_snowflake_id(),
+            user_id=user_id,
+            amount=amount,
+            before_amount=before_amount,
+            after_amount=after_amount,
+            remark=remark,
+            created_at=timezone.now(),
+        )
 
 
 def run_profit_allocation(target_date: date | None = None) -> dict:
@@ -297,7 +311,7 @@ def run_profit_allocation(target_date: date | None = None) -> dict:
             user_id: _quantize_amount(new_amounts.get(user_id, Decimal("0.00")) - existing_amounts.get(user_id, Decimal("0.00")))
             for user_id in changed_user_ids
         }
-        _update_wallets(allocation_deltas)
+        _update_wallets(allocation_deltas, remark_prefix=f"{target_date.isoformat()} 分润结算")
         asset_user_count = sum(1 for delta in allocation_deltas.values() if delta != 0)
 
     result = {

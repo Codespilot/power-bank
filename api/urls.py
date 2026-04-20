@@ -7,6 +7,7 @@ from .profit_views import ProfitListView
 from .views import HealthCheckView, ItemListCreateView
 from .user_views import AgentSaveView, LoginAPIView, RegisterAPIView, TokenGrantView, TokenRefreshView, UserListView, UserCreateView, UserDetailView, UserResetPasswordView
 from .order_views import MerchantOrderListView, OrderImportListCreateView, OrderImportRunningCountView
+from .wallet_views import WalletRecordListView, WalletView
 
 urlpatterns = [
     path("health/", HealthCheckView.as_view(), name="api-health"),
@@ -45,4 +46,10 @@ urlpatterns = [
     # 个人资料
     path("profile/", CurrentUserProfileView.as_view(), name="api-profile"),
     path("profile/change-password/", CurrentUserPasswordView.as_view(), name="api-profile-change-password"),
+
+    # 钱包管理
+    path("wallet", WalletView.as_view(), name="api-wallet"),
+    path("wallet/", WalletView.as_view()),
+    path("wallet/record", WalletRecordListView.as_view(), name="api-wallet-record"),
+    path("wallet/record/", WalletRecordListView.as_view()),
 ]

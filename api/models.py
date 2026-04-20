@@ -279,6 +279,24 @@ class Wallet(BaseEntity):
         app_label = "api"
 
 
+class WalletRecord(BaseEntity):
+    """钱包流水记录。
+
+    before_amount 和 after_amount 记录的是本次变动前后的可用金额。
+    """
+    id = models.BigIntegerField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="wallet_records")
+    amount = models.DecimalField(max_digits=18, decimal_places=2)
+    before_amount = models.DecimalField(max_digits=18, decimal_places=2)
+    after_amount = models.DecimalField(max_digits=18, decimal_places=2)
+    remark = models.CharField(max_length=500, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "wallet_record"
+        app_label = "api"
+
+
 class Withdraw(BaseEntity):
     STATUS_PENDING_SUBMIT = 1
     STATUS_PENDING_APPROVAL = 2

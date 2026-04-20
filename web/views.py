@@ -43,6 +43,8 @@ class HomePageView(TemplateView):
             active_menu = "profile"
         elif path.startswith("/invite/"):
             active_menu = "invite"
+        elif path.startswith("/wallet"):
+            active_menu = "wallet"
         else:
             active_menu = ""
         context["active_menu"] = active_menu
@@ -298,6 +300,26 @@ class InvitePageView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "invite"
+        user_id = self.request.session.get("current_user_id")
+        user = None
+        is_admin = False
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
+            except Exception:
+                pass
+        context["current_user"] = user
+        context["user_is_admin"] = is_admin
+        return context
+
+class WalletPageView(TemplateView):
+    """我的钱包页面，展示余额概况并支持提交提现申请。"""
+
+    template_name = "web/wallet.html"
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_menu"] = "wallet"
         user_id = self.request.session.get("current_user_id")
         user = None
         is_admin = False

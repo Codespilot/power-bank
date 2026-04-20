@@ -91,6 +91,17 @@ layui.use(function () {
     var layer = layui.layer;
     var laydate = layui.laydate;
 
+    var heightOffset;
+
+    var summary = document.getElementById('withdraw-summary-box');
+
+    if(summary) {
+        heightOffset = 'full-400';
+    }
+    else {
+        heightOffset = 'full-280';
+    }
+    
     function updateSummary(summary) {
         if (!summary) return;
         var approved = document.getElementById('approved-total');
@@ -150,7 +161,7 @@ layui.use(function () {
         page: true,
         limit: 10,
         limits: [10, 20, 50, 100],
-        height: 'full-340'
+        height: heightOffset
     });
 
     form.on('submit(withdraw-search)', function (data) {

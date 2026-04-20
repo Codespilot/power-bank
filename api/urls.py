@@ -8,6 +8,7 @@ from .views import HealthCheckView, ItemListCreateView
 from .user_views import AgentSaveView, LoginAPIView, RegisterAPIView, TokenGrantView, TokenRefreshView, UserListView, UserCreateView, UserDetailView, UserResetPasswordView
 from .order_views import MerchantOrderListView, OrderImportListCreateView, OrderImportRunningCountView
 from .wallet_views import WalletRecordListView, WalletView
+from .withdraw_views import WithdrawApproveView, WithdrawCancelView, WithdrawListView, WithdrawRejectView
 
 urlpatterns = [
     path("health/", HealthCheckView.as_view(), name="api-health"),
@@ -52,4 +53,10 @@ urlpatterns = [
     path("wallet/", WalletView.as_view()),
     path("wallet/record", WalletRecordListView.as_view(), name="api-wallet-record"),
     path("wallet/record/", WalletRecordListView.as_view()),
+
+    # 提现管理
+    path("withdraws/", WithdrawListView.as_view(), name="api-withdraws"),
+    path("withdraws/<int:id>/approve/", WithdrawApproveView.as_view(), name="api-withdraws-approve"),
+    path("withdraws/<int:id>/reject/", WithdrawRejectView.as_view(), name="api-withdraws-reject"),
+    path("withdraws/<int:id>/cancel/", WithdrawCancelView.as_view(), name="api-withdraws-cancel"),
 ]

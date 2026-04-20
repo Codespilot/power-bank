@@ -45,6 +45,8 @@ class HomePageView(TemplateView):
             active_menu = "invite"
         elif path.startswith("/wallet"):
             active_menu = "wallet"
+        elif path.startswith("/withdraw"):
+            active_menu = "withdraw"
         else:
             active_menu = ""
         context["active_menu"] = active_menu
@@ -320,6 +322,26 @@ class WalletPageView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "wallet"
+        user_id = self.request.session.get("current_user_id")
+        user = None
+        is_admin = False
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
+            except Exception:
+                pass
+        context["current_user"] = user
+        context["user_is_admin"] = is_admin
+        return context
+
+class WithdrawPageView(TemplateView):
+    """提现管理页面，管理员可审批，普通用户仅查看自己的申请。"""
+
+    template_name = "web/withdraw_list.html"
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_menu"] = "withdraw"
         user_id = self.request.session.get("current_user_id")
         user = None
         is_admin = False

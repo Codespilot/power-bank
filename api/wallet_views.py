@@ -108,15 +108,9 @@ class WalletView(APIView):
                 status=Withdraw.STATUS_PENDING_APPROVAL,
                 created_at=timezone.now(),
             )
-            WalletRecord.objects.create(
-                id=generate_snowflake_id(),
-                user_id=user_id,
-                amount=-amount,
-                before_amount=before_amount,
-                after_amount=after_amount,
-                remark=remark,
-                created_at=timezone.now(),
-            )
+
+            # 提交申请时仅冻结余额并生成申请单，不立即写入钱包流水；
+            # 后续审核通过/拒绝时再记录最终资金变动。
 
         refreshed_wallet = Wallet.objects.get(id=user_id)
         return Response(

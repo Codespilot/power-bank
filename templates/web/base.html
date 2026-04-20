@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>Power Bank</title>
+    <title>{% block title %}{% endblock %} - Power Bank</title>
     <!-- <link rel="stylesheet" href="/static/css/style.css"> -->
     <link href="//unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
     <script src="//unpkg.com/layui@2.13.4/dist/layui.js"></script>

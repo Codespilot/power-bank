@@ -1,14 +1,11 @@
 {% extends "web/base.html" %}
-{% block header %}邀请推广{% endblock %}
+{% block title %}邀请码{% endblock %}
+{% block header %}邀请码{% endblock %}
 {% block content %}
-<div class="layui-card">
-    <div class="layui-card-body">
-        <div style="margin-bottom: 16px; text-align: right;">
-            <button type="button" class="layui-btn" id="add-invite-btn">新增邀请码</button>
-        </div>
-        <table class="layui-hide" id="invite-list" lay-filter="invite-list"></table>
-    </div>
+<div style="margin-bottom: 16px; text-align: right;">
+    <button type="button" class="layui-btn" id="add-invite-btn">新增邀请码</button>
 </div>
+<table class="layui-hide" id="invite-list" lay-filter="invite-list"></table>
 
 {% endblock %}
 
@@ -18,22 +15,25 @@
         padding: 20px;
         text-align: center;
     }
+
     .invite-qrcode {
         display: inline-block;
         padding: 12px;
         background: #fff;
         border: 1px solid #e5e7eb;
         border-radius: 8px;
-        min-height: 204px;
     }
+
     .invite-qrcode img {
         margin: 0 auto;
     }
+
     .invite-link-wrap {
         margin-top: 16px;
         display: flex;
         justify-content: center;
     }
+
     .invite-link-wrap .layui-input {
         width: 100%;
         max-width: 360px;
@@ -89,7 +89,7 @@
             layer.open({
                 title: '邀请码详情',
                 type: 1,
-                area: ['460px', '520px'],
+                area: ['460px', 'auto'],
                 content: `
                     <div class="invite-popup">
                         <div id="invite-popup-qrcode" class="invite-qrcode"></div>

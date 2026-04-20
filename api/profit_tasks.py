@@ -11,7 +11,7 @@ from django.db import connection, transaction
 from django.db.models import Sum
 from django.utils import timezone
 
-from .models import Merchant, MerchantOrder, ProfitAllocation, User, UserAsset
+from .models import Merchant, MerchantOrder, ProfitAllocation, User, Wallet
 from utils.generate_snowflake_id import generate_snowflake_id
 
 logger = logging.getLogger(__name__)
@@ -191,13 +191,13 @@ def _allocate_agent_profit(
         current_rate = rate
 
 
-def _update_user_assets(allocation_deltas: dict[int, Decimal]):
+def _update_wallets(allocation_deltas: dict[int, Decimal]):
     for user_id, delta in allocation_deltas.items():
         amount = _quantize_amount(delta)
         if amount == 0:
             continue
 
-        asset, _ = UserAsset.objects.select_for_update().get_or_create(
+        wallet, _ = Wallet.objects.select_for_update().get_or_create(
             id=user_id,
             defaults={
                 "total_amount": Decimal("0.00"),
@@ -206,9 +206,9 @@ def _update_user_assets(allocation_deltas: dict[int, Decimal]):
                 "available_amount": Decimal("0.00"),
             },
         )
-        asset.total_amount = _quantize_amount(Decimal(asset.total_amount or 0) + amount)
-        asset.available_amount = _quantize_amount(Decimal(asset.available_amount or 0) + amount)
-        asset.save(update_fields=["total_amount", "available_amount"])
+        wallet.total_amount = _quantize_amount(Decimal(wallet.total_amount or 0) + amount)
+        wallet.available_amount = _quantize_amount(Decimal(wallet.available_amount or 0) + amount)
+        wallet.save(update_fields=["total_amount", "available_amount"])
 
 
 def run_profit_allocation(target_date: date | None = None) -> dict:
@@ -288,7 +288,7 @@ def run_profit_allocation(target_date: date | None = None) -> dict:
             user_id: _quantize_amount(new_amounts.get(user_id, Decimal("0.00")) - existing_amounts.get(user_id, Decimal("0.00")))
             for user_id in changed_user_ids
         }
-        _update_user_assets(allocation_deltas)
+        _update_wallets(allocation_deltas)
         asset_user_count = sum(1 for delta in allocation_deltas.values() if delta != 0)
 
     result = {

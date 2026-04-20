@@ -243,7 +243,7 @@ class OrderImport(BaseEntity):
         app_label = "api"
 
 
-class UserAsset(BaseEntity):
+class Wallet(BaseEntity):
     id = models.BigIntegerField(primary_key=True)
     total_amount = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
     frozen_amount = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
@@ -251,7 +251,7 @@ class UserAsset(BaseEntity):
     available_amount = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
 
     class Meta:
-        db_table = "user_asset"
+        db_table = "wallet"
         app_label = "api"
 
 

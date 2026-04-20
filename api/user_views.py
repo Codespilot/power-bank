@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-from .models import AgentHistory, InviteCode, User, UserAsset
+from .models import AgentHistory, InviteCode, User, Wallet
 from .user_serializers import UserListSerializer, UserCreateSerializer, UserDetailSerializer
 from utils.generate_snowflake_id import generate_snowflake_id
 from .auth import EMAIL_REGEX, MOBILE_REGEX, compute_lock_until, create_access_token, create_refresh_token, decode_jwt, get_request_user_id, get_user_by_identifier, is_valid_username, verify_password
@@ -229,7 +229,7 @@ def _create_user_account(data, *, invite_code: str = ""):
             agent_rate=agent_rate if superior_user else Decimal('0.00'),
             created_at=timezone.now()
         )
-        UserAsset.objects.create(id=user.id)
+        Wallet.objects.create(id=user.id)
 
         if locked_invite_record:
             locked_invite_record.register_count = int(locked_invite_record.register_count or 0) + 1

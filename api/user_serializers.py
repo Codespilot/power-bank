@@ -2,7 +2,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from .serializers import SafeBigIntModelSerializer
 from rest_framework import serializers
-from .models import User, UserAsset
+from .models import User, Wallet
 
 
 def _get_superior_agent_display(obj):
@@ -42,8 +42,8 @@ class UserListSerializer(SafeBigIntModelSerializer):
         fields = ["id", "username", "fullname", "phone", "email", "invite_code", "superior_id", "superior_phone", "superior_agent", "agent_rate", "created_at", "total_asset", "locked_out"]
 
     def get_total_asset(self, obj):
-        asset = UserAsset.objects.filter(id=obj.id).first()
-        return str(asset.total_amount) if asset else "0.00"
+        wallet = Wallet.objects.filter(id=obj.id).first()
+        return str(wallet.total_amount) if wallet else "0.00"
 
     def get_superior_id(self, obj):
         return str(obj.agent_id) if obj.agent_id else None
@@ -77,8 +77,8 @@ class UserDetailSerializer(SafeBigIntModelSerializer):
         fields = ["id", "username", "fullname", "phone", "email", "invite_code", "superior_id", "superior_phone", "superior_agent", "agent_rate", "created_at", "total_asset"]
 
     def get_total_asset(self, obj):
-        asset = UserAsset.objects.filter(id=obj.id).first()
-        return str(asset.total_amount) if asset else "0.00"
+        wallet = Wallet.objects.filter(id=obj.id).first()
+        return str(wallet.total_amount) if wallet else "0.00"
 
     def get_superior_id(self, obj):
         return str(obj.agent_id) if obj.agent_id else None

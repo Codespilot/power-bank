@@ -81,6 +81,23 @@ def _format_agent_rate(rate, has_superior=False):
 
 
 class UserListSerializer(SafeBigIntModelSerializer):
+    """
+    用于用户列表展示的序列化器，包含用户基本信息和关联的上级代理信息。
+
+    Attributes:
+        id: 用户ID，字符串格式。
+        username: 用户名。
+        fullname: 用户全名。
+        phone: 用户手机号。
+        email: 用户邮箱。
+        invite_code: 用户的邀请码。
+        superior_id: 上级代理ID，字符串格式，如果没有上级代理则为None。
+        superior_phone: 上级代理手机号，如果没有上级代理或手机号不可用则为None。
+        superior_agent: 上级代理展示信息，格式为“姓名（手机号）”，如果没有上级代理则为"--"。
+        agent_rate: 用户的代理分润比例，如果没有上级代理则为"--"。
+        created_at: 用户创建时间，格式为"YYYY-MM-DD HH:MM:SS"。
+        total_asset: 用户总资产，通过关联的Wallet对象计算得出，字符串格式。
+    """
     phone = serializers.CharField()
     email = serializers.CharField()
     total_asset = serializers.SerializerMethodField()

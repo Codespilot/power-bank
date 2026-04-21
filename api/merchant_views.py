@@ -6,6 +6,15 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from .order_serializers import (
+    MerchantListRequestSerializer,
+    MerchantListResponseSerializer,
+    MerchantHistoryResponseSerializer,
+    MerchantAssignAgentRequestSerializer,
+    MerchantBatchAssignAgentRequestSerializer,
+    MerchantAssignMessageSerializer,
+)
 
 from utils.generate_snowflake_id import generate_snowflake_id
 
@@ -38,6 +47,21 @@ def _format_agent_display(user):
 
 
 class MerchantListView(APIView):
+    @extend_schema(
+        tags=["merchants"],
+        summary="获取商户列表",
+        description="分页查询商户列表，支持按商户名称和代理商关键字筛选。管理员可见所有商户，普通代理商仅可见自己名下的商户。",
+        parameters=[
+            OpenApiParameter(name="merchant_name", description="商户名称关键字", required=False, type=str),
+            OpenApiParameter(name="agent_keyword", description="代理商关键字（手机号/姓名/用户名/邮箱）", required=False, type=str),
+            OpenApiParameter(name="page", description="页码，默认1", required=False, type=int),
+            OpenApiParameter(name="limit", description="每页数量，默认10", required=False, type=int),
+        ],
+        responses={
+            200: MerchantListResponseSerializer,
+            401: MerchantAssignMessageSerializer,
+        },
+    )
     def get(self, request):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
@@ -149,6 +173,18 @@ class MerchantListView(APIView):
 
 
 class MerchantHistoryListView(APIView):
+    @extend_schema(
+        tags=["merchants"],
+        summary="获取商户划拨历史",
+        description="查询指定商户的所有划拨历史记录，包括原代理商和新代理商信息。",
+        parameters=[
+            OpenApiParameter(name="id", description="商户ID", required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        responses={
+            200: MerchantHistoryResponseSerializer,
+            404: MerchantAssignMessageSerializer,
+        },
+    )
     def get(self, request, id):
         merchant = Merchant.objects.filter(id=id).first()
         if not merchant:
@@ -237,11 +273,38 @@ def _assign_merchants(request, merchant_ids, agent_phone):
 
 
 class MerchantAssignAgentView(APIView):
+    @extend_schema(
+        tags=["merchants"],
+        summary="划拨单个商户",
+        description="将单个商户划拨给指定代理商。管理员可划拨任意商户，普通代理商仅能划拨自己名下的商户给自己的直属下级代理商。",
+        parameters=[
+            OpenApiParameter(name="id", description="商户ID", required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        request=MerchantAssignAgentRequestSerializer,
+        responses={
+            200: MerchantAssignMessageSerializer,
+            400: MerchantAssignMessageSerializer,
+            401: MerchantAssignMessageSerializer,
+            404: MerchantAssignMessageSerializer,
+        },
+    )
     def post(self, request, id):
         return _assign_merchants(request, [id], request.data.get("agent_phone", ""))
 
 
 class MerchantBatchAssignAgentView(APIView):
+    @extend_schema(
+        tags=["merchants"],
+        summary="批量划拨商户",
+        description="将多个商户批量划拨给指定代理商。管理员可划拨任意商户，普通代理商仅能划拨自己名下的商户给自己的直属下级代理商。",
+        request=MerchantBatchAssignAgentRequestSerializer,
+        responses={
+            200: MerchantAssignMessageSerializer,
+            400: MerchantAssignMessageSerializer,
+            401: MerchantAssignMessageSerializer,
+            404: MerchantAssignMessageSerializer,
+        },
+    )
     def post(self, request):
         merchant_ids = request.data.get("merchant_ids", [])
         return _assign_merchants(request, merchant_ids, request.data.get("agent_phone", ""))

@@ -1,0 +1,1749 @@
+openapi: 3.0.3
+info:
+  title: 分润管理系统
+  version: 1.0.0
+  description: 分润管理系统 API 文档
+paths:
+  /api/agents/save:
+    post:
+      operationId: agents_save_create
+      summary: 分配上级代理商
+      tags:
+      - agents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentAssign'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AgentAssign'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AgentAssign'
+        required: true
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/health/:
+    get:
+      operationId: health_retrieve
+      description: 最小健康检查接口，用于确认服务是否正常运行。
+      tags:
+      - health
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/invite-codes/:
+    get:
+      operationId: invite_codes_retrieve
+      description: 查询当前用户的所有邀请码及其注册统计信息。
+      summary: 获取邀请码列表
+      tags:
+      - invite-codes
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InviteCodeListResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+    post:
+      operationId: invite_codes_create
+      description: 为当前用户创建新的邀请码，需指定分润比例。
+      summary: 创建邀请码
+      tags:
+      - invite-codes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteCodeCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InviteCodeCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InviteCodeCreateRequest'
+        required: true
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InviteCodeCreateResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/invite-codes/{id}/toggle-status:
+    post:
+      operationId: invite_codes_toggle_status_create
+      description: 启用或作废指定的邀请码。
+      summary: 切换邀请码状态
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 邀请码ID
+        required: true
+      tags:
+      - invite-codes
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InviteCodeToggleResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/items/:
+    get:
+      operationId: items_list
+      description: 示例条目接口，保留基础的增删查改演示能力。
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: 分页结果集中的页码。
+        schema:
+          type: integer
+      tags:
+      - items
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedItemList'
+          description: ''
+    post:
+      operationId: items_create
+      description: 示例条目接口，保留基础的增删查改演示能力。
+      tags:
+      - items
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Item'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Item'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Item'
+        required: true
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+          description: ''
+  /api/merchants/:
+    get:
+      operationId: merchants_retrieve
+      description: 分页查询商户列表，支持按商户名称和代理商关键字筛选。管理员可见所有商户，普通代理商仅可见自己名下的商户。
+      summary: 获取商户列表
+      parameters:
+      - in: query
+        name: agent_keyword
+        schema:
+          type: string
+        description: 代理商关键字（手机号/姓名/用户名/邮箱）
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: 每页数量，默认10
+      - in: query
+        name: merchant_name
+        schema:
+          type: string
+        description: 商户名称关键字
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: 页码，默认1
+      tags:
+      - merchants
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantListResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantAssignMessage'
+          description: ''
+  /api/merchants/{id}/assign-agent:
+    post:
+      operationId: merchants_assign_agent_create
+      description: 将单个商户划拨给指定代理商。管理员可划拨任意商户，普通代理商仅能划拨自己名下的商户给自己的直属下级代理商。
+      summary: 划拨单个商户
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 商户ID
+        required: true
+      tags:
+      - merchants
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchantAssignAgentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MerchantAssignAgentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MerchantAssignAgentRequest'
+        required: true
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantAssignMessage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantAssignMessage'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantAssignMessage'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantAssignMessage'
+          description: ''
+  /api/merchants/{id}/history:
+    get:
+      operationId: merchants_history_retrieve
+      description: 查询指定商户的所有划拨历史记录，包括原代理商和新代理商信息。
+      summary: 获取商户划拨历史
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 商户ID
+        required: true
+      tags:
+      - merchants
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantHistoryResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantAssignMessage'
+          description: ''
+  /api/merchants/batch-assign-agent:
+    post:
+      operationId: merchants_batch_assign_agent_create
+      description: 将多个商户批量划拨给指定代理商。管理员可划拨任意商户，普通代理商仅能划拨自己名下的商户给自己的直属下级代理商。
+      summary: 批量划拨商户
+      tags:
+      - merchants
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchantBatchAssignAgentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MerchantBatchAssignAgentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MerchantBatchAssignAgentRequest'
+        required: true
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantAssignMessage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantAssignMessage'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantAssignMessage'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantAssignMessage'
+          description: ''
+  /api/order-imports/:
+    get:
+      operationId: order_imports_retrieve
+      description: |-
+        订单导入任务接口。
+
+        GET 返回导入历史；POST 仅创建导入任务，实际文件解析由后台线程完成。
+      tags:
+      - order-imports
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: order_imports_create
+      description: |-
+        订单导入任务接口。
+
+        GET 返回导入历史；POST 仅创建导入任务，实际文件解析由后台线程完成。
+      tags:
+      - order-imports
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/order-imports/running-count:
+    get:
+      operationId: order_imports_running_count_retrieve
+      description: 返回当前仍在执行中的导入任务数量。
+      tags:
+      - order-imports
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/orders/:
+    get:
+      operationId: orders_list
+      description: 商户订单分页查询接口，支持关键字与日期范围筛选。
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: 分页结果集中的页码。
+        schema:
+          type: integer
+      tags:
+      - orders
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMerchantOrderList'
+          description: ''
+  /api/profile/:
+    get:
+      operationId: profile_retrieve
+      tags:
+      - profile
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: profile_create
+      tags:
+      - profile
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/profile/change-password:
+    post:
+      operationId: profile_change_password_create
+      tags:
+      - profile
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/profits/:
+    get:
+      operationId: profits_retrieve
+      tags:
+      - profits
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/token/grant:
+    post:
+      operationId: token_grant_create
+      summary: 获取访问令牌
+      tags:
+      - token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenGrant'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenGrant'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenGrant'
+        required: true
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenGrantResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '423':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/token/refresh:
+    post:
+      operationId: token_refresh_create
+      description: 刷新Token
+      summary: 刷新访问令牌
+      tags:
+      - token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+        required: true
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenGrantResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/users/:
+    get:
+      operationId: users_list
+      summary: 获取用户列表
+      parameters:
+      - in: query
+        name: direct_subordinates
+        schema:
+          type: string
+        description: 是否只查询直属下级，传 1 或 true 生效
+      - in: query
+        name: exclude_id
+        schema:
+          type: string
+        description: 排除指定用户ID
+      - in: query
+        name: id
+        schema:
+          type: string
+        description: 按用户ID筛选
+      - in: query
+        name: keyword
+        schema:
+          type: string
+        description: 用户名、手机号或邮箱关键字
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: 每页数量
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: 页码
+      tags:
+      - users
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserListList'
+          description: ''
+  /api/users/{id}:
+    get:
+      operationId: users_retrieve
+      summary: 获取用户详情
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - users
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+          description: ''
+  /api/users/{id}/assign-superior-agent:
+    post:
+      operationId: users_assign_superior_agent_create
+      summary: 分配上级代理商
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - agents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentAssign'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AgentAssign'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AgentAssign'
+        required: true
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/users/{id}/reset-password:
+    post:
+      operationId: users_reset_password_create
+      summary: 重置用户密码
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserResetPassword'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserResetPassword'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserResetPassword'
+        required: true
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/users/create:
+    post:
+      operationId: users_create_create
+      summary: 创建用户
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+        required: true
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdMessage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/users/login:
+    post:
+      operationId: users_login_create
+      description: 用户登录
+      summary: 用户登录
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdMessage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '423':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/users/register:
+    post:
+      operationId: users_register_create
+      description: 用户注册
+      summary: 用户注册
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegister'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRegister'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRegister'
+        required: true
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdMessage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/wallet:
+    get:
+      operationId: wallet_retrieve
+      description: 查询当前用户的钱包概览信息，包括总金额、冻结金额、待结算金额和可用金额。
+      summary: 获取钱包信息
+      tags:
+      - wallet
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletInfo'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    post:
+      operationId: wallet_create
+      description: 提交提现申请，冻结相应金额并生成提现申请单。
+      summary: 申请提现
+      tags:
+      - wallet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WalletWithdrawRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WalletWithdrawRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WalletWithdrawRequest'
+        required: true
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletWithdrawResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/wallet/record:
+    get:
+      operationId: wallet_record_retrieve
+      description: 分页查询当前用户的钱包流水记录，支持按日期区间过滤。
+      summary: 获取钱包流水记录
+      parameters:
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: 起始日期 (YYYY-MM-DD)
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: 每页数量，默认10
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: 页码，默认1
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: 结束日期 (YYYY-MM-DD)
+      tags:
+      - wallet
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletRecordListResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/withdraws/:
+    get:
+      operationId: withdraws_retrieve
+      description: 提现申请列表接口。
+      tags:
+      - withdraws
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/withdraws/{id}/approve:
+    post:
+      operationId: withdraws_approve_create
+      description: 管理员审批通过提现申请。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - withdraws
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/withdraws/{id}/cancel:
+    post:
+      operationId: withdraws_cancel_create
+      description: 用户自行作废提现申请，并解冻资金。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - withdraws
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/withdraws/{id}/reject:
+    post:
+      operationId: withdraws_reject_create
+      description: 管理员拒绝提现申请，并解冻资金。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - withdraws
+      security:
+      - BearerAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    AgentAssign:
+      type: object
+      properties:
+        subordinate_id:
+          type: string
+        superior_id:
+          type: string
+        superior_phone:
+          type: string
+        rate:
+          type: string
+      required:
+      - rate
+    IdMessage:
+      type: object
+      properties:
+        message:
+          type: string
+        id:
+          type: string
+        user_id:
+          type: string
+        next:
+          type: string
+      required:
+      - message
+    InviteCodeCreateRequest:
+      type: object
+      properties:
+        rate:
+          type: string
+          description: '分润比例 (例如: 0.01)'
+      required:
+      - rate
+    InviteCodeCreateResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        data:
+          type: object
+          additionalProperties: {}
+      required:
+      - data
+      - message
+    InviteCodeListResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        count:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - count
+      - message
+      - results
+    InviteCodeToggleResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        is_valid:
+          type: boolean
+      required:
+      - is_valid
+      - message
+    Item:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          description: 用户名、手机号或邮箱
+        password:
+          type: string
+          writeOnly: true
+        captcha:
+          type: string
+        source_token:
+          type: string
+        next:
+          type: string
+      required:
+      - password
+      - username
+    MerchantAssignAgentRequest:
+      type: object
+      properties:
+        agent_phone:
+          type: string
+          description: 代理商手机号
+      required:
+      - agent_phone
+    MerchantAssignMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          description: 操作结果信息
+      required:
+      - message
+    MerchantBatchAssignAgentRequest:
+      type: object
+      properties:
+        merchant_ids:
+          type: array
+          items:
+            type: integer
+          description: 商户ID列表
+        agent_phone:
+          type: string
+          description: 代理商手机号
+      required:
+      - agent_phone
+      - merchant_ids
+    MerchantHistoryResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: 总数
+        message:
+          type: string
+        results:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - count
+      - message
+      - results
+    MerchantListResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: 总数
+        page:
+          type: integer
+          description: 当前页码
+        limit:
+          type: integer
+          description: 每页数量
+        message:
+          type: string
+        results:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - count
+      - limit
+      - message
+      - page
+      - results
+    MerchantOrder:
+      type: object
+      properties:
+        id:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        order_no:
+          type: string
+          maxLength: 64
+        order_date:
+          type: string
+          format: date-time
+        bill_month:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        bill_date:
+          type: string
+          format: date-time
+          nullable: true
+        order_type:
+          type: string
+          maxLength: 10
+        order_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,2})?$
+        merchant_name:
+          type: string
+          maxLength: 255
+        merchant_profit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,2})?$
+        agent_profit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,2})?$
+          nullable: true
+        is_capped:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - id
+      - is_capped
+      - merchant_name
+      - merchant_profit
+      - order_amount
+      - order_date
+      - order_type
+    Message:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+      - message
+    PaginatedItemList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+    PaginatedMerchantOrderList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MerchantOrder'
+    PaginatedUserListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserList'
+    TokenGrant:
+      type: object
+      properties:
+        username:
+          type: string
+          description: 用户名、手机号或邮箱
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - password
+      - username
+    TokenGrantResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        token_type:
+          type: string
+        access_token:
+          type: string
+        expires_in:
+          type: integer
+        refresh_token:
+          type: string
+        refresh_expires_in:
+          type: integer
+        user_id:
+          type: string
+      required:
+      - access_token
+      - expires_in
+      - message
+      - refresh_expires_in
+      - refresh_token
+      - token_type
+      - user_id
+    TokenRefresh:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+      required:
+      - refresh_token
+    UserCreate:
+      type: object
+      properties:
+        username:
+          type: string
+        fullname:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        password:
+          type: string
+          writeOnly: true
+        superior_phone:
+          type: string
+        agent_rate:
+          type: string
+      required:
+      - fullname
+      - password
+      - phone
+      - username
+    UserDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        username:
+          type: string
+          maxLength: 32
+        fullname:
+          type: string
+          maxLength: 64
+        phone:
+          type: string
+          maxLength: 11
+        email:
+          type: string
+          nullable: true
+          maxLength: 255
+        invite_code:
+          type: string
+          nullable: true
+          maxLength: 8
+        superior_id:
+          type: string
+          nullable: true
+          readOnly: true
+        superior_phone:
+          type: string
+          nullable: true
+          readOnly: true
+        superior_agent:
+          type: string
+          readOnly: true
+        agent_rate:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        total_asset:
+          type: string
+          readOnly: true
+      required:
+      - agent_rate
+      - id
+      - phone
+      - superior_agent
+      - superior_id
+      - superior_phone
+      - total_asset
+      - username
+    UserList:
+      type: object
+      description: |-
+        用于用户列表展示的序列化器，包含用户基本信息和关联的上级代理信息。
+
+        Attributes:
+            id: 用户ID，字符串格式。
+            username: 用户名。
+            fullname: 用户全名。
+            phone: 用户手机号。
+            email: 用户邮箱。
+            invite_code: 用户的邀请码。
+            superior_id: 上级代理ID，字符串格式，如果没有上级代理则为None。
+            superior_phone: 上级代理手机号，如果没有上级代理或手机号不可用则为None。
+            superior_agent: 上级代理展示信息，格式为“姓名（手机号）”，如果没有上级代理则为"--"。
+            agent_rate: 用户的代理分润比例，如果没有上级代理则为"--"。
+            created_at: 用户创建时间，格式为"YYYY-MM-DD HH:MM:SS"。
+            total_asset: 用户总资产，通过关联的Wallet对象计算得出，字符串格式。
+      properties:
+        id:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        username:
+          type: string
+          maxLength: 32
+        fullname:
+          type: string
+          maxLength: 64
+        phone:
+          type: string
+        email:
+          type: string
+        invite_code:
+          type: string
+          nullable: true
+          maxLength: 8
+        superior_id:
+          type: string
+          nullable: true
+          readOnly: true
+        superior_phone:
+          type: string
+          nullable: true
+          readOnly: true
+        superior_agent:
+          type: string
+          readOnly: true
+        agent_rate:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+        total_asset:
+          type: string
+          readOnly: true
+        locked_out:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - agent_rate
+      - created_at
+      - email
+      - id
+      - phone
+      - superior_agent
+      - superior_id
+      - superior_phone
+      - total_asset
+      - username
+    UserRegister:
+      type: object
+      properties:
+        username:
+          type: string
+        fullname:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        password:
+          type: string
+          writeOnly: true
+        confirm_password:
+          type: string
+          writeOnly: true
+        captcha:
+          type: string
+        invite_code:
+          type: string
+      required:
+      - captcha
+      - confirm_password
+      - fullname
+      - invite_code
+      - password
+      - phone
+      - username
+    UserResetPassword:
+      type: object
+      properties:
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - password
+    WalletInfo:
+      type: object
+      properties:
+        total_amount:
+          type: string
+          description: 总金额
+        frozen_amount:
+          type: string
+          description: 冻结金额
+        pending_amount:
+          type: string
+          description: 待结算金额
+        available_amount:
+          type: string
+          description: 可用金额
+        message:
+          type: string
+          description: 响应消息
+      required:
+      - available_amount
+      - frozen_amount
+      - message
+      - pending_amount
+      - total_amount
+    WalletRecordListResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: 总数
+        page:
+          type: integer
+          description: 当前页码
+        limit:
+          type: integer
+          description: 每页数量
+        message:
+          type: string
+          description: 响应消息
+        results:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - count
+      - limit
+      - message
+      - page
+      - results
+    WalletWithdrawRequest:
+      type: object
+      properties:
+        amount:
+          type: string
+          description: 提现金额
+        remark:
+          type: string
+          description: 备注信息
+      required:
+      - amount
+    WalletWithdrawResponse:
+      type: object
+      properties:
+        total_amount:
+          type: string
+          description: 总金额
+        frozen_amount:
+          type: string
+          description: 冻结金额
+        pending_amount:
+          type: string
+          description: 待结算金额
+        available_amount:
+          type: string
+          description: 可用金额
+        withdraw_id:
+          type: string
+          description: 提现申请ID
+        message:
+          type: string
+          description: 响应消息
+      required:
+      - available_amount
+      - frozen_amount
+      - message
+      - pending_amount
+      - total_amount
+      - withdraw_id
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 在请求头中使用 Bearer Token，例如：Bearer eyJ...
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+tags:
+- name: auth
+  description: 登录认证相关接口
+- name: token
+  description: JWT Token 接口
+- name: users
+  description: 用户管理接口
+- name: agents
+  description: 代理商管理接口
+- name: merchants
+  description: 商户管理接口
+- name: orders
+  description: 订单管理接口
+- name: order-imports
+  description: 订单导入接口
+- name: profits
+  description: 分润管理接口
+- name: invite-codes
+  description: 邀请码管理接口
+- name: profile
+  description: 个人资料接口
+- name: wallet
+  description: 钱包管理接口
+- name: withdraws
+  description: 提现管理接口
+- name: health
+  description: 系统健康检查接口
+- name: items
+  description: 示例数据接口

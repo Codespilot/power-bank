@@ -5,12 +5,20 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from rest_framework import serializers
 from api.auth import get_request_user_id
 from utils.generate_snowflake_id import generate_snowflake_id
 
 from .models import InviteCode
 from .user_serializers import _format_agent_rate
 from .user_views import _parse_agent_rate
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from .order_serializers import (
+    InviteCodeListResponseSerializer,
+    InviteCodeCreateRequestSerializer,
+    InviteCodeCreateResponseSerializer,
+    InviteCodeToggleResponseSerializer,
+)
 
 
 def _build_invite_link(request, code: str) -> str:
@@ -38,6 +46,12 @@ def _serialize_invite_code(request, invite: InviteCode):
 
 
 class InviteCodeListCreateView(APIView):
+    @extend_schema(
+        tags=["invite-codes"],
+        summary="获取邀请码列表",
+        description="查询当前用户的所有邀请码及其注册统计信息。",
+        responses={200: InviteCodeListResponseSerializer, 401: serializers.DictField()},
+    )
     def get(self, request):
         user_id = get_request_user_id(request)
         if not user_id:
@@ -47,6 +61,13 @@ class InviteCodeListCreateView(APIView):
         results = [_serialize_invite_code(request, item) for item in queryset]
         return Response({"message": "查询成功", "count": len(results), "results": results})
 
+    @extend_schema(
+        tags=["invite-codes"],
+        summary="创建邀请码",
+        description="为当前用户创建新的邀请码，需指定分润比例。",
+        request=InviteCodeCreateRequestSerializer,
+        responses={200: InviteCodeCreateResponseSerializer, 400: serializers.DictField(), 401: serializers.DictField()},
+    )
     def post(self, request):
         user_id = get_request_user_id(request)
         if not user_id:
@@ -69,6 +90,15 @@ class InviteCodeListCreateView(APIView):
 
 
 class InviteCodeToggleView(APIView):
+    @extend_schema(
+        tags=["invite-codes"],
+        summary="切换邀请码状态",
+        description="启用或作废指定的邀请码。",
+        parameters=[
+            OpenApiParameter(name="id", description="邀请码ID", required=True, type=int, location=OpenApiParameter.PATH),
+        ],
+        responses={200: InviteCodeToggleResponseSerializer, 401: serializers.DictField(), 404: serializers.DictField()},
+    )
     def post(self, request, id=None):
         user_id = get_request_user_id(request)
         if not user_id:

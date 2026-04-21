@@ -6,6 +6,15 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+
+from .wallet_serializers import (
+    WalletInfoSerializer,
+    WalletWithdrawRequestSerializer,
+    WalletWithdrawResponseSerializer,
+    WalletRecordListRequestSerializer,
+    WalletRecordListResponseSerializer,
+)
 
 from utils.generate_snowflake_id import generate_snowflake_id
 
@@ -61,6 +70,12 @@ def _serialize_wallet(wallet: Wallet) -> dict:
 class WalletView(APIView):
     """钱包概览与提现申请接口。"""
 
+    @extend_schema(
+        tags=["wallet"],
+        summary="获取钱包信息",
+        description="查询当前用户的钱包概览信息，包括总金额、冻结金额、待结算金额和可用金额。",
+        responses={200: WalletInfoSerializer, 401: dict},
+    )
     def get(self, request):
         """
         查询钱包信息
@@ -74,6 +89,13 @@ class WalletView(APIView):
         wallet, _ = Wallet.objects.get_or_create(id=user_id, defaults=_wallet_defaults())
         return Response({**_serialize_wallet(wallet), "message": "查询成功"})
 
+    @extend_schema(
+        tags=["wallet"],
+        summary="申请提现",
+        description="提交提现申请，冻结相应金额并生成提现申请单。",
+        request=WalletWithdrawRequestSerializer,
+        responses={200: WalletWithdrawResponseSerializer, 400: dict, 401: dict},
+    )
     def post(self, request):
         user_id = get_request_user_id(request)
         if not user_id:
@@ -130,6 +152,18 @@ class WalletView(APIView):
 class WalletRecordListView(APIView):
     """钱包流水查询接口，支持按日期区间过滤。"""
 
+    @extend_schema(
+        tags=["wallet"],
+        summary="获取钱包流水记录",
+        description="分页查询当前用户的钱包流水记录，支持按日期区间过滤。",
+        parameters=[
+            OpenApiParameter(name="page", description="页码，默认1", required=False, type=int),
+            OpenApiParameter(name="limit", description="每页数量，默认10", required=False, type=int),
+            OpenApiParameter(name="from", description="起始日期 (YYYY-MM-DD)", required=False, type=str),
+            OpenApiParameter(name="to", description="结束日期 (YYYY-MM-DD)", required=False, type=str),
+        ],
+        responses={200: WalletRecordListResponseSerializer, 400: dict, 401: dict},
+    )
     def get(self, request):
         user_id = get_request_user_id(request)
         if not user_id:

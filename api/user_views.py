@@ -102,6 +102,7 @@ def _authenticate_credentials(request, use_session_captcha: bool):
 
 
 class LoginAPIView(APIView):
+    """用户登录"""
     permission_classes = [AllowAny]
     serializer_class = LoginRequestSerializer
 
@@ -152,6 +153,7 @@ class TokenGrantView(APIView):
 
 
 class TokenRefreshView(APIView):
+    """刷新Token"""
     permission_classes = [AllowAny]
     serializer_class = TokenRefreshSerializer
 
@@ -429,6 +431,7 @@ class UserCreateView(generics.CreateAPIView):
         return Response({'message': '创建成功', 'id': str(user.id)}, status=status.HTTP_201_CREATED)
 
 class RegisterAPIView(APIView):
+    """用户注册"""
     permission_classes = [AllowAny]
     serializer_class = UserRegisterSerializer
 

@@ -62,6 +62,11 @@ class WalletView(APIView):
     """钱包概览与提现申请接口。"""
 
     def get(self, request):
+        """
+        查询钱包信息
+        :param request: 请求信息
+        :return: 钱包信息字典
+        """
         user_id = get_request_user_id(request)
         if not user_id:
             return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)

@@ -13,7 +13,7 @@ from .withdraw_views import WithdrawApproveView, WithdrawCancelView, WithdrawLis
 urlpatterns = [
     path("health/", HealthCheckView.as_view(), name="api-health"),
     path("items/", ItemListCreateView.as_view(), name="api-items"),
-    path("auth/login", LoginAPIView.as_view(), name="api-auth-login"),
+    path("users/login", LoginAPIView.as_view(), name="api-auth-login"),
     path("users/register", RegisterAPIView.as_view(), name="api-users-register"),
     path("token/grant", TokenGrantView.as_view(), name="api-token-grant"),
     path("token/refresh", TokenRefreshView.as_view(), name="api-token-refresh"),

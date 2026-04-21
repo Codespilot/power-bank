@@ -63,7 +63,17 @@ class User(BaseEntity):
     class Meta:
         db_table = "user"
         app_label = "api"
+
 class UserRole(BaseEntity):
+    """
+    用户角色
+
+    Attributes:
+        id: 主键
+        user: 外键，关联到 User 模型
+        role: 角色名称，枚举值（admin、user）
+        created_at: 记录创建时间
+    """
     ROLE_ADMIN = "admin"
     ROLE_USER = "user"
     ROLE_CHOICES = (
@@ -84,22 +94,16 @@ class UserRole(BaseEntity):
         ]
 
 
-class Agent(BaseEntity):
-    id = models.BigIntegerField(primary_key=True)
-    superior = models.ForeignKey(User, on_delete=models.PROTECT, db_column="superior_id", related_name="agent_subordinates")
-    subordinate = models.ForeignKey(User, on_delete=models.PROTECT, db_column="subordinate_id", related_name="agent_superiors")
-    rate = models.DecimalField(max_digits=18, decimal_places=2)
-    created_at = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        db_table = "agent"
-        app_label = "api"
-        constraints = [
-            models.UniqueConstraint(fields=["superior", "subordinate"], name="uq_agent_superior_subordinate"),
-        ]
-
-
 class AgentHistory(BaseEntity):
+    """
+    代理商变更记录
+
+    Attributes:
+        id: 主键
+        old_superior: 外键，变更前的上级代理商，允许为空
+        new_superior: 外键，变更后的上级代理商，允许为空
+        created_at: 记录创建时间
+    """
     id = models.BigIntegerField(primary_key=True)
     old_superior = models.ForeignKey(
         User,

@@ -2,7 +2,7 @@ from datetime import date
 
 from django.core.management.base import BaseCommand, CommandError
 
-from api.profit_tasks import run_profit_allocation
+from api.profit_tasks import run_profit_allocation_with_tracking
 
 
 class Command(BaseCommand):
@@ -23,5 +23,5 @@ class Command(BaseCommand):
             except ValueError as exc:
                 raise CommandError("Invalid date format, expected YYYY-MM-DD") from exc
 
-        result = run_profit_allocation(target_date=run_date)
+        result = run_profit_allocation_with_tracking(target_date=run_date)
         self.stdout.write(self.style.SUCCESS(f"Profit task completed: {result}"))

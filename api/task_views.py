@@ -1,4 +1,4 @@
-from datetime import datetime, time as dt_time, timedelta
+from datetime import date, datetime, time as dt_time, timedelta
 
 from django.utils import timezone
 from rest_framework import status
@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from .auth import get_request_user_id
 from .models import ProfitTaskRecord, UserRole
+from .profit_tasks import run_profit_allocation_with_tracking
 
 
 def _parse_int(value, default):
@@ -28,10 +29,10 @@ def _format_datetime(value):
 class ProfitTaskRecordListView(APIView):
     """分润任务运行记录分页查询。"""
 
-    def get(self, request):
+    def _check_admin(self, request):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
-            return Response(
+            return None, Response(
                 {"count": 0, "results": [], "message": "未登录"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
@@ -40,10 +41,17 @@ class ProfitTaskRecordListView(APIView):
             user_id=current_user_id, role=UserRole.ROLE_ADMIN
         ).exists()
         if not is_admin:
-            return Response(
+            return None, Response(
                 {"count": 0, "results": [], "message": "无权限访问"},
                 status=status.HTTP_403_FORBIDDEN,
             )
+
+        return current_user_id, None
+
+    def get(self, request):
+        _, error_response = self._check_admin(request)
+        if error_response is not None:
+            return error_response
 
         from_date = str(request.GET.get("from", "")).strip()
         to_date = str(request.GET.get("to", "")).strip()
@@ -103,5 +111,32 @@ class ProfitTaskRecordListView(APIView):
                 "limit": limit,
                 "results": results,
                 "message": "查询成功",
+            }
+        )
+
+    def post(self, request):
+        _, error_response = self._check_admin(request)
+        if error_response is not None:
+            return error_response
+
+        run_date = None
+        run_date_text = str(request.data.get("run_date", "")).strip()
+        if run_date_text:
+            try:
+                run_date = date.fromisoformat(run_date_text)
+            except ValueError:
+                return Response(
+                    {"message": "run_date 日期格式错误，应为 YYYY-MM-DD"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        result = run_profit_allocation_with_tracking(target_date=run_date)
+        latest_record = ProfitTaskRecord.objects.order_by("-created_at", "-id").first()
+
+        return Response(
+            {
+                "message": "任务执行完成",
+                "result": result,
+                "record_id": str(latest_record.id) if latest_record else "",
             }
         )

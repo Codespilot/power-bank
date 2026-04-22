@@ -19,9 +19,20 @@
             </div>
         </div>
     </div>
-    <div class="layui-col-md2 layui-col-md-offset5" style="text-align: right;">
-        <button type="button" class="layui-btn layui-btn-primary" lay-submit lay-filter="task-search">
+    <div class="layui-col-md3">
+        <div class="layui-form-item">
+            <div class="layui-input-group">
+                <div class="layui-input-prefix search-label">执行日期</div>
+                <input type="text" name="run_date" autocomplete="off" id="task-run-date" class="layui-input" placeholder="留空默认执行昨日">
+            </div>
+        </div>
+    </div>
+    <div class="layui-col-md4" style="text-align: right;">
+        <button type="button" class="layui-btn layui-btn-primary" lay-submit lay-filter="task-search" style="margin-right: 8px;">
             <i class="layui-icon layui-icon-search"></i> 搜索
+        </button>
+        <button type="button" class="layui-btn" id="task-run-btn">
+            <i class="layui-icon layui-icon-play"></i> 手动执行
         </button>
     </div>
 </form>
@@ -40,6 +51,10 @@
             elem: '#task-date-range',
             range: ['#task-date-from', '#task-date-to'],
             rangeLinked: true
+        });
+
+        laydate.render({
+            elem: '#task-run-date'
         });
 
         table.render({
@@ -80,6 +95,33 @@
                 where: data.field
             });
             return false;
+        });
+
+        document.getElementById('task-run-btn').addEventListener('click', async function () {
+            var runDate = (document.getElementById('task-run-date').value || '').trim();
+            var loadingIndex = layer.load(1, { shade: 0.2 });
+            try {
+                var response = await fetch('/api/profit-tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : ''
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ run_date: runDate })
+                });
+                var res = await response.json();
+                if (!response.ok) {
+                    layer.msg(res.message || '执行失败', { icon: 5 });
+                    return;
+                }
+                layer.msg(res.message || '执行成功', { icon: 1 });
+                table.reload('taskRecordTable');
+            } catch (err) {
+                layer.msg('执行失败，请稍后重试', { icon: 5 });
+            } finally {
+                layer.close(loadingIndex);
+            }
         });
     });
 </script>

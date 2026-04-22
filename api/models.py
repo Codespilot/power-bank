@@ -346,7 +346,17 @@ class Item(models.Model):
         return self.name
 
 class ProfitTaskRecord(models.Model):
-    """分润任务运行记录"""
+    """
+    分润任务运行记录
+    Attributes:
+        id: 主键，使用雪花算法生成
+        run_time: 任务实际运行时间
+        duration_ms: 任务持续时间，单位毫秒
+        data_scanned: 任务处理的数据量（例如订单数量）
+        profit_data_count: 产生的分润记录数量
+        error_message: 任务执行过程中捕获的错误信息，若无错误则为 null
+        created_at: 记录创建时间
+    """
     id = models.BigIntegerField(primary_key=True)
     run_time = models.DateTimeField(default=timezone.now)
     duration_ms = models.IntegerField(default=0)

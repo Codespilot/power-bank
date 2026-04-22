@@ -48,6 +48,8 @@ class HomePageView(BaseTemplateView):
             active_menu = "merchant"
         elif path.startswith("/profit/"):
             active_menu = "profit"
+        elif path.startswith("/task/"):
+            active_menu = "task"
         elif path.startswith("/profile/"):
             active_menu = "profile"
         elif path.startswith("/invite/"):
@@ -231,6 +233,17 @@ class ProfitListPageView(BaseTemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "profit"
+        return context
+
+
+class TaskRecordListPageView(BaseTemplateView):
+    """分润任务运行记录页面。"""
+
+    template_name = "web/task_record_list.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_menu"] = "task"
         return context
 
 class ProfilePageView(BaseTemplateView):

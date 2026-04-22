@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import CaptchaImageView, HomePageView, LoginPageView, RegisterPageView, LogoutView, UserListPageView, AgentListPageView, MerchantListPageView, MerchantHistoryPageView, ProfitListPageView, ProfilePageView, InvitePageView, WalletPageView, WithdrawPageView, OrderListPageView, OrderImportListPageView
+from .views import CaptchaImageView, HomePageView, LoginPageView, RegisterPageView, LogoutView, UserListPageView, AgentListPageView, MerchantListPageView, MerchantHistoryPageView, ProfitListPageView, TaskRecordListPageView, ProfilePageView, InvitePageView, WalletPageView, WithdrawPageView, OrderListPageView, OrderImportListPageView
 
 urlpatterns = [
     path("", HomePageView.as_view(), name="home"),
@@ -15,6 +15,7 @@ urlpatterns = [
     path("merchant/", MerchantListPageView.as_view(), name="merchant-list"),
     path("merchant/history/", MerchantHistoryPageView.as_view(), name="merchant-history-list"),
     path("profit/", ProfitListPageView.as_view(), name="profit-list"),
+    path("task/", TaskRecordListPageView.as_view(), name="task-record-list"),
     path("profile/", ProfilePageView.as_view(), name="profile-page"),
     path("invite/", InvitePageView.as_view(), name="invite-page"),
     path("wallet", WalletPageView.as_view(), name="wallet-page"),

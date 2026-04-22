@@ -7,7 +7,7 @@ from datetime import date, datetime, time as dt_time, timedelta, timezone as dt_
 from decimal import Decimal, ROUND_HALF_UP
 from django.conf import settings
 from django.db import connection, transaction
-from django.db import models
+from django.db.models import Sum
 from django.utils import timezone
 
 from .models import (
@@ -407,7 +407,7 @@ def _scheduler_loop(cron_expr: str):
                     run_key,
                     cron_expr,
                 )
-                run_profit_allocation()
+                run_profit_allocation_with_tracking()
                 last_run_key = run_key
             time.sleep(20)
         except Exception:

@@ -1,0 +1,86 @@
+{% extends "web/base.html" %}
+{% block title %}任务管理{% endblock %}
+{% block header %}任务管理{% endblock %}
+{% block content %}
+<form class="layui-form layui-row layui-col-space16">
+    <div class="layui-col-md5">
+        <div class="layui-form-item">
+            <div class="layui-inline">
+                <label class="layui-form-label search-label">运行时间</label>
+                <div class="layui-inline" id="task-date-range">
+                    <div class="layui-input-inline">
+                        <input type="text" name="from" autocomplete="off" id="task-date-from" class="layui-input" placeholder="开始日期">
+                    </div>
+                    <div class="layui-form-mid">-</div>
+                    <div class="layui-input-inline">
+                        <input type="text" name="to" autocomplete="off" id="task-date-to" class="layui-input" placeholder="结束日期">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="layui-col-md2 layui-col-md-offset5" style="text-align: right;">
+        <button type="button" class="layui-btn layui-btn-primary" lay-submit lay-filter="task-search">
+            <i class="layui-icon layui-icon-search"></i> 搜索
+        </button>
+    </div>
+</form>
+
+<table class="layui-hide" id="task-record-list"></table>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    layui.use(function () {
+        var table = layui.table;
+        var form = layui.form;
+        var laydate = layui.laydate;
+
+        laydate.render({
+            elem: '#task-date-range',
+            range: ['#task-date-from', '#task-date-to'],
+            rangeLinked: true
+        });
+
+        table.render({
+            elem: '#task-record-list',
+            id: 'taskRecordTable',
+            url: '/api/profit-tasks',
+            response: {
+                statusCode: 200
+            },
+            parseData: function (res) {
+                return {
+                    code: 200,
+                    msg: res.message || '',
+                    count: res.count || 0,
+                    data: res.results || []
+                };
+            },
+            cols: [[
+                { field: 'id', title: 'ID', width: 200 },
+                { field: 'run_time', title: '运行时间', width: 180 },
+                { field: 'duration_ms', title: '持续时间(ms)', width: 130, align: 'right' },
+                { field: 'data_scanned', title: '扫描数据量', width: 120, align: 'right' },
+                { field: 'profit_data_count', title: '分润数据量', width: 120, align: 'right' },
+                { field: 'error_message', title: '错误消息', minWidth: 240 },
+                { field: 'created_at', title: '记录时间', width: 180 }
+            ]],
+            page: true,
+            limit: 10,
+            limits: [10, 20, 50, 100],
+            height: 'full-300'
+        });
+
+        form.on('submit(task-search)', function (data) {
+            table.reload('taskRecordTable', {
+                page: {
+                    curr: 1
+                },
+                where: data.field
+            });
+            return false;
+        });
+    });
+</script>
+{% endblock %}

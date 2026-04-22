@@ -5,13 +5,20 @@ import time
 from collections import defaultdict
 from datetime import date, datetime, time as dt_time, timedelta, timezone as dt_timezone
 from decimal import Decimal, ROUND_HALF_UP
-
 from django.conf import settings
 from django.db import connection, transaction
-from django.db.models import Sum
+from django.db import models
 from django.utils import timezone
 
-from .models import Merchant, MerchantOrder, ProfitAllocation, User, Wallet, WalletRecord
+from .models import (
+    Merchant,
+    MerchantOrder,
+    ProfitAllocation,
+    ProfitTaskRecord,
+    User,
+    Wallet,
+    WalletRecord,
+)
 from utils.generate_snowflake_id import generate_snowflake_id
 
 logger = logging.getLogger(__name__)
@@ -103,8 +110,16 @@ def _fetch_profit_summary_rows(start_dt: datetime, end_dt: datetime) -> list[dic
         GROUP BY mch.agent_id
     """
 
-    utc_start = start_dt.astimezone(dt_timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%S")
-    utc_end = end_dt.astimezone(dt_timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%S")
+    utc_start = (
+        start_dt.astimezone(dt_timezone.utc)
+        .replace(tzinfo=None)
+        .strftime("%Y-%m-%d %H:%M:%S")
+    )
+    utc_end = (
+        end_dt.astimezone(dt_timezone.utc)
+        .replace(tzinfo=None)
+        .strftime("%Y-%m-%d %H:%M:%S")
+    )
 
     with connection.cursor() as cursor:
         cursor.execute(sql, [utc_start, utc_end])
@@ -135,7 +150,11 @@ def _get_superior_chain(agent_id: int) -> list[User]:
             break
         visited.add(current_id)
 
-        current_user = User.objects.only("id", "agent_id", "agent_rate").filter(id=current_id).first()
+        current_user = (
+            User.objects.only("id", "agent_id", "agent_rate")
+            .filter(id=current_id)
+            .first()
+        )
         if not current_user:
             break
         chain.append(current_user)
@@ -144,7 +163,9 @@ def _get_superior_chain(agent_id: int) -> list[User]:
         current_id = int(current_user.agent_id)
 
     if cycle_detected:
-        logger.warning("Detected cycle while loading superior chain for user %s", agent_id)
+        logger.warning(
+            "Detected cycle while loading superior chain for user %s", agent_id
+        )
 
     return chain
 
@@ -153,7 +174,9 @@ def _allocate_agent_profit(
     agent_id: int,
     total_profit: Decimal,
     total_order_amount: Decimal,
-    allocations: dict[tuple[int, str, int | None, Decimal | None], dict[str, Decimal | None]],
+    allocations: dict[
+        tuple[int, str, int | None, Decimal | None], dict[str, Decimal | None]
+    ],
 ):
     """按代理链逐级拆分利润。
 
@@ -197,7 +220,9 @@ def _allocate_agent_profit(
         current_rate = rate
 
 
-def _update_wallets(allocation_deltas: dict[int, Decimal], remark_prefix: str = "分润结算"):
+def _update_wallets(
+    allocation_deltas: dict[int, Decimal], remark_prefix: str = "分润结算"
+):
     """根据当日分润差额增量更新钱包，保证重复执行不会重复入账。"""
     for user_id, delta in allocation_deltas.items():
         amount = _quantize_amount(delta)
@@ -216,7 +241,9 @@ def _update_wallets(allocation_deltas: dict[int, Decimal], remark_prefix: str = 
         before_amount = _quantize_amount(Decimal(wallet.available_amount or 0))
         after_amount = _quantize_amount(before_amount + amount)
 
-        wallet.total_amount = _quantize_amount(Decimal(wallet.total_amount or 0) + amount)
+        wallet.total_amount = _quantize_amount(
+            Decimal(wallet.total_amount or 0) + amount
+        )
         wallet.available_amount = after_amount
         wallet.save(update_fields=["total_amount", "available_amount"])
 
@@ -249,10 +276,14 @@ def run_profit_allocation(target_date: date | None = None) -> dict:
             "agent_count": 0,
             "allocation_count": 0,
         }
-        logger.info("Profit allocation task finished with no eligible orders: %s", result)
+        logger.info(
+            "Profit allocation task finished with no eligible orders: %s", result
+        )
         return result
 
-    allocations: dict[tuple[int, str, int | None, Decimal | None], dict[str, Decimal | None]] = defaultdict(
+    allocations: dict[
+        tuple[int, str, int | None, Decimal | None], dict[str, Decimal | None]
+    ] = defaultdict(
         lambda: {
             "settle_amount": Decimal("0.00"),
             "profit_amount": Decimal("0.00"),
@@ -262,7 +293,9 @@ def run_profit_allocation(target_date: date | None = None) -> dict:
     total_order_count = sum(row["order_count"] for row in profit_rows)
 
     for row in profit_rows:
-        _allocate_agent_profit(row["agent_id"], row["merchant_profit"], row["order_amount"], allocations)
+        _allocate_agent_profit(
+            row["agent_id"], row["merchant_profit"], row["order_amount"], allocations
+        )
 
     created_count = 0
     asset_user_count = 0
@@ -271,12 +304,16 @@ def run_profit_allocation(target_date: date | None = None) -> dict:
         # 这样任务重复执行时仍然是幂等的。
         existing_amounts = {
             int(row["user_id"]): _quantize_amount(Decimal(row["total_amount"] or 0))
-            for row in ProfitAllocation.objects.filter(settle_date__gte=start_dt, settle_date__lt=end_dt)
+            for row in ProfitAllocation.objects.filter(
+                settle_date__gte=start_dt, settle_date__lt=end_dt
+            )
             .values("user_id")
             .annotate(total_amount=Sum("settle_amount"))
         }
 
-        ProfitAllocation.objects.filter(settle_date__gte=start_dt, settle_date__lt=end_dt).delete()
+        ProfitAllocation.objects.filter(
+            settle_date__gte=start_dt, settle_date__lt=end_dt
+        ).delete()
 
         records = []
         new_amounts: dict[int, Decimal] = defaultdict(lambda: Decimal("0.00"))
@@ -308,10 +345,15 @@ def run_profit_allocation(target_date: date | None = None) -> dict:
 
         changed_user_ids = set(existing_amounts.keys()) | set(new_amounts.keys())
         allocation_deltas = {
-            user_id: _quantize_amount(new_amounts.get(user_id, Decimal("0.00")) - existing_amounts.get(user_id, Decimal("0.00")))
+            user_id: _quantize_amount(
+                new_amounts.get(user_id, Decimal("0.00"))
+                - existing_amounts.get(user_id, Decimal("0.00"))
+            )
             for user_id in changed_user_ids
         }
-        _update_wallets(allocation_deltas, remark_prefix=f"{target_date.isoformat()} 分润结算")
+        _update_wallets(
+            allocation_deltas, remark_prefix=f"{target_date.isoformat()} 分润结算"
+        )
         asset_user_count = sum(1 for delta in allocation_deltas.values() if delta != 0)
 
     result = {
@@ -325,6 +367,34 @@ def run_profit_allocation(target_date: date | None = None) -> dict:
     return result
 
 
+def run_profit_allocation_with_tracking(target_date: date | None = None) -> dict:
+    start_time = time.time()
+    try:
+        result = run_profit_allocation(target_date)
+        error_message = None
+    except Exception as e:
+        result = {}
+        error_message = str(e)
+    end_time = time.time()
+
+    # 记录任务运行时间
+    duration = (end_time - start_time) * 1000  # 转换为毫秒
+
+    # 创建任务运行记录
+    record = ProfitTaskRecord(
+        id=generate_snowflake_id(),
+        run_time=timezone.now(),
+        duration_ms=duration,
+        data_scanned=0,  # 需要根据实际处理的数据量设置
+        profit_data_count=result.get('allocation_count', 0),
+        error_message=error_message,
+        created_at=timezone.now()
+    )
+    record.save()
+
+    return result
+
+
 def _scheduler_loop(cron_expr: str):
     last_run_key = None
     while True:
@@ -332,7 +402,11 @@ def _scheduler_loop(cron_expr: str):
             now_local = timezone.localtime()
             run_key = now_local.strftime("%Y-%m-%d %H:%M")
             if run_key != last_run_key and _cron_matches(now_local, cron_expr):
-                logger.info("Profit allocation scheduler triggered at %s with cron %s", run_key, cron_expr)
+                logger.info(
+                    "Profit allocation scheduler triggered at %s with cron %s",
+                    run_key,
+                    cron_expr,
+                )
                 run_profit_allocation()
                 last_run_key = run_key
             time.sleep(20)

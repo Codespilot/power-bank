@@ -5,6 +5,7 @@ import secrets
 import string
 
 from django.utils import timezone
+from utils.generate_snowflake_id import generate_snowflake_id
 
 
 # ===== 核心数据模型 =====
@@ -343,3 +344,17 @@ class Item(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+class ProfitTaskRecord(models.Model):
+    """分润任务运行记录"""
+    id = models.BigIntegerField(primary_key=True)
+    run_time = models.DateTimeField(default=timezone.now)
+    duration_ms = models.IntegerField(default=0)
+    data_scanned = models.IntegerField(default=0)
+    profit_data_count = models.IntegerField(default=0)
+    error_message = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "profit_task_record"
+        app_label = "api"

@@ -131,7 +131,7 @@
         }
 
         function loadWallet() {
-            fetch('/api/wallet/')
+            fetch('/api/wallet')
                 .then(function (response) { return response.json(); })
                 .then(function (res) {
                     if (res.message !== '查询成功') {
@@ -154,7 +154,7 @@
         table.render({
             elem: '#wallet-record-list',
             id: 'walletRecordTable',
-            url: '/api/wallet/record/',
+            url: '/api/wallet/record',
             response: { statusCode: 200 },
             parseData: function (res) {
                 return {
@@ -221,7 +221,7 @@
                 yes: function (index) {
                     var input = document.getElementById('withdraw-amount-input');
                     var amountValue = (input && input.value || '').trim();
-                    fetch('/api/wallet/', {
+                    fetch('/api/wallet', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ amount: amountValue })

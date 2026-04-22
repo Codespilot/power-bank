@@ -36,10 +36,10 @@ urlpatterns = [
     path("order-imports/running-count", OrderImportRunningCountView.as_view(), name="api-order-imports-running-count"),
 
     # 分润管理
-    path("profits/", ProfitListView.as_view(), name="api-profits-list"),
+    path("profits", ProfitListView.as_view(), name="api-profits-list"),
 
     # 邀请码管理
-    path("invite-codes/", InviteCodeListCreateView.as_view(), name="api-invite-codes"),
+    path("invite-codes", InviteCodeListCreateView.as_view(), name="api-invite-codes"),
     path("invite-codes/<int:id>/toggle-status", InviteCodeToggleView.as_view(), name="api-invite-codes-toggle"),
 
     # 个人资料
@@ -51,7 +51,7 @@ urlpatterns = [
     path("wallet/record", WalletRecordListView.as_view(), name="api-wallet-record"),
 
     # 提现管理
-    path("withdraws/", WithdrawListView.as_view(), name="api-withdraws"),
+    path("withdraws", WithdrawListView.as_view(), name="api-withdraws"),
     path("withdraws/<int:id>/approve", WithdrawApproveView.as_view(), name="api-withdraws-approve"),
     path("withdraws/<int:id>/reject", WithdrawRejectView.as_view(), name="api-withdraws-reject"),
     path("withdraws/<int:id>/cancel", WithdrawCancelView.as_view(), name="api-withdraws-cancel"),

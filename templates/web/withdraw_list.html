@@ -149,7 +149,7 @@
 		table.render({
 			elem: '#withdraw-list',
 			id: 'withdrawTable',
-			url: '/api/withdraws/',
+			url: '/api/withdraws',
 			response: { statusCode: 200 },
 			parseData: function (res) {
 				updateSummary(res.summary);

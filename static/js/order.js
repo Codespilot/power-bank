@@ -5,7 +5,7 @@ function fetchOrders(page) {
   const dateStart = document.getElementById('order-date-start').value;
   const dateEnd = document.getElementById('order-date-end').value;
   const params = new URLSearchParams({page, kw, date_start: dateStart, date_end: dateEnd});
-  fetch(`/api/orders/?${params}`)
+  fetch(`/api/orders?${params}`)
     .then(r=>r.json())
     .then(renderOrderTable);
 }

@@ -17,7 +17,7 @@ urlpatterns = [
     path("users/register", RegisterAPIView.as_view(), name="api-users-register"),
     path("token/grant", TokenGrantView.as_view(), name="api-token-grant"),
     path("token/refresh", TokenRefreshView.as_view(), name="api-token-refresh"),
-    path("users/", UserListView.as_view(), name="api-users-list"),
+    path("users", UserListView.as_view(), name="api-users-list"),
     path("users/create", UserCreateView.as_view(), name="api-users-create"),
     path("users/<int:id>", UserDetailView.as_view(), name="api-users-detail"),
     path("users/<int:id>/assign-superior-agent", UserAgentAssignView.as_view(), name="api-users-assign-superior-agent"),
@@ -25,13 +25,13 @@ urlpatterns = [
     path("users/agent", UserAgentAssignView.as_view(), name="api-agent"),
 
     # 商户管理
-    path("merchants/", MerchantListView.as_view(), name="api-merchants-list"),
+    path("merchants", MerchantListView.as_view(), name="api-merchants-list"),
     path("merchants/batch-assign-agent", MerchantBatchAssignAgentView.as_view(), name="api-merchants-batch-assign-agent"),
     path("merchants/<int:id>/history", MerchantHistoryListView.as_view(), name="api-merchants-history"),
     path("merchants/<int:id>/assign-agent", MerchantAssignAgentView.as_view(), name="api-merchants-assign-agent"),
 
     # 订单管理
-    path("orders/", MerchantOrderListView.as_view(), name="api-orders-list"),
+    path("orders", MerchantOrderListView.as_view(), name="api-orders-list"),
     path("order-imports/", OrderImportListCreateView.as_view(), name="api-order-imports-list-create"),
     path("order-imports/running-count", OrderImportRunningCountView.as_view(), name="api-order-imports-running-count"),
 

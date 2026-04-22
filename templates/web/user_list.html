@@ -33,7 +33,7 @@
 		// 创建表格实例
 		table.render({
 			elem: '#list',
-			url: '/api/users/',
+			url: '/api/users',
 			response: {
 				statusCode: 200 // 重新规定成功的状态码为 200，table 组件默认为 0
 			},
@@ -203,7 +203,7 @@
 									form.on('submit(assign-superior-agent-submit)', function (formdata) {
 										var field = formdata.field; // 获取表单字段值
 										console.log(field);
-										fetch(`/api/users/agent/`, {
+										fetch(`/api/users/agent`, {
 											method: 'POST',
 											headers: { 'Content-Type': 'application/json' },
 											body: JSON.stringify(field)
@@ -312,7 +312,7 @@
 						form.on('submit(add-user-submit)', function (data) {
 							var field = data.field; // 获取表单字段值
 							// 显示填写结果，仅作演示用
-							fetch('/api/users/create/', {
+							fetch('/api/users/create', {
 								method: 'POST',
 								headers: { 'Content-Type': 'application/json' },
 								body: JSON.stringify(field)

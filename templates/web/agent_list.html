@@ -39,7 +39,7 @@
 
         var tableIns = table.render({
             elem: '#agent-list',
-            url: '/api/users/?direct_subordinates=1',
+            url: '/api/users?direct_subordinates=1',
             response: { statusCode: 200 },
             parseData: function (res) {
                 return {
@@ -165,7 +165,7 @@
         });
 
         form.on('submit(agent-rate-submit)', function (data) {
-            fetch('/api/users/agent/', {
+            fetch('/api/users/agent', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data.field)

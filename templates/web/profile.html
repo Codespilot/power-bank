@@ -98,7 +98,7 @@
         var layer = layui.layer;
 
         function loadProfile() {
-            fetch('/api/profile/')
+            fetch('/api/profile')
                 .then(function (response) { return response.json(); })
                 .then(function (res) {
                     if (res.message !== '查询成功') {
@@ -120,7 +120,7 @@
         loadProfile();
 
         form.on('submit(profile-submit)', function (data) {
-            fetch('/api/profile/', {
+            fetch('/api/profile', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data.field)

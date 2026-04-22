@@ -43,7 +43,7 @@ urlpatterns = [
     path("invite-codes/<int:id>/toggle-status", InviteCodeToggleView.as_view(), name="api-invite-codes-toggle"),
 
     # 个人资料
-    path("profile/", CurrentUserProfileView.as_view(), name="api-profile"),
+    path("profile", CurrentUserProfileView.as_view(), name="api-profile"),
     path("profile/change-password", CurrentUserPasswordView.as_view(), name="api-profile-change-password"),
 
     # 钱包管理

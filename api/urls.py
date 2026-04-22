@@ -5,7 +5,7 @@ from .merchant_views import MerchantAssignAgentView, MerchantBatchAssignAgentVie
 from .profile_views import CurrentUserPasswordView, CurrentUserProfileView
 from .profit_views import ProfitListView
 from .views import HealthCheckView, ItemListCreateView
-from .user_views import AgentSaveView, LoginAPIView, RegisterAPIView, TokenGrantView, TokenRefreshView, UserListView, UserCreateView, UserDetailView, UserResetPasswordView
+from .user_views import UserAgentAssignView, LoginAPIView, RegisterAPIView, TokenGrantView, TokenRefreshView, UserListView, UserCreateView, UserDetailView, UserResetPasswordView
 from .order_views import MerchantOrderListView, OrderImportListCreateView, OrderImportRunningCountView
 from .wallet_views import WalletRecordListView, WalletView
 from .withdraw_views import WithdrawApproveView, WithdrawCancelView, WithdrawListView, WithdrawRejectView
@@ -20,9 +20,9 @@ urlpatterns = [
     path("users/", UserListView.as_view(), name="api-users-list"),
     path("users/create", UserCreateView.as_view(), name="api-users-create"),
     path("users/<int:id>", UserDetailView.as_view(), name="api-users-detail"),
-    path("users/<int:id>/assign-superior-agent", AgentSaveView.as_view(), name="api-users-assign-superior-agent"),
+    path("users/<int:id>/assign-superior-agent", UserAgentAssignView.as_view(), name="api-users-assign-superior-agent"),
     path("users/<int:id>/reset-password", UserResetPasswordView.as_view(), name="api-users-reset-password"),
-    path("agents/save", AgentSaveView.as_view(), name="api-agents-save"),
+    path("users/agent", UserAgentAssignView.as_view(), name="api-agent"),
 
     # 商户管理
     path("merchants/", MerchantListView.as_view(), name="api-merchants-list"),

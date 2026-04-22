@@ -111,10 +111,8 @@ SPECTACULAR_SETTINGS = {
     },
     "SCHEMA_PATH_PREFIX": r"/api",
     "TAGS": [
-        {"name": "auth", "description": "登录认证相关接口"},
         {"name": "token", "description": "JWT Token 接口"},
         {"name": "users", "description": "用户管理接口"},
-        {"name": "agents", "description": "代理商管理接口"},
         {"name": "merchants", "description": "商户管理接口"},
         {"name": "orders", "description": "订单管理接口"},
         {"name": "order-imports", "description": "订单导入接口"},

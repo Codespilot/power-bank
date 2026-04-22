@@ -107,7 +107,7 @@ class LoginAPIView(APIView):
     serializer_class = LoginRequestSerializer
 
     @extend_schema(
-        tags=["auth"],
+        tags=["users"],
         summary="用户登录",
         request=LoginRequestSerializer,
         responses={200: IdMessageSerializer, 400: MessageSerializer, 423: MessageSerializer},
@@ -478,11 +478,11 @@ class UserDetailView(generics.RetrieveAPIView):
     lookup_field = 'id'
 
 
-class AgentSaveView(APIView):
+class UserAgentAssignView(APIView):
     serializer_class = AgentAssignSerializer
 
     @extend_schema(
-        tags=["agents"],
+        tags=["users"],
         summary="分配上级代理商",
         request=AgentAssignSerializer,
         responses={200: MessageSerializer, 400: MessageSerializer, 404: MessageSerializer},

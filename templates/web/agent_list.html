@@ -165,7 +165,7 @@
         });
 
         form.on('submit(agent-rate-submit)', function (data) {
-            fetch('/api/agents/save/', {
+            fetch('/api/users/agent/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data.field)

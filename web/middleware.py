@@ -9,9 +9,15 @@ class StripTrailingSlashMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.path.startswith("/api/") and request.path != "/" and request.path.endswith("/"):
+        if (
+            request.path.startswith("/api/")
+            and request.path != "/api/schema/"
+            and request.path != "/"
+            and request.path.endswith("/")
+        ):
             request.path_info = request.path_info.rstrip("/")
         return self.get_response(request)
+
 
 EXCLUDE_PATHS = [
     "/login",
@@ -25,6 +31,7 @@ EXCLUDE_PATHS = [
     "/swagger/",
     "/static/",
 ]
+
 
 class LoginRequiredMiddleware:
     def __init__(self, get_response):

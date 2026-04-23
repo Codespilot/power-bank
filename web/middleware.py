@@ -1,6 +1,18 @@
 from django.shortcuts import redirect
 from django.urls import reverse
 
+
+class StripTrailingSlashMiddleware:
+    """忽略 URL 末尾斜杠，直接路由而不做 301 重定向。"""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path.startswith("/api/") and request.path != "/" and request.path.endswith("/"):
+            request.path_info = request.path_info.rstrip("/")
+        return self.get_response(request)
+
 EXCLUDE_PATHS = [
     "/login",
     "/register",

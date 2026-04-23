@@ -17,8 +17,8 @@ from .wallet_views import WalletRecordListView, WalletView
 from .withdraw_views import WithdrawApproveView, WithdrawCancelView, WithdrawListView, WithdrawRejectView
 
 urlpatterns = [
-    path("health/", HealthCheckView.as_view(), name="api-health"),
-    path("items/", ItemListCreateView.as_view(), name="api-items"),
+    path("health", HealthCheckView.as_view(), name="api-health"),
+    path("items", ItemListCreateView.as_view(), name="api-items"),
     path("users/login", LoginAPIView.as_view(), name="api-auth-login"),
     path("users/register", RegisterAPIView.as_view(), name="api-users-register"),
     path("token/grant", TokenGrantView.as_view(), name="api-token-grant"),
@@ -38,7 +38,7 @@ urlpatterns = [
 
     # 订单管理
     path("orders", OrderListView.as_view(), name="api-orders-list"),
-    path("order-imports/", OrderImportListCreateView.as_view(), name="api-order-imports-list-create"),
+    path("order-imports", OrderImportListCreateView.as_view(), name="api-order-imports-list-create"),
     path("order-imports/<int:id>", OrderImportDetailView.as_view(), name="api-order-imports-detail"),
     path("order-imports/<int:id>/run-profit", OrderImportRunProfitView.as_view(), name="api-order-imports-run-profit"),
     path("order-imports/running-count", OrderImportRunningCountView.as_view(), name="api-order-imports-running-count"),

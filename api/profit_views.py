@@ -128,6 +128,7 @@ class ProfitListView(APIView):
         data_sql = f"""
             SELECT
                 pa.id,
+                pa.order_import_id,
                 pa.settle_date,
                 pa.order_amount,
                 pa.profit_amount,
@@ -163,6 +164,7 @@ class ProfitListView(APIView):
             results.append(
                 {
                     "id": str(row["id"]),
+                    "order_import_id": str(row.get("order_import_id") or ""),
                     "settle_date": _format_datetime(row.get("settle_date")),
                     "agent_display": _user_display(row.get("agent_fullname"), row.get("agent_username"), row.get("agent_phone")),
                     "order_amount": _format_decimal(row.get("order_amount")),
@@ -285,18 +287,22 @@ class ProfitTaskListView(APIView):
         if error_response is not None:
             return error_response
 
-        run_date = None
-        run_date_text = str(request.data.get("run_date", "")).strip()
-        if run_date_text:
-            try:
-                run_date = date.fromisoformat(run_date_text)
-            except ValueError:
-                return Response(
-                    {"message": "run_date 日期格式错误，应为 YYYY-MM-DD"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+        order_import_id = request.data.get("order_import_id")
+        if order_import_id in (None, ""):
+            return Response(
+                {"message": "请传入 order_import_id，在导入记录页面执行分润"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        result = run_profit_allocation_with_tracking(target_date=run_date)
+        try:
+            order_import_id = int(order_import_id)
+        except (TypeError, ValueError):
+            return Response(
+                {"message": "order_import_id 格式错误"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        result = run_profit_allocation_with_tracking(order_import_id=order_import_id)
         latest_record = ProfitTaskRecord.objects.order_by("-created_at", "-id").first()
 
         return Response(

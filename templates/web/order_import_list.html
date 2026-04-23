@@ -34,7 +34,7 @@
 	</div>
 </form>
 
-<table class="layui-hide" id="list"></table>
+<table class="layui-hide" id="list" lay-filter="list"></table>
 
 {% endblock %}
 {% block extra_js %}
@@ -70,6 +70,7 @@
 
 		table.render({
 			elem: '#list',
+			id: 'orderImportTable',
 			url: '/api/order-imports/',
 			response: {
 				statusCode: 200 // 重新规定成功的状态码为 200，table 组件默认为 0
@@ -88,21 +89,105 @@
 				{
 					field: 'status', title: '状态', align: 'center', width: 180, templet: function (d) {
 						switch (d.status) {
-							case 1: return '待处理';
-							case 2: return '处理中';
-							case 3:
-							case 4: return '已完成';
+							case 1: return '未开始';
+							case 2: return '运行中';
+							case 3: return '成功';
+							case 4: return '失败';
 							default: return d.status;
 						}
 					}
 				},
+				{
+					field: 'profit_task_status', title: '分润任务状态', align: 'center', width: 160, templet: function (d) {
+						switch (d.profit_task_status) {
+							case 1: return '未运行';
+							case 2: return '正在运行';
+							case 3: return '完成';
+							case 4: return '失败';
+							default: return d.profit_task_status;
+						}
+					}
+				},
+				{ field: 'profit_run_time', title: '分润运行时间', width: 180, align: 'center' },
+				{ field: 'profit_error_message', title: '分润错误信息', width: 220 },
+				{ field: 'profit_summary_count', title: '分润汇总数量', width: 140, align: 'center' },
+				{ field: 'profit_total_amount', title: '总分润金额', width: 140, align: 'right' },
 				{ field: 'succeed_rows', title: '成功行数', width: 180, align: 'center' },
 				{ field: 'failed_rows', title: '失败行数', width: 180, align: 'center' },
-				{ field: 'created_at', title: '导入时间', width: 180, align: 'center' }
+				{ field: 'created_at', title: '导入时间', width: 180, align: 'center' },
+				{
+					title: '操作', width: 220, align: 'center', templet: function (d) {
+						var html = '';
+						if (d.can_run_profit) {
+							html += '<button class="layui-btn layui-btn-xs" lay-event="run-profit">运行分润</button>';
+						}
+						if (d.can_delete) {
+							html += '<button class="layui-btn layui-btn-danger layui-btn-xs" lay-event="delete">删除</button>';
+						}
+						return html || '-';
+					}
+				}
 			]],
 			page: true,
 			limit: 20,
 			limits: [10, 20, 50, 100],
+		});
+
+		table.on('tool(list)', function (obj) {
+			var row = obj.data;
+			if (obj.event === 'run-profit') {
+				layer.confirm('确认执行该导入记录的分润任务吗？', { icon: 3, title: '提示' }, async function (idx) {
+					layer.close(idx);
+					var loading = layer.load(1, { shade: 0.2 });
+					try {
+						var res = await fetch('/api/order-imports/' + row.id + '/run-profit', {
+							method: 'POST',
+							headers: {
+								'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : ''
+							},
+							credentials: 'same-origin'
+						});
+						var data = await res.json();
+						if (!res.ok) {
+							layer.msg(data.message || '执行失败', { icon: 2 });
+							return;
+						}
+						layer.msg(data.message || '执行成功', { icon: 1 });
+						table.reload('orderImportTable');
+					} catch (e) {
+						layer.msg('执行失败，请稍后重试', { icon: 2 });
+					} finally {
+						layer.close(loading);
+					}
+				});
+			}
+
+			if (obj.event === 'delete') {
+				layer.confirm('确认删除该导入记录吗？将同时删除订单与分润并扣减钱包。', { icon: 3, title: '提示' }, async function (idx) {
+					layer.close(idx);
+					var loading = layer.load(1, { shade: 0.2 });
+					try {
+						var res = await fetch('/api/order-imports/' + row.id, {
+							method: 'DELETE',
+							headers: {
+								'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : ''
+							},
+							credentials: 'same-origin'
+						});
+						var data = await res.json();
+						if (!res.ok) {
+							layer.msg(data.message || '删除失败', { icon: 2 });
+							return;
+						}
+						layer.msg(data.message || '删除成功', { icon: 1 });
+						table.reload('orderImportTable', { page: { curr: 1 } });
+					} catch (e) {
+						layer.msg('删除失败，请稍后重试', { icon: 2 });
+					} finally {
+						layer.close(loading);
+					}
+				});
+			}
 		});
 
 		upload.render({
@@ -114,7 +199,7 @@
 			},
 			done: function (res) {
 				layer.msg('上传成功');
-				table.reload('list'); // 上传成功后刷新表格数据
+				table.reload('orderImportTable'); // 上传成功后刷新表格数据
 			}
 		});
 	});

@@ -1,27 +1,45 @@
-from datetime import date
-
 from django.core.management.base import BaseCommand, CommandError
 
+from api.models import OrderImport
 from api.profit_tasks import run_profit_allocation_with_tracking
 
 
 class Command(BaseCommand):
-    help = "Run the profit allocation task for the previous day or a specified date"
+    help = "Run the profit allocation task for a specified order import record"
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--date",
-            dest="run_date",
-            help="Settlement date in YYYY-MM-DD format. Defaults to yesterday.",
+            "--order-import-id",
+            dest="order_import_id",
+            required=False,
+            help="Order import id. If omitted, run latest eligible import.",
         )
 
     def handle(self, *args, **options):
-        run_date = None
-        if options.get("run_date"):
+        order_import_id = options.get("order_import_id")
+        if order_import_id:
             try:
-                run_date = date.fromisoformat(options["run_date"])
-            except ValueError as exc:
-                raise CommandError("Invalid date format, expected YYYY-MM-DD") from exc
+                order_import_id = int(order_import_id)
+            except (TypeError, ValueError) as exc:
+                raise CommandError("Invalid --order-import-id") from exc
+        else:
+            latest = (
+                OrderImport.objects.filter(
+                    status=OrderImport.STATUS_SUCCESS,
+                    failed_rows=0,
+                )
+                .filter(
+                    profit_task_status__in=[
+                        OrderImport.PROFIT_STATUS_NOT_STARTED,
+                        OrderImport.PROFIT_STATUS_FAILED,
+                    ]
+                )
+                .order_by("-id")
+                .first()
+            )
+            if not latest:
+                raise CommandError("No eligible order import record found")
+            order_import_id = int(latest.id)
 
-        result = run_profit_allocation_with_tracking(target_date=run_date)
+        result = run_profit_allocation_with_tracking(order_import_id=order_import_id)
         self.stdout.write(self.style.SUCCESS(f"Profit task completed: {result}"))

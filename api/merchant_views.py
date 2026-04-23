@@ -120,7 +120,7 @@ class MerchantListView(APIView):
                     COUNT(1) AS order_count,
                     COALESCE(SUM(order_amount), 0) AS order_amount,
                     COALESCE(SUM(merchant_profit), 0) AS merchant_profit
-                FROM merchant_order
+                FROM `order`
                 GROUP BY merchant_id
             )
             SELECT

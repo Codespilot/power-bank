@@ -6,7 +6,13 @@ from .profile_views import CurrentUserPasswordView, CurrentUserProfileView
 from .profit_views import ProfitListView, ProfitTaskListView
 from .views import HealthCheckView, ItemListCreateView
 from .user_views import UserAgentAssignView, LoginAPIView, RegisterAPIView, TokenGrantView, TokenRefreshView, UserListView, UserCreateView, UserDetailView, UserResetPasswordView
-from .order_views import MerchantOrderListView, OrderImportListCreateView, OrderImportRunningCountView
+from .order_views import (
+    OrderListView,
+    OrderImportDetailView,
+    OrderImportListCreateView,
+    OrderImportRunProfitView,
+    OrderImportRunningCountView,
+)
 from .wallet_views import WalletRecordListView, WalletView
 from .withdraw_views import WithdrawApproveView, WithdrawCancelView, WithdrawListView, WithdrawRejectView
 
@@ -31,8 +37,10 @@ urlpatterns = [
     path("merchants/<int:id>/assign-agent", MerchantAssignAgentView.as_view(), name="api-merchants-assign-agent"),
 
     # 订单管理
-    path("orders", MerchantOrderListView.as_view(), name="api-orders-list"),
+    path("orders", OrderListView.as_view(), name="api-orders-list"),
     path("order-imports/", OrderImportListCreateView.as_view(), name="api-order-imports-list-create"),
+    path("order-imports/<int:id>", OrderImportDetailView.as_view(), name="api-order-imports-detail"),
+    path("order-imports/<int:id>/run-profit", OrderImportRunProfitView.as_view(), name="api-order-imports-run-profit"),
     path("order-imports/running-count", OrderImportRunningCountView.as_view(), name="api-order-imports-running-count"),
 
     # 分润管理

@@ -1,13 +1,14 @@
 import threading
 import pandas as pd
 from django.utils import timezone
-from .models import OrderImport, MerchantOrder
+from .models import OrderImport, Order
 from config.import_map import get_import_column_mapping
 from utils.generate_snowflake_id import generate_snowflake_id
+from .profit_tasks import run_profit_allocation_with_tracking
 import warnings
 
 warnings.filterwarnings("ignore", message="DateTimeField .* received a naive datetime.*while time zone support is active.", category=RuntimeWarning)
-    
+
 
 def process_imported_excel(order_import_id, file_path):
     import traceback
@@ -75,7 +76,7 @@ def process_imported_excel(order_import_id, file_path):
                 except (TypeError, ValueError):
                     merchant_id = 0
 
-                MerchantOrder.objects.create(
+                Order.objects.create(
                     id=generate_snowflake_id(),
                     import_id=order_import_id,
                     order_no=row.get("order_no"),
@@ -125,6 +126,12 @@ def process_imported_excel(order_import_id, file_path):
             OrderImport.STATUS_SUCCESS if failed == 0 else OrderImport.STATUS_FAILED
         )
         order_import.save()
+
+        if failed == 0:
+            try:
+                run_profit_allocation_with_tracking(order_import_id=order_import_id)
+            except Exception as profit_exc:
+                log(f"Profit task failed for import_id={order_import_id}: {profit_exc}")
     except Exception as e:
         log(f"Import failed: {e}\n{traceback.format_exc()}")
         order_import = OrderImport.objects.get(id=order_import_id)

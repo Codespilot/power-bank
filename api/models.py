@@ -164,7 +164,7 @@ class MerchantHistory(BaseEntity):
         app_label = "api"
 
 
-class MerchantOrder(BaseEntity):
+class Order(BaseEntity):
     id = models.BigIntegerField(primary_key=True)
     import_id = models.BigIntegerField()
     order_no = models.CharField(max_length=64, unique=True, default="", blank=False)
@@ -180,7 +180,7 @@ class MerchantOrder(BaseEntity):
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        db_table = "merchant_order"
+        db_table = "order"
         app_label = "api"
 
 
@@ -212,6 +212,7 @@ class ProfitAllocation(BaseEntity):
     settle_amount = models.DecimalField(max_digits=18, decimal_places=2)
     settle_date = models.DateTimeField(null=True, blank=True)
     settle_source = models.CharField(max_length=20, choices=SOURCE_CHOICES)
+    order_import_id = models.BigIntegerField(default=0, db_index=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
@@ -256,11 +257,34 @@ class OrderImport(BaseEntity):
         (STATUS_FAILED, "失败"),
     )
 
+    PROFIT_STATUS_NOT_STARTED = 1
+    PROFIT_STATUS_RUNNING = 2
+    PROFIT_STATUS_SUCCESS = 3
+    PROFIT_STATUS_FAILED = 4
+    PROFIT_STATUS_CHOICES = (
+        (PROFIT_STATUS_NOT_STARTED, "未运行"),
+        (PROFIT_STATUS_RUNNING, "正在运行"),
+        (PROFIT_STATUS_SUCCESS, "完成"),
+        (PROFIT_STATUS_FAILED, "失败"),
+    )
+
     id = models.BigIntegerField(primary_key=True)
     file_name = models.CharField(max_length=128)
     succeed_rows = models.IntegerField(null=True, blank=True)
     failed_rows = models.IntegerField(null=True, blank=True)
     status = models.IntegerField(choices=STATUS_CHOICES)
+    profit_task_status = models.IntegerField(
+        choices=PROFIT_STATUS_CHOICES,
+        default=PROFIT_STATUS_NOT_STARTED,
+    )
+    profit_run_time = models.DateTimeField(null=True, blank=True)
+    profit_error_message = models.TextField(null=True, blank=True)
+    profit_summary_count = models.IntegerField(default=0)
+    profit_total_amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:

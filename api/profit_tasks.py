@@ -1,18 +1,15 @@
 import logging
-import os
-import threading
-import time
 from collections import defaultdict
-from datetime import date, datetime, time as dt_time, timedelta, timezone as dt_timezone
+from datetime import date, datetime, time as dt_time, timedelta
 from decimal import Decimal, ROUND_HALF_UP
-from django.conf import settings
+
 from django.db import connection, transaction
 from django.db.models import Sum
 from django.utils import timezone
 
 from .models import (
-    Merchant,
-    MerchantOrder,
+    Order,
+    OrderImport,
     ProfitAllocation,
     ProfitTaskRecord,
     User,
@@ -23,8 +20,6 @@ from utils.generate_snowflake_id import generate_snowflake_id
 
 logger = logging.getLogger(__name__)
 
-_scheduler_started = False
-_scheduler_lock = threading.Lock()
 _AMOUNT_QUANT = Decimal("0.01")
 
 
@@ -55,109 +50,54 @@ def _quantize_amount(value: Decimal) -> Decimal:
     return Decimal(value).quantize(_AMOUNT_QUANT, rounding=ROUND_HALF_UP)
 
 
-def _field_matches(value: int, expr: str, min_value: int, max_value: int) -> bool:
-    if expr == "*":
-        return True
-
-    for part in expr.split(","):
-        part = part.strip()
-        if not part:
-            continue
-
-        if "/" in part:
-            base, step_text = part.split("/", 1)
-            step = int(step_text)
-            if step <= 0:
-                return False
-            if base == "*":
-                start, end = min_value, max_value
-            elif "-" in base:
-                start_text, end_text = base.split("-", 1)
-                start, end = int(start_text), int(end_text)
-            else:
-                start, end = int(base), max_value
-            if start <= value <= end and (value - start) % step == 0:
-                return True
-            continue
-
-        if "-" in part:
-            start_text, end_text = part.split("-", 1)
-            if int(start_text) <= value <= int(end_text):
-                return True
-            continue
-
-        if int(part) == value:
-            return True
-
-    return False
-
-
-def _cron_matches(now_local: datetime, cron_expr: str) -> bool:
-    parts = cron_expr.split()
-    if len(parts) != 5:
-        raise ValueError("PROFIT_TASK_CRON must contain 5 fields")
-
-    minute_expr, hour_expr, day_expr, month_expr, weekday_expr = parts
-    weekday_value = now_local.isoweekday() % 7
-
-    minute_ok = _field_matches(now_local.minute, minute_expr, 0, 59)
-    hour_ok = _field_matches(now_local.hour, hour_expr, 0, 23)
-    month_ok = _field_matches(now_local.month, month_expr, 1, 12)
-    day_ok = _field_matches(now_local.day, day_expr, 1, 31)
-    weekday_ok = _field_matches(weekday_value, weekday_expr, 0, 7) or (
-        weekday_value == 0 and _field_matches(7, weekday_expr, 0, 7)
-    )
-
-    if day_expr != "*" and weekday_expr != "*":
-        day_match = day_ok or weekday_ok
+def _to_bill_day_start(bill_day_value) -> datetime:
+    if isinstance(bill_day_value, datetime):
+        day_value = bill_day_value.date()
+    elif isinstance(bill_day_value, date):
+        day_value = bill_day_value
     else:
-        day_match = day_ok and weekday_ok
+        day_value = datetime.strptime(str(bill_day_value), "%Y-%m-%d").date()
+    return timezone.make_aware(datetime.combine(day_value, dt_time.min))
 
-    return minute_ok and hour_ok and month_ok and day_match
 
-
-def _fetch_profit_summary_rows(start_dt: datetime, end_dt: datetime) -> list[dict]:
-    """按账单日期汇总商户订单利润，作为分润任务的原始输入。"""
+def _fetch_profit_summary_rows(order_import_id: int) -> list[dict]:
+    """按导入批次汇总：代理商 + 账单日。"""
     sql = """
         SELECT
             mch.agent_id,
+            DATE(odr.bill_date) AS bill_day,
             COUNT(odr.id) AS order_count,
             COALESCE(SUM(odr.order_amount), 0) AS order_amount,
             COALESCE(SUM(odr.merchant_profit), 0) AS merchant_profit
-        FROM merchant_order AS odr
+        FROM `order` AS odr
         INNER JOIN merchant AS mch ON odr.merchant_id = mch.id
         WHERE mch.agent_id IS NOT NULL
           AND mch.agent_id > 0
-          AND odr.bill_date >= %s
-          AND odr.bill_date < %s
-        GROUP BY mch.agent_id
+          AND odr.import_id = %s
+          AND odr.bill_date IS NOT NULL
+        GROUP BY mch.agent_id, DATE(odr.bill_date)
     """
 
-    utc_start = (
-        start_dt.astimezone(dt_timezone.utc)
-        .replace(tzinfo=None)
-        .strftime("%Y-%m-%d %H:%M:%S")
-    )
-    utc_end = (
-        end_dt.astimezone(dt_timezone.utc)
-        .replace(tzinfo=None)
-        .strftime("%Y-%m-%d %H:%M:%S")
-    )
-
     with connection.cursor() as cursor:
-        cursor.execute(sql, [utc_start, utc_end])
+        cursor.execute(sql, [int(order_import_id)])
         rows = cursor.fetchall()
 
-    return [
-        {
-            "agent_id": int(agent_id),
-            "order_count": int(order_count or 0),
-            "order_amount": _quantize_amount(Decimal(order_amount or 0)),
-            "merchant_profit": _quantize_amount(Decimal(merchant_profit or 0)),
-        }
-        for agent_id, order_count, order_amount, merchant_profit in rows
-        if agent_id
-    ]
+    result = []
+    for agent_id, bill_day, order_count, order_amount, merchant_profit in rows:
+        if not agent_id or not bill_day:
+            continue
+        settle_date = _to_bill_day_start(bill_day)
+        result.append(
+            {
+                "agent_id": int(agent_id),
+                "settle_date": settle_date,
+                "bill_day": settle_date.date().isoformat(),
+                "order_count": int(order_count or 0),
+                "order_amount": _quantize_amount(Decimal(order_amount or 0)),
+                "merchant_profit": _quantize_amount(Decimal(merchant_profit or 0)),
+            }
+        )
+    return result
 
 
 def _get_superior_chain(agent_id: int) -> list[User]:
@@ -165,11 +105,12 @@ def _get_superior_chain(agent_id: int) -> list[User]:
     chain: list[User] = []
     visited: set[int] = set()
     current_id = int(agent_id)
-    cycle_detected = False
 
     while current_id:
         if current_id in visited:
-            cycle_detected = True
+            logger.warning(
+                "Detected cycle while loading superior chain for user %s", agent_id
+            )
             break
         visited.add(current_id)
 
@@ -185,26 +126,20 @@ def _get_superior_chain(agent_id: int) -> list[User]:
             break
         current_id = int(current_user.agent_id)
 
-    if cycle_detected:
-        logger.warning(
-            "Detected cycle while loading superior chain for user %s", agent_id
-        )
-
     return chain
 
 
 def _allocate_agent_profit(
+    settle_date: datetime,
     agent_id: int,
     total_profit: Decimal,
     total_order_amount: Decimal,
     allocations: dict[
-        tuple[int, str, int | None, Decimal | None], dict[str, Decimal | None]
+        tuple[datetime, int, str, int | None, Decimal | None],
+        dict[str, Decimal | None],
     ],
 ):
-    """按代理链逐级拆分利润。
-
-    当前级先保留自己的部分，再按 agent_rate 将上级应得金额继续向上递推。
-    """
+    """按代理链逐级拆分利润。"""
     current_amount = _quantize_amount(total_profit)
     total_profit = _quantize_amount(total_profit)
     total_order_amount = _quantize_amount(total_order_amount)
@@ -219,7 +154,14 @@ def _allocate_agent_profit(
 
         rate = _quantize_amount(Decimal(agent.agent_rate or 0))
         has_next_superior = index + 1 < len(superior_chain)
-        key = (agent.id, current_source, current_source_user_id, current_rate)
+        key = (
+            settle_date,
+            int(agent.id),
+            current_source,
+            current_source_user_id,
+            current_rate,
+        )
+
         if not has_next_superior or rate <= 0:
             allocations[key]["settle_amount"] += current_amount
             allocations[key]["profit_amount"] += total_profit
@@ -239,14 +181,15 @@ def _allocate_agent_profit(
 
         current_amount = superior_share
         current_source = ProfitAllocation.SOURCE_SUBAGENT
-        current_source_user_id = agent.id
+        current_source_user_id = int(agent.id)
         current_rate = rate
 
 
 def _update_wallets(
-    allocation_deltas: dict[int, Decimal], remark_prefix: str = "分润结算"
+    allocation_deltas: dict[int, Decimal],
+    remark_prefix: str,
 ):
-    """根据当日分润差额增量更新钱包，保证重复执行不会重复入账。"""
+    """根据分润差额更新钱包，支持正向入账和反向回滚。"""
     for user_id, delta in allocation_deltas.items():
         amount = _quantize_amount(delta)
         if amount == 0:
@@ -261,16 +204,19 @@ def _update_wallets(
                 "available_amount": Decimal("0.00"),
             },
         )
+
         before_amount = _quantize_amount(Decimal(wallet.available_amount or 0))
         after_amount = _quantize_amount(before_amount + amount)
-
-        wallet.total_amount = _quantize_amount(
-            Decimal(wallet.total_amount or 0) + amount
-        )
+        wallet.total_amount = _quantize_amount(Decimal(wallet.total_amount or 0) + amount)
         wallet.available_amount = after_amount
         wallet.save(update_fields=["total_amount", "available_amount"])
 
-        remark = f"{remark_prefix}入账" if amount > 0 else f"{remark_prefix}调整"
+        remark = remark_prefix
+        if amount > 0:
+            remark = f"{remark_prefix}入账"
+        elif amount < 0:
+            remark = f"{remark_prefix}回滚"
+
         WalletRecord.objects.create(
             id=generate_snowflake_id(),
             user_id=user_id,
@@ -282,32 +228,26 @@ def _update_wallets(
         )
 
 
-def run_profit_allocation(target_date: date | None = None) -> dict:
-    print(f"Starting profit allocation task for target date: {target_date}")
-    if target_date is None and settings.DEBUG:
-        target_date = date(2026, 2, 1)
-    else:
-        target_date = target_date or (timezone.localdate() - timedelta(days=1))
-    start_dt = timezone.make_aware(datetime.combine(target_date, dt_time.min))
-    end_dt = start_dt + timedelta(days=1)
+def run_profit_allocation(order_import_id: int) -> dict:
+    """按导入记录执行分润。"""
+    order_import_id = int(order_import_id)
+    profit_rows = _fetch_profit_summary_rows(order_import_id)
 
-    profit_rows = _fetch_profit_summary_rows(start_dt, end_dt)
     if not profit_rows:
-        result = {
-            "target_date": target_date.isoformat(),
-            "bill_date_start": target_date.isoformat(),
-            "bill_date_end": target_date.isoformat(),
+        return {
+            "order_import_id": order_import_id,
+            "bill_date_start": "",
+            "bill_date_end": "",
             "order_count": 0,
-            "agent_count": 0,
+            "summary_count": 0,
             "allocation_count": 0,
+            "total_settle_amount": "0.00",
+            "asset_user_count": 0,
         }
-        logger.info(
-            "Profit allocation task finished with no eligible orders: %s", result
-        )
-        return result
 
     allocations: dict[
-        tuple[int, str, int | None, Decimal | None], dict[str, Decimal | None]
+        tuple[datetime, int, str, int | None, Decimal | None],
+        dict[str, Decimal | None],
     ] = defaultdict(
         lambda: {
             "settle_amount": Decimal("0.00"),
@@ -315,39 +255,49 @@ def run_profit_allocation(target_date: date | None = None) -> dict:
             "order_amount": Decimal("0.00"),
         }
     )
-    total_order_count = sum(row["order_count"] for row in profit_rows)
 
     for row in profit_rows:
         _allocate_agent_profit(
-            row["agent_id"], row["merchant_profit"], row["order_amount"], allocations
+            settle_date=row["settle_date"],
+            agent_id=row["agent_id"],
+            total_profit=row["merchant_profit"],
+            total_order_amount=row["order_amount"],
+            allocations=allocations,
         )
+
+    total_order_count = sum(row["order_count"] for row in profit_rows)
+    bill_days = sorted({row["bill_day"] for row in profit_rows})
 
     created_count = 0
     asset_user_count = 0
+    total_settle_amount = Decimal("0.00")
+
     with transaction.atomic():
-        # 结算逻辑采用“先统计旧值 -> 删除旧记录 -> 重建新记录 -> 按差额更新钱包”，
-        # 这样任务重复执行时仍然是幂等的。
         existing_amounts = {
             int(row["user_id"]): _quantize_amount(Decimal(row["total_amount"] or 0))
-            for row in ProfitAllocation.objects.filter(
-                settle_date__gte=start_dt, settle_date__lt=end_dt
-            )
+            for row in ProfitAllocation.objects.filter(order_import_id=order_import_id)
             .values("user_id")
             .annotate(total_amount=Sum("settle_amount"))
         }
 
-        ProfitAllocation.objects.filter(
-            settle_date__gte=start_dt, settle_date__lt=end_dt
-        ).delete()
+        ProfitAllocation.objects.filter(order_import_id=order_import_id).delete()
 
         records = []
         new_amounts: dict[int, Decimal] = defaultdict(lambda: Decimal("0.00"))
-        for (user_id, source, source_user_id, rate), payload in allocations.items():
+        for (
+            settle_date,
+            user_id,
+            source,
+            source_user_id,
+            rate,
+        ), payload in allocations.items():
             settle_amount = _quantize_amount(Decimal(payload["settle_amount"] or 0))
-            profit_amount = _quantize_amount(Decimal(payload["profit_amount"] or 0))
-            order_amount = _quantize_amount(Decimal(payload["order_amount"] or 0))
             if settle_amount <= 0:
                 continue
+
+            profit_amount = _quantize_amount(Decimal(payload["profit_amount"] or 0))
+            order_amount = _quantize_amount(Decimal(payload["order_amount"] or 0))
+            total_settle_amount += settle_amount
             new_amounts[int(user_id)] += settle_amount
             records.append(
                 ProfitAllocation(
@@ -358,8 +308,9 @@ def run_profit_allocation(target_date: date | None = None) -> dict:
                     profit_amount=profit_amount,
                     order_amount=order_amount,
                     settle_amount=settle_amount,
-                    settle_date=start_dt,
+                    settle_date=settle_date,
                     settle_source=source,
+                    order_import_id=order_import_id,
                     created_at=timezone.now(),
                 )
             )
@@ -376,43 +327,64 @@ def run_profit_allocation(target_date: date | None = None) -> dict:
             )
             for user_id in changed_user_ids
         }
+
         _update_wallets(
-            allocation_deltas, remark_prefix=f"{target_date.isoformat()} 分润结算"
+            allocation_deltas,
+            remark_prefix=f"导入批次 {order_import_id} 分润",
         )
         asset_user_count = sum(1 for delta in allocation_deltas.values() if delta != 0)
 
-    result = {
-        "target_date": target_date.isoformat(),
-        "bill_date_start": target_date.isoformat(),
-        "bill_date_end": target_date.isoformat(),
+    return {
+        "order_import_id": order_import_id,
+        "bill_date_start": bill_days[0] if bill_days else "",
+        "bill_date_end": bill_days[-1] if bill_days else "",
         "order_count": total_order_count,
-        "agent_count": len(profit_rows),
+        "summary_count": len(profit_rows),
         "allocation_count": created_count,
+        "total_settle_amount": format(_quantize_amount(total_settle_amount), "f"),
         "asset_user_count": asset_user_count,
     }
-    logger.info("Profit allocation task finished: %s", result)
-    return result
 
 
-def run_profit_allocation_with_tracking(target_date: date | None = None) -> dict:
-    start_time = time.time()
-    try:
-        result = run_profit_allocation(target_date)
-        error_message = None
-    except Exception as e:
-        result = {}
-        error_message = str(e)
-    end_time = time.time()
+def run_profit_allocation_with_tracking(
+    order_import_id: int,
+) -> dict:
+    """带运行记录与导入记录状态回写的分润执行入口。"""
+    order_import = OrderImport.objects.filter(id=int(order_import_id)).first()
+    if not order_import:
+        raise ValueError("订单导入记录不存在")
 
-    # 记录任务运行时间
-    duration = int((end_time - start_time) * 1000)
-
-    bill_date_text = _format_bill_date_text(
-        result.get("bill_date_start", ""), result.get("bill_date_end", "")
+    order_import.profit_task_status = OrderImport.PROFIT_STATUS_RUNNING
+    order_import.profit_run_time = timezone.now()
+    order_import.profit_error_message = ""
+    order_import.profit_summary_count = 0
+    order_import.profit_total_amount = Decimal("0.00")
+    order_import.save(
+        update_fields=[
+            "profit_task_status",
+            "profit_run_time",
+            "profit_error_message",
+            "profit_summary_count",
+            "profit_total_amount",
+        ]
     )
 
-    # 创建任务运行记录
-    record = ProfitTaskRecord(
+    start_time = timezone.now()
+    result = {}
+    error_message = None
+    try:
+        result = run_profit_allocation(order_import_id=order_import.id)
+    except Exception as exc:
+        error_message = str(exc)
+        logger.exception("Profit allocation task failed for import_id=%s", order_import.id)
+
+    duration = int((timezone.now() - start_time).total_seconds() * 1000)
+    bill_date_text = _format_bill_date_text(
+        result.get("bill_date_start", ""),
+        result.get("bill_date_end", ""),
+    )
+
+    ProfitTaskRecord.objects.create(
         id=generate_snowflake_id(),
         run_time=timezone.now(),
         duration=duration,
@@ -422,57 +394,72 @@ def run_profit_allocation_with_tracking(target_date: date | None = None) -> dict
         error_message=error_message,
         created_at=timezone.now(),
     )
-    record.save()
 
+    if error_message:
+        order_import.profit_task_status = OrderImport.PROFIT_STATUS_FAILED
+        order_import.profit_error_message = error_message
+        order_import.profit_run_time = timezone.now()
+        order_import.save(
+            update_fields=[
+                "profit_task_status",
+                "profit_error_message",
+                "profit_run_time",
+                "profit_summary_count",
+                "profit_total_amount",
+            ]
+        )
+        return {"order_import_id": int(order_import.id), "message": error_message}
+
+    order_import.profit_task_status = OrderImport.PROFIT_STATUS_SUCCESS
+    order_import.profit_run_time = timezone.now()
+    order_import.profit_error_message = ""
+    order_import.profit_summary_count = int(result.get("summary_count", 0))
+    order_import.profit_total_amount = Decimal(str(result.get("total_settle_amount", "0.00")))
+    order_import.save(
+        update_fields=[
+            "profit_task_status",
+            "profit_run_time",
+            "profit_error_message",
+            "profit_summary_count",
+            "profit_total_amount",
+        ]
+    )
     return result
 
 
-def _scheduler_loop(cron_expr: str):
-    last_run_key = None
-    while True:
-        try:
-            now_local = timezone.localtime()
-            run_key = now_local.strftime("%Y-%m-%d %H:%M")
-            if run_key != last_run_key and _cron_matches(now_local, cron_expr):
-                logger.info(
-                    "Profit allocation scheduler triggered at %s with cron %s",
-                    run_key,
-                    cron_expr,
-                )
-                run_profit_allocation_with_tracking()
-                last_run_key = run_key
-            time.sleep(20)
-        except Exception:
-            logger.exception("Profit allocation scheduler execution failed")
-            time.sleep(60)
+def rollback_profit_allocation_for_import(order_import_id: int) -> dict:
+    """删除导入记录时回滚该批次分润并扣减钱包。"""
+    order_import_id = int(order_import_id)
+    with transaction.atomic():
+        existing_amounts = {
+            int(row["user_id"]): _quantize_amount(Decimal(row["total_amount"] or 0))
+            for row in ProfitAllocation.objects.filter(order_import_id=order_import_id)
+            .values("user_id")
+            .annotate(total_amount=Sum("settle_amount"))
+        }
+
+        deleted_count, _ = ProfitAllocation.objects.filter(
+            order_import_id=order_import_id
+        ).delete()
+
+        rollback_deltas = {
+            user_id: _quantize_amount(Decimal("0.00") - amount)
+            for user_id, amount in existing_amounts.items()
+            if amount != 0
+        }
+        _update_wallets(
+            rollback_deltas,
+            remark_prefix=f"导入批次 {order_import_id} 分润",
+        )
+
+    total_amount = sum(existing_amounts.values(), Decimal("0.00"))
+    return {
+        "deleted_profit_rows": int(deleted_count or 0),
+        "rollback_user_count": len(rollback_deltas),
+        "rollback_total_amount": format(_quantize_amount(total_amount), "f"),
+    }
 
 
 def start_profit_scheduler():
-    global _scheduler_started
-
-    cron_expr = os.getenv("PROFIT_TASK_CRON", "").strip()
-    if not cron_expr:
-        return
-
-    if settings.DEBUG and os.environ.get("RUN_MAIN") != "true":
-        return
-
-    with _scheduler_lock:
-        if _scheduler_started:
-            return
-
-        try:
-            _cron_matches(timezone.localtime(), cron_expr)
-        except ValueError:
-            logger.exception("Invalid PROFIT_TASK_CRON value: %s", cron_expr)
-            return
-
-        worker = threading.Thread(
-            target=_scheduler_loop,
-            args=(cron_expr,),
-            name="profit-allocation-scheduler",
-            daemon=True,
-        )
-        worker.start()
-        _scheduler_started = True
-        logger.info("Profit allocation scheduler started with cron %s", cron_expr)
+    """分润定时任务已下线，保留兼容入口。"""
+    return

@@ -72,7 +72,7 @@
         });
 
         function showUserDetail(id) {
-            fetch('/api/users/' + id + '/')
+            fetch('/api/users/' + id)
                 .then(function (r) { return r.json(); })
                 .then(function (u) {
                     layer.open({

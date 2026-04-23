@@ -3,8 +3,7 @@ from django.urls import path
 from .invite_views import InviteCodeListCreateView, InviteCodeToggleView
 from .merchant_views import MerchantAssignAgentView, MerchantBatchAssignAgentView, MerchantHistoryListView, MerchantListView
 from .profile_views import CurrentUserPasswordView, CurrentUserProfileView
-from .profit_views import ProfitListView
-from .task_views import ProfitTaskRecordListView
+from .profit_views import ProfitListView, ProfitTaskListView
 from .views import HealthCheckView, ItemListCreateView
 from .user_views import UserAgentAssignView, LoginAPIView, RegisterAPIView, TokenGrantView, TokenRefreshView, UserListView, UserCreateView, UserDetailView, UserResetPasswordView
 from .order_views import MerchantOrderListView, OrderImportListCreateView, OrderImportRunningCountView
@@ -38,7 +37,7 @@ urlpatterns = [
 
     # 分润管理
     path("profits", ProfitListView.as_view(), name="api-profits-list"),
-    path("profit-tasks", ProfitTaskRecordListView.as_view(), name="api-profit-tasks-list"),
+    path("profit-tasks", ProfitTaskListView.as_view(), name="api-profit-tasks-list"),
 
     # 邀请码管理
     path("invite-codes", InviteCodeListCreateView.as_view(), name="api-invite-codes"),

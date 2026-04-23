@@ -84,10 +84,9 @@
 				};
 			},
 			cols: [[
-				{ field: 'id', title: 'ID', width: 200 },
-				{ field: 'file_name', title: '文件名' },
+				{ field: 'file_name', title: '文件名', width: 240 },
 				{
-					field: 'status', title: '状态', align: 'center', width: 180, templet: function (d) {
+					field: 'status', title: '状态', align: 'center', width: 80, templet: function (d) {
 						switch (d.status) {
 							case 1: return '未开始';
 							case 2: return '运行中';
@@ -98,7 +97,7 @@
 					}
 				},
 				{
-					field: 'profit_task_status', title: '分润任务状态', align: 'center', width: 160, templet: function (d) {
+					field: 'profit_task_status', title: '分润任务状态', align: 'center', width: 120, templet: function (d) {
 						switch (d.profit_task_status) {
 							case 1: return '未运行';
 							case 2: return '正在运行';
@@ -110,10 +109,10 @@
 				},
 				{ field: 'profit_run_time', title: '分润运行时间', width: 180, align: 'center' },
 				{ field: 'profit_error_message', title: '分润错误信息', width: 220 },
-				{ field: 'profit_summary_count', title: '分润汇总数量', width: 140, align: 'center' },
-				{ field: 'profit_total_amount', title: '总分润金额', width: 140, align: 'right' },
-				{ field: 'succeed_rows', title: '成功行数', width: 180, align: 'center' },
-				{ field: 'failed_rows', title: '失败行数', width: 180, align: 'center' },
+				{ field: 'profit_summary_count', title: '分润汇总数量', width: 120, align: 'center' },
+				{ field: 'profit_total_amount', title: '总分润金额', width: 120, align: 'right' },
+				{ field: 'succeed_rows', title: '成功行数', width: 120, align: 'center' },
+				{ field: 'failed_rows', title: '失败行数', width: 120, align: 'center' },
 				{ field: 'created_at', title: '导入时间', width: 180, align: 'center' },
 				{
 					title: '操作', width: 220, align: 'center', templet: function (d) {
@@ -131,6 +130,7 @@
 			page: true,
 			limit: 20,
 			limits: [10, 20, 50, 100],
+			height: 'full-300'
 		});
 
 		table.on('tool(list)', function (obj) {

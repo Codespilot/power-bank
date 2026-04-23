@@ -351,7 +351,8 @@ class ProfitTaskRecord(models.Model):
     Attributes:
         id: 主键，使用雪花算法生成
         run_time: 任务实际运行时间
-        duration_ms: 任务持续时间，单位毫秒
+        duration: 任务持续时间，单位毫秒
+        bill_date: 任务运行查询的单据日期范围
         data_scanned: 任务处理的数据量（例如订单数量）
         profit_data_count: 产生的分润记录数量
         error_message: 任务执行过程中捕获的错误信息，若无错误则为 null
@@ -359,12 +360,13 @@ class ProfitTaskRecord(models.Model):
     """
     id = models.BigIntegerField(primary_key=True)
     run_time = models.DateTimeField(default=timezone.now)
-    duration_ms = models.IntegerField(default=0)
+    duration = models.IntegerField(default=0)
+    bill_date = models.CharField(max_length=32, default="")
     data_scanned = models.IntegerField(default=0)
     profit_data_count = models.IntegerField(default=0)
     error_message = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        db_table = "profit_task_record"
+        db_table = "profit_task"
         app_label = "api"

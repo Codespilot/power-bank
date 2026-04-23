@@ -28,6 +28,29 @@ _scheduler_lock = threading.Lock()
 _AMOUNT_QUANT = Decimal("0.01")
 
 
+def _format_bill_date_text(start_text: str, end_text: str) -> str:
+    start_text = str(start_text or "").strip()
+    end_text = str(end_text or "").strip()
+    if not start_text and not end_text:
+        return ""
+    if not end_text:
+        end_text = start_text
+    if not start_text:
+        start_text = end_text
+
+    try:
+        start_obj = datetime.strptime(start_text, "%Y-%m-%d").date()
+        end_obj = datetime.strptime(end_text, "%Y-%m-%d").date()
+    except ValueError:
+        return ""
+
+    start_fmt = start_obj.strftime("%Y.%m.%d")
+    end_fmt = end_obj.strftime("%Y.%m.%d")
+    if start_obj == end_obj:
+        return start_fmt
+    return f"{start_fmt} ~ {end_fmt}"
+
+
 def _quantize_amount(value: Decimal) -> Decimal:
     return Decimal(value).quantize(_AMOUNT_QUANT, rounding=ROUND_HALF_UP)
 
@@ -272,6 +295,8 @@ def run_profit_allocation(target_date: date | None = None) -> dict:
     if not profit_rows:
         result = {
             "target_date": target_date.isoformat(),
+            "bill_date_start": target_date.isoformat(),
+            "bill_date_end": target_date.isoformat(),
             "order_count": 0,
             "agent_count": 0,
             "allocation_count": 0,
@@ -358,6 +383,8 @@ def run_profit_allocation(target_date: date | None = None) -> dict:
 
     result = {
         "target_date": target_date.isoformat(),
+        "bill_date_start": target_date.isoformat(),
+        "bill_date_end": target_date.isoformat(),
         "order_count": total_order_count,
         "agent_count": len(profit_rows),
         "allocation_count": created_count,
@@ -378,17 +405,22 @@ def run_profit_allocation_with_tracking(target_date: date | None = None) -> dict
     end_time = time.time()
 
     # 记录任务运行时间
-    duration = (end_time - start_time) * 1000  # 转换为毫秒
+    duration = int((end_time - start_time) * 1000)
+
+    bill_date_text = _format_bill_date_text(
+        result.get("bill_date_start", ""), result.get("bill_date_end", "")
+    )
 
     # 创建任务运行记录
     record = ProfitTaskRecord(
         id=generate_snowflake_id(),
         run_time=timezone.now(),
-        duration_ms=duration,
-        data_scanned=0,  # 需要根据实际处理的数据量设置
-        profit_data_count=result.get('allocation_count', 0),
+        duration=duration,
+        bill_date=bill_date_text,
+        data_scanned=int(result.get("order_count", 0)),
+        profit_data_count=int(result.get("allocation_count", 0)),
         error_message=error_message,
-        created_at=timezone.now()
+        created_at=timezone.now(),
     )
     record.save()
 

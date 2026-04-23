@@ -95,7 +95,8 @@ class ProfitTaskRecordListView(APIView):
             {
                 "id": str(row.id),
                 "run_time": _format_datetime(row.run_time),
-                "duration_ms": int(row.duration_ms or 0),
+                "duration": int(row.duration or 0),
+                "bill_date": row.bill_date or "",
                 "data_scanned": int(row.data_scanned or 0),
                 "profit_data_count": int(row.profit_data_count or 0),
                 "error_message": row.error_message or "",

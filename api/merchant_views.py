@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from .order_serializers import (
+from .merchant_serializers import (
     MerchantListRequestSerializer,
     MerchantListResponseSerializer,
     MerchantHistoryResponseSerializer,

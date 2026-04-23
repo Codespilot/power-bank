@@ -8,6 +8,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 
+from api.serializers import GenericResponseSerializer
+
 from .wallet_serializers import (
     WalletInfoSerializer,
     WalletWithdrawRequestSerializer,
@@ -162,7 +164,7 @@ class WalletRecordListView(APIView):
             OpenApiParameter(name="from", description="起始日期 (YYYY-MM-DD)", required=False, type=str),
             OpenApiParameter(name="to", description="结束日期 (YYYY-MM-DD)", required=False, type=str),
         ],
-        responses={200: WalletRecordListResponseSerializer, 400: dict, 401: dict},
+        responses={200: GenericResponseSerializer[WalletRecordListResponseSerializer], 400: dict, 401: dict},
     )
     def get(self, request):
         user_id = get_request_user_id(request)

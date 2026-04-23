@@ -4,6 +4,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.db import transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,7 +13,8 @@ from utils.generate_snowflake_id import generate_snowflake_id
 
 from .auth import get_request_user_id
 from .models import User, UserRole, Wallet, WalletRecord, Withdraw
-
+from .serializers import GenericResponseSerializer
+from .withdraw_serializers import WithdrawListResponseSerializer
 
 _AMOUNT_QUANT = Decimal("0.01")
 
@@ -48,6 +50,19 @@ def _is_admin(user_id: int) -> bool:
 class WithdrawListView(APIView):
     """提现申请列表接口。"""
 
+    @extend_schema(
+        summary="提现申请列表",
+        parameters=[
+            OpenApiParameter(name="keyword", description="搜索关键词，匹配用户名、姓名、手机号、邮箱", required=False),
+            OpenApiParameter(name="status", description="申请状态，0=待审批，1=已批准，2=已驳回，3=已作废", required=False),
+            OpenApiParameter(name="date_start", description="申请开始日期，格式YYYY-MM-DD", required=False),
+            OpenApiParameter(name="date_end", description="申请结束日期，格式YYYY-MM-DD", required=False),
+            OpenApiParameter(name="page", description="页码，默认为1", required=False),
+            OpenApiParameter(name="limit", description="每页数量，默认为10", required=False),
+        ],
+        responses={
+            200: GenericResponseSerializer[WithdrawListResponseSerializer]}
+    )
     def get(self, request):
         current_user_id = get_request_user_id(request)
         if not current_user_id:

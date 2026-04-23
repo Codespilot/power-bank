@@ -33,11 +33,12 @@ class WalletRecordListRequestSerializer(serializers.Serializer):
 
 
 class WalletRecordListResponseSerializer(serializers.Serializer):
-    count = serializers.IntegerField(help_text="总数")
-    page = serializers.IntegerField(help_text="当前页码")
-    limit = serializers.IntegerField(help_text="每页数量")
-    message = serializers.CharField(help_text="响应消息")
-    results = serializers.ListField(child=serializers.DictField())
+    id = serializers.CharField(help_text="记录ID")
+    amount = serializers.CharField(help_text="变动金额")
+    before_amount = serializers.CharField(help_text="变动前金额")
+    after_amount = serializers.CharField(help_text="变动后金额")
+    remark = serializers.CharField(help_text="备注")
+    created_at = serializers.CharField(help_text="创建时间")
 
 
 class WalletRecordSerializer(serializers.Serializer):

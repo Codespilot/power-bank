@@ -1,6 +1,7 @@
 
 import secrets
 from django.conf import settings
+from django.db.models import Exists, OuterRef
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.views import View
@@ -8,8 +9,13 @@ from django.views.generic import TemplateView
 from api.models import InviteCode, User, UserRole
 from api.auth import new_captcha_code
 
+
 class BaseTemplateView(TemplateView):
-    """所有页面视图的基类，负责注入当前登录用户上下文和站点标题。"""
+    """所有页面视图的基类，负责注入当前登录用户上下文和站点标题。
+
+    使用 Exists 子查询将用户查询和管理员角色检查合并为一次数据库查询，
+    避免每页两次查询。
+    """
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -18,8 +24,14 @@ class BaseTemplateView(TemplateView):
         is_admin = False
         if user_id:
             try:
-                user = User.objects.get(id=user_id)
-                is_admin = UserRole.objects.filter(user=user, role=UserRole.ROLE_ADMIN).exists()
+                is_admin_subquery = UserRole.objects.filter(
+                    user_id=OuterRef("id"), role=UserRole.ROLE_ADMIN
+                )
+                user = (
+                    User.objects.annotate(_is_admin=Exists(is_admin_subquery))
+                    .get(id=user_id)
+                )
+                is_admin = user._is_admin
             except Exception:
                 pass
         context["current_user"] = user

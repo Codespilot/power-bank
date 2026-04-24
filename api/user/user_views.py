@@ -139,16 +139,17 @@ class LoginAPIView(APIView):
     permission_classes = [AllowAny]
     serializer_class = LoginRequestSerializer
 
-    @extend_schema(
-        tags=["users"],
-        summary="用户登录",
-        request=LoginRequestSerializer,
-        responses={
-            200: IdMessageSerializer,
-            400: MessageSerializer,
-            423: MessageSerializer,
-        },
-    )
+    # @extend_schema(
+    #     tags=["users"],
+    #     summary="用户登录",
+    #     request=LoginRequestSerializer,
+    #     responses={
+    #         200: IdMessageSerializer,
+    #         400: MessageSerializer,
+    #         423: MessageSerializer,
+    #     },
+    # )
+    @extend_schema(exclude=True)  # 该接口不在自动文档中展示
     def post(self, request):
         user, error_response = _authenticate_credentials(
             request, use_session_captcha=True
@@ -570,7 +571,8 @@ class RegisterAPIView(APIView):
         return Response({"message": "注册成功", "id": str(user.id)})
 
 
-@extend_schema_view(get=extend_schema(
+@extend_schema_view(
+    get=extend_schema(
         tags=["users"],
         summary="获取用户详情",
         responses={

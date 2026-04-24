@@ -23,6 +23,9 @@ class ItemSerializer(SafeBigIntModelSerializer):
         fields = ["id", "name", "description", "created_at"]
         read_only_fields = ["id", "created_at"]
 
+class CommonResponseSerializer(serializers.Serializer):
+    code = serializers.IntegerField(help_text="响应状态码")
+    message = serializers.CharField(help_text="响应消息")
 
 class GenericResponseSerializer(serializers.Serializer):
     """分页列表响应的通用 Serializer。

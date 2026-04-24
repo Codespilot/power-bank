@@ -17,7 +17,7 @@ from .merchant_serializers import (
 )
 
 from utils.generate_snowflake_id import generate_snowflake_id
-
+from ..serializers import GenericResponseSerializer
 from ..auth import get_request_user_id
 from ..models import Merchant, MerchantHistory, User, UserRole
 
@@ -58,7 +58,7 @@ class MerchantListView(APIView):
             OpenApiParameter(name="limit", description="每页数量，默认10", required=False, type=int),
         ],
         responses={
-            200: MerchantListResponseSerializer,
+            200: GenericResponseSerializer[MerchantListResponseSerializer],
             401: MerchantAssignMessageSerializer,
         },
     )
@@ -275,6 +275,7 @@ def _assign_merchants(request, merchant_ids, agent_phone):
 class MerchantAssignAgentView(APIView):
     @extend_schema(
         tags=["merchants"],
+        operation_id="merchant_allocate_detail",
         summary="划拨单个商户",
         description="将单个商户划拨给指定代理商。管理员可划拨任意商户，普通代理商仅能划拨自己名下的商户给自己的直属下级代理商。",
         parameters=[
@@ -295,6 +296,7 @@ class MerchantAssignAgentView(APIView):
 class MerchantBatchAssignAgentView(APIView):
     @extend_schema(
         tags=["merchants"],
+        operation_id="merchant_allocate_bulk",
         summary="批量划拨商户",
         description="将多个商户批量划拨给指定代理商。管理员可划拨任意商户，普通代理商仅能划拨自己名下的商户给自己的直属下级代理商。",
         request=MerchantBatchAssignAgentRequestSerializer,

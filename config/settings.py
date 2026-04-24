@@ -124,14 +124,14 @@ SPECTACULAR_SETTINGS = {
         {"name": "token", "description": "JWT Token 接口"},
         {"name": "users", "description": "用户管理接口"},
         {"name": "merchants", "description": "商户管理接口"},
-        {"name": "orders", "description": "订单管理接口"},
-        {"name": "profits", "description": "分润管理接口"},
+        # {"name": "orders", "description": "订单管理接口"},
+        # {"name": "profits", "description": "分润管理接口"},
         {"name": "invite-codes", "description": "邀请码管理接口"},
         {"name": "profile", "description": "个人资料接口"},
         {"name": "wallet", "description": "钱包管理接口"},
         {"name": "withdraws", "description": "提现管理接口"},
-        {"name": "health", "description": "系统健康检查接口"},
-        {"name": "items", "description": "示例数据接口"},
+        # {"name": "health", "description": "系统健康检查接口"},
+        # {"name": "items", "description": "示例数据接口"},
     ],
 }
 

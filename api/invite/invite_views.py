@@ -5,20 +5,18 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from rest_framework import serializers
 from api.auth import get_request_user_id
+from api.message import ResponseMessage
 from utils.generate_snowflake_id import generate_snowflake_id
 
 from ..models import InviteCode
 from ..user.user_serializers import _format_agent_rate
 from ..user.user_views import _parse_agent_rate
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from ..serializers import GenericResponseSerializer
+from ..serializers import GenericResponseSerializer, CommonResponseSerializer
 from .invite_serializers import (
     InviteCodeListResponseSerializer,
     InviteCodeCreateRequestSerializer,
-    InviteCodeCreateResponseSerializer,
-    InviteCodeToggleResponseSerializer,
 )
 
 
@@ -58,18 +56,18 @@ class InviteCodeView(APIView):
         description="查询当前用户的所有邀请码及其注册统计信息。",
         responses={
             200: GenericResponseSerializer[InviteCodeListResponseSerializer],
-            401: serializers.DictField(),
+            401: CommonResponseSerializer(),
         },
     )
     def get(self, request):
         user_id = get_request_user_id(request)
         if not user_id:
-            return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"message": "未登录", "code": 401}, status=status.HTTP_401_UNAUTHORIZED)
 
         queryset = InviteCode.objects.filter(user_id=user_id).order_by("-created_at")
         results = [_serialize_invite_code(request, item) for item in queryset]
         return Response(
-            {"message": "查询成功", "count": len(results), "results": results}
+            {"message": "查询成功", "code": 200, "count": len(results), "results": results}
         )
 
     @extend_schema(
@@ -79,21 +77,21 @@ class InviteCodeView(APIView):
         description="为当前用户创建新的邀请码，需指定分润比例。",
         request=InviteCodeCreateRequestSerializer,
         responses={
-            200: InviteCodeCreateResponseSerializer,
-            400: serializers.DictField(),
-            401: serializers.DictField(),
+            200: CommonResponseSerializer,
+            400: CommonResponseSerializer(),
+            401: CommonResponseSerializer(),
         },
     )
     def post(self, request):
         user_id = get_request_user_id(request)
         if not user_id:
-            return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(ResponseMessage("未登录", 401).to_dict(), status=status.HTTP_401_UNAUTHORIZED)
 
         try:
             rate = _parse_agent_rate(request.data.get("rate", ""))
         except Exception as exc:
             return Response(
-                {"message": str(exc) or "分润比例格式错误"},
+                ResponseMessage(str(exc) or "分润比例格式错误", 400).to_dict(),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -105,12 +103,13 @@ class InviteCodeView(APIView):
             is_valid=True,
             created_at=timezone.now(),
         )
-        return Response({"message": "新增邀请码成功"})
+        return Response(ResponseMessage("新增邀请码成功", 200).to_dict())
 
 
 class InviteCodeToggleView(APIView):
     @extend_schema(
         tags=["invite-codes"],
+        request=None,
         summary="切换邀请码状态",
         description="启用或作废指定的邀请码。",
         parameters=[
@@ -123,23 +122,24 @@ class InviteCodeToggleView(APIView):
             ),
         ],
         responses={
-            200: InviteCodeToggleResponseSerializer,
-            401: serializers.DictField(),
-            404: serializers.DictField(),
+            200: CommonResponseSerializer(),
+            401: CommonResponseSerializer(),
+            404: CommonResponseSerializer(),
+            500: CommonResponseSerializer(),
         },
     )
     def post(self, request, id=None):
         user_id = get_request_user_id(request)
         if not user_id:
-            return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(ResponseMessage("未登录", 401).to_dict(), status=status.HTTP_401_UNAUTHORIZED)
 
         invite = InviteCode.objects.filter(id=id, user_id=user_id).first()
         if not invite:
             return Response(
-                {"message": "邀请码不存在"}, status=status.HTTP_404_NOT_FOUND
+                ResponseMessage("邀请码不存在", 404).to_dict(), status=status.HTTP_404_NOT_FOUND
             )
 
         invite.is_valid = not bool(invite.is_valid)
         invite.save(update_fields=["is_valid"])
         action = "启用" if invite.is_valid else "作废"
-        return Response({"message": f"邀请码已{action}", "is_valid": invite.is_valid})
+        return Response(ResponseMessage(f"邀请码已{action}", 200).to_dict())

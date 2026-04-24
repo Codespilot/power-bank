@@ -9,11 +9,14 @@ class MerchantListRequestSerializer(serializers.Serializer):
 
 
 class MerchantListResponseSerializer(serializers.Serializer):
-    count = serializers.IntegerField(help_text="总数")
-    page = serializers.IntegerField(help_text="当前页码")
-    limit = serializers.IntegerField(help_text="每页数量")
-    message = serializers.CharField()
-    results = serializers.ListField(child=serializers.DictField())
+    id = serializers.CharField(help_text="商户ID")
+    merchant_id = serializers.CharField(help_text="商户编号")
+    merchant_name = serializers.CharField(help_text="商户名称")
+    agent_fullname = serializers.CharField(help_text="代理商姓名")
+    agent_phone = serializers.CharField(help_text="代理商手机号")
+    order_count = serializers.IntegerField(help_text="订单数量")
+    order_amount = serializers.DecimalField(max_digits=18, decimal_places=2, help_text="订单总金额")
+    merchant_profit = serializers.DecimalField(max_digits=18, decimal_places=2, help_text="商户分润总金额")
 
 
 class MerchantHistoryResponseSerializer(serializers.Serializer):

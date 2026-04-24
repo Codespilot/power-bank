@@ -1,14 +1,15 @@
 from datetime import datetime, time as dt_time, timedelta
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 
+from api.exceptions import CredentialError
 from api.serializers import GenericResponseSerializer
+from ..views import BaseAPIView
 
 from .wallet_serializers import (
     WalletInfoSerializer,
@@ -20,27 +21,7 @@ from .wallet_serializers import (
 
 from utils.generate_snowflake_id import generate_snowflake_id
 
-from ..auth import get_request_user_id
 from ..models import Wallet, WalletRecord, Withdraw
-
-
-_AMOUNT_QUANT = Decimal("0.01")
-
-
-def _quantize_amount(value) -> Decimal:
-    return Decimal(str(value or 0)).quantize(_AMOUNT_QUANT, rounding=ROUND_HALF_UP)
-
-
-def _format_amount(value) -> str:
-    return format(_quantize_amount(value), "f")
-
-
-def _format_datetime(value) -> str:
-    if not value:
-        return "--"
-    if timezone.is_naive(value):
-        return value.strftime("%Y-%m-%d %H:%M:%S")
-    return timezone.localtime(value).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _parse_int(value, default: int) -> int:
@@ -62,14 +43,14 @@ def _wallet_defaults() -> dict:
 
 def _serialize_wallet(wallet: Wallet) -> dict:
     return {
-        "total_amount": _format_amount(wallet.total_amount),
-        "frozen_amount": _format_amount(wallet.frozen_amount),
-        "pending_amount": _format_amount(wallet.pending_amount),
-        "available_amount": _format_amount(wallet.available_amount),
+        "total_amount": BaseAPIView.format_amount(wallet.total_amount),
+        "frozen_amount": BaseAPIView.format_amount(wallet.frozen_amount),
+        "pending_amount": BaseAPIView.format_amount(wallet.pending_amount),
+        "available_amount": BaseAPIView.format_amount(wallet.available_amount),
     }
 
 
-class WalletView(APIView):
+class WalletView(BaseAPIView):
     """钱包概览与提现申请接口。"""
 
     @extend_schema(
@@ -84,12 +65,18 @@ class WalletView(APIView):
         :param request: 请求信息
         :return: 钱包信息字典
         """
-        user_id = get_request_user_id(request)
-        if not user_id:
-            return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        wallet, _ = Wallet.objects.get_or_create(id=user_id, defaults=_wallet_defaults())
-        return Response({**_serialize_wallet(wallet), "message": "查询成功"})
+        def _handle():
+            user_id = self.get_current_user_id(request)
+            if not user_id:
+                raise CredentialError("未登录")
+
+            wallet, _ = Wallet.objects.get_or_create(
+                id=user_id, defaults=_wallet_defaults()
+            )
+            return Response({**_serialize_wallet(wallet), "message": "查询成功"})
+
+        return self.invoke(_handle)
 
     @extend_schema(
         tags=["wallet"],
@@ -99,33 +86,44 @@ class WalletView(APIView):
         responses={200: WalletWithdrawResponseSerializer, 400: dict, 401: dict},
     )
     def post(self, request):
-        user_id = get_request_user_id(request)
+        user_id = self.get_current_user_id(request)
         if not user_id:
-            return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+            raise CredentialError("未登录")
 
         try:
-            amount = _quantize_amount(request.data.get("amount", "0"))
+            amount = self.quantize_amount(request.data.get("amount", "0"))
         except (InvalidOperation, TypeError, ValueError):
-            return Response({"message": "提现金额格式错误"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "提现金额格式错误"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         if amount < Decimal("0.01"):
-            return Response({"message": "提现金额不能低于0.01"}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValueError("提现金额不能低于0.01")
 
         with transaction.atomic():
-            if Withdraw.objects.select_for_update().filter(
-                user_id=user_id,
-                status__in=[Withdraw.STATUS_PENDING_SUBMIT, Withdraw.STATUS_PENDING_APPROVAL],
-            ).exists():
-                return Response({"message": "当前有待处理的提现申请，请稍后再试"}, status=status.HTTP_400_BAD_REQUEST)
+            if (
+                Withdraw.objects.select_for_update()
+                .filter(
+                    user_id=user_id,
+                    status__in=[
+                        Withdraw.STATUS_PENDING_SUBMIT,
+                        Withdraw.STATUS_PENDING_APPROVAL,
+                    ],
+                )
+                .exists()
+            ):
+                raise InvalidOperation("当前有待处理的提现申请，请稍后再试")
 
-            wallet, _ = Wallet.objects.select_for_update().get_or_create(id=user_id, defaults=_wallet_defaults())
-            before_amount = _quantize_amount(wallet.available_amount)
+            wallet, _ = Wallet.objects.select_for_update().get_or_create(
+                id=user_id, defaults=_wallet_defaults()
+            )
+            before_amount = self.quantize_amount(wallet.available_amount)
             if amount > before_amount:
-                return Response({"message": "提现金额不能大于可用金额"}, status=status.HTTP_400_BAD_REQUEST)
+                raise ValueError("提现金额不能大于可用金额")
 
-            after_amount = _quantize_amount(before_amount - amount)
+            after_amount = self.quantize_amount(before_amount - amount)
             wallet.available_amount = after_amount
-            wallet.frozen_amount = _quantize_amount(wallet.frozen_amount + amount)
+            wallet.frozen_amount = self.quantize_amount(wallet.frozen_amount + amount)
             wallet.save(update_fields=["available_amount", "frozen_amount"])
 
             remark = str(request.data.get("remark", "")).strip() or "提现申请，资金冻结"
@@ -151,7 +149,7 @@ class WalletView(APIView):
         )
 
 
-class WalletRecordListView(APIView):
+class WalletRecordListView(BaseAPIView):
     """钱包流水查询接口，支持按日期区间过滤。"""
 
     @extend_schema(
@@ -159,56 +157,87 @@ class WalletRecordListView(APIView):
         summary="获取钱包流水记录",
         description="分页查询当前用户的钱包流水记录，支持按日期区间过滤。",
         parameters=[
-            OpenApiParameter(name="page", description="页码，默认1", required=False, type=int),
-            OpenApiParameter(name="limit", description="每页数量，默认10", required=False, type=int),
-            OpenApiParameter(name="from", description="起始日期 (YYYY-MM-DD)", required=False, type=str),
-            OpenApiParameter(name="to", description="结束日期 (YYYY-MM-DD)", required=False, type=str),
+            OpenApiParameter(
+                name="page", description="页码，默认1", required=False, type=int
+            ),
+            OpenApiParameter(
+                name="limit", description="每页数量，默认10", required=False, type=int
+            ),
+            OpenApiParameter(
+                name="from",
+                description="起始日期 (YYYY-MM-DD)",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="to", description="结束日期 (YYYY-MM-DD)", required=False, type=str
+            ),
         ],
-        responses={200: GenericResponseSerializer[WalletRecordListResponseSerializer], 400: dict, 401: dict},
+        responses={
+            200: GenericResponseSerializer[WalletRecordListResponseSerializer],
+            400: dict,
+            401: dict,
+        },
     )
     def get(self, request):
-        user_id = get_request_user_id(request)
-        if not user_id:
-            return Response({"count": 0, "results": [], "message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+        def _handle():
+            user_id = self.get_current_user_id(request)
+            if not user_id:
+                return Response(
+                    {"count": 0, "results": [], "message": "未登录"},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
 
-        qs = WalletRecord.objects.filter(user_id=user_id).order_by("-created_at", "-id")
+            qs = WalletRecord.objects.filter(user_id=user_id).order_by("-created_at", "-id")
 
-        date_from = str(request.GET.get("from", "")).strip()
-        date_to = str(request.GET.get("to", "")).strip()
-        try:
-            if date_from:
-                start_dt = timezone.make_aware(datetime.combine(datetime.strptime(date_from, "%Y-%m-%d").date(), dt_time.min))
-                qs = qs.filter(created_at__gte=start_dt)
-            if date_to:
-                end_dt = timezone.make_aware(datetime.combine(datetime.strptime(date_to, "%Y-%m-%d").date(), dt_time.min)) + timedelta(days=1)
-                qs = qs.filter(created_at__lt=end_dt)
-        except ValueError:
-            return Response({"count": 0, "results": [], "message": "日期格式错误"}, status=status.HTTP_400_BAD_REQUEST)
+            date_from = str(request.GET.get("from", "")).strip()
+            date_to = str(request.GET.get("to", "")).strip()
+            try:
+                if date_from:
+                    start_dt = timezone.make_aware(
+                        datetime.combine(
+                            datetime.strptime(date_from, "%Y-%m-%d").date(), dt_time.min
+                        )
+                    )
+                    qs = qs.filter(created_at__gte=start_dt)
+                if date_to:
+                    end_dt = timezone.make_aware(
+                        datetime.combine(
+                            datetime.strptime(date_to, "%Y-%m-%d").date(), dt_time.min
+                        )
+                    ) + timedelta(days=1)
+                    qs = qs.filter(created_at__lt=end_dt)
+            except ValueError:
+                return Response(
+                    {"count": 0, "results": [], "message": "日期格式错误"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        page = _parse_int(request.GET.get("page", 1), 1)
-        limit = _parse_int(request.GET.get("limit", 10), 10)
-        offset = (page - 1) * limit
+            page = _parse_int(request.GET.get("page", 1), 1)
+            limit = _parse_int(request.GET.get("limit", 10), 10)
+            offset = (page - 1) * limit
 
-        count = qs.count()
-        records = qs[offset: offset + limit]
-        results = [
-            {
-                "id": str(item.id),
-                "amount": _format_amount(item.amount),
-                "before_amount": _format_amount(item.before_amount),
-                "after_amount": _format_amount(item.after_amount),
-                "remark": item.remark or "--",
-                "created_at": _format_datetime(item.created_at),
-            }
-            for item in records
-        ]
+            count = qs.count()
+            records = qs[offset : offset + limit]
+            results = [
+                {
+                    "id": str(item.id),
+                    "amount": self.format_amount(item.amount),
+                    "before_amount": self.format_amount(item.before_amount),
+                    "after_amount": self.format_amount(item.after_amount),
+                    "remark": item.remark or "--",
+                    "created_at": self.format_datetime(item.created_at),
+                }
+                for item in records
+            ]
 
-        return Response(
-            {
-                "count": count,
-                "page": page,
-                "limit": limit,
-                "results": results,
-                "message": "查询成功",
-            }
-        )
+            return Response(
+                {
+                    "count": count,
+                    "page": page,
+                    "limit": limit,
+                    "results": results,
+                    "message": "查询成功",
+                }
+            )
+        return self.invoke(_handle)

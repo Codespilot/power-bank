@@ -166,15 +166,15 @@ class MerchantHistory(BaseEntity):
 
 class Order(BaseEntity):
     id = models.BigIntegerField(primary_key=True)
-    import_id = models.BigIntegerField()
+    import_id = models.BigIntegerField(db_index=True)
     order_no = models.CharField(max_length=64, unique=True, default="", blank=False)
     order_date = models.DateTimeField()
     bill_month = models.IntegerField(null=True, blank=True)
-    bill_date = models.DateTimeField(null=True, blank=True)
+    bill_date = models.DateTimeField(null=True, blank=True, db_index=True)
     order_type = models.CharField(max_length=10)
     order_amount = models.DecimalField(max_digits=18, decimal_places=2)
     merchant_name = models.CharField(max_length=255)
-    merchant_id = models.BigIntegerField()
+    merchant_id = models.BigIntegerField(db_index=True)
     merchant_profit = models.DecimalField(max_digits=18, decimal_places=2)
     agent_profit = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)

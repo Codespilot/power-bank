@@ -1,4 +1,5 @@
 import os
+import logging
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -6,6 +7,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# 确保日志目录存在
+_LOG_DIR = BASE_DIR / "logs"
+_LOG_DIR.mkdir(exist_ok=True)
 
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-change-me")
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
@@ -128,6 +133,95 @@ SPECTACULAR_SETTINGS = {
         {"name": "health", "description": "系统健康检查接口"},
         {"name": "items", "description": "示例数据接口"},
     ],
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "debug_only": {
+            "()": "config.logging_filters.LevelFilter",
+            "level": logging.DEBUG,
+        },
+        "info_only": {
+            "()": "config.logging_filters.LevelFilter",
+            "level": logging.INFO,
+        },
+        "warning_only": {
+            "()": "config.logging_filters.LevelFilter",
+            "level": logging.WARNING,
+        },
+        "error_only": {
+            "()": "config.logging_filters.LevelFilter",
+            "level": logging.ERROR,
+        },
+    },
+    "formatters": {
+        "verbose": {
+            "format": "{name} {levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "debug_file": {
+            "class": "config.logging_filters.DatedFileHandler",
+            "filename": os.path.join(BASE_DIR, "logs", "debug.log"),
+            "when": "midnight",
+            "backupCount": 30,
+            "formatter": "verbose",
+            "encoding": "utf-8",
+            "filters": ["debug_only"],
+        },
+        "info_file": {
+            "class": "config.logging_filters.DatedFileHandler",
+            "filename": os.path.join(BASE_DIR, "logs", "info.log"),
+            "when": "midnight",
+            "backupCount": 30,
+            "formatter": "verbose",
+            "encoding": "utf-8",
+            "filters": ["info_only"],
+        },
+        "warning_file": {
+            "class": "config.logging_filters.DatedFileHandler",
+            "filename": os.path.join(BASE_DIR, "logs", "warning.log"),
+            "when": "midnight",
+            "backupCount": 30,
+            "formatter": "verbose",
+            "encoding": "utf-8",
+            "filters": ["warning_only"],
+        },
+        "error_file": {
+            "class": "config.logging_filters.DatedFileHandler",
+            "filename": os.path.join(BASE_DIR, "logs", "error.log"),
+            "when": "midnight",
+            "backupCount": 30,
+            "formatter": "verbose",
+            "encoding": "utf-8",
+            "filters": ["error_only"],
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["debug_file", "info_file", "warning_file", "error_file"],
+            "level": "WARNING",
+            "propagate": True,
+        },
+        "api": {
+            "handlers": ["debug_file", "info_file", "warning_file", "error_file"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+        "web": {
+            "handlers": ["debug_file", "info_file", "warning_file", "error_file"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+        "": {
+            "handlers": ["debug_file", "info_file", "warning_file", "error_file"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+    },
 }
 
 CSRF_TRUSTED_ORIGINS = [f'https://{h}' for h in ALLOWED_HOSTS if h and h != 'localhost' and not h.startswith('127.')]

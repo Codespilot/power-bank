@@ -8,7 +8,9 @@ from django.views import View
 from django.views.generic import TemplateView
 from api.models import InviteCode, User, UserRole
 from api.auth import new_captcha_code
+import logging
 
+logger = logging.getLogger(__name__)
 
 class BaseTemplateView(TemplateView):
     """所有页面视图的基类，负责注入当前登录用户上下文和站点标题。
@@ -32,8 +34,8 @@ class BaseTemplateView(TemplateView):
                     .get(id=user_id)
                 )
                 is_admin = user._is_admin
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error("Error fetching user or admin status: %s", e)
         context["current_user"] = user
         context["user_is_admin"] = is_admin
         context["site_title"] = getattr(settings, "SITE_TITLE")

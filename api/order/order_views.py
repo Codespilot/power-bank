@@ -1,5 +1,6 @@
 import logging
 
+from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
@@ -17,6 +18,10 @@ class OrderListView(ListAPIView):
     """商户订单分页查询接口，支持关键字与日期范围筛选。"""
 
     serializer_class = OrderSerializer
+
+    @extend_schema(exclude=True)  # 该接口不在自动文档中展示
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
         qs = Order.objects.all().order_by('-id')
@@ -50,6 +55,7 @@ class OrderImportListCreateView(APIView):
     parser_classes = [MultiPartParser]
     permission_classes = [AllowAny]
 
+    @extend_schema(exclude=True)  # 该接口不在自动文档中展示
     def get(self, request):
         qs = OrderImport.objects.all().order_by('-id')
         date_start = request.GET.get('date_start')
@@ -67,6 +73,7 @@ class OrderImportListCreateView(APIView):
         serializer = OrderImportSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
 
+    @extend_schema(exclude=True)  # 该接口不在自动文档中展示
     def post(self, request):
         file = request.FILES.get('file')
         if not file:
@@ -87,6 +94,7 @@ class OrderImportListCreateView(APIView):
 class OrderImportRunProfitView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(exclude=True)  # 该接口不在自动文档中展示
     def post(self, request, id):
         order_import = OrderImport.objects.filter(id=id).first()
         if not order_import:
@@ -112,6 +120,7 @@ class OrderImportRunProfitView(APIView):
 class OrderImportDetailView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(exclude=True)  # 该接口不在自动文档中展示
     def delete(self, request, id):
         order_import = OrderImport.objects.filter(id=id).first()
         if not order_import:
@@ -138,6 +147,7 @@ class OrderImportDetailView(APIView):
 class OrderImportRunningCountView(APIView):
     """返回当前仍在执行中的导入任务数量。"""
 
+    @extend_schema(exclude=True)  # 该接口不在自动文档中展示
     def get(self, request):
         count = OrderImport.objects.filter(status=OrderImport.STATUS_RUNNING).count()
         return Response({'count': count})

@@ -176,3 +176,7 @@ class UserDetailSerializer(SafeBigIntModelSerializer):
 class TokenGrantSerializer(serializers.Serializer):
     username = serializers.CharField(required=True, help_text="用户名、手机号或邮箱")
     password = serializers.CharField(required=True, write_only=True)
+
+class UserPasswordChangeRequestSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True)

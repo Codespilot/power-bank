@@ -161,7 +161,7 @@
             if (field.rate) {
                 field.rate = parseFloat(field.rate) / 100;
             }
-            fetch('/api/invite-codes/', {
+            fetch('/api/invite-codes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(field)

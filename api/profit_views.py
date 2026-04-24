@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from django.db import connection
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -61,6 +62,8 @@ def _to_utc_string(value):
 
 
 class ProfitListView(APIView):
+    """分润记录分页查询接口，支持多维度筛选。"""
+    @extend_schema(exclude=True)  # 该接口不在自动文档中展示
     def get(self, request):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
@@ -215,6 +218,7 @@ class ProfitTaskListView(APIView):
 
         return current_user_id, None
 
+    @extend_schema(exclude=True)  # 该接口不在自动文档中展示
     def get(self, request):
         _, error_response = self._check_admin(request)
         if error_response is not None:
@@ -282,6 +286,7 @@ class ProfitTaskListView(APIView):
             }
         )
 
+    @extend_schema(exclude=True)  # 该接口不在自动文档中展示
     def post(self, request):
         _, error_response = self._check_admin(request)
         if error_response is not None:

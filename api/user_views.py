@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, OuterRef, Subquery
 from django.utils import timezone
 from .models import AgentHistory, InviteCode, User, Wallet
 from .user_serializers import (
@@ -343,6 +343,9 @@ class UserListView(generics.ListAPIView):
 
     def get_queryset(self):
         qs = User.objects.select_related('agent').all().order_by('-created_at')
+        # 使用 Subquery 批量获取钱包余额，消除 N+1 查询
+        wallet_subquery = Wallet.objects.filter(id=OuterRef('id')).values('total_amount')[:1]
+        qs = qs.annotate(wallet_total_amount=Subquery(wallet_subquery))
         keyword = self.request.GET.get('keyword', '').strip()
         user_id = self.request.GET.get('id', '').strip()
         exclude_user_id = self.request.GET.get('exclude_id', '').strip()
@@ -473,7 +476,11 @@ class RegisterAPIView(APIView):
     get=extend_schema(tags=["users"], summary="获取用户详情")
 )
 class UserDetailView(generics.RetrieveAPIView):
-    queryset = User.objects.select_related('agent').all()
+    queryset = User.objects.select_related('agent').annotate(
+        wallet_total_amount=Subquery(
+            Wallet.objects.filter(id=OuterRef('id')).values('total_amount')[:1]
+        )
+    ).all()
     serializer_class = UserDetailSerializer
     lookup_field = 'id'
 

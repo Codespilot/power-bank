@@ -1,7 +1,8 @@
 import threading
 import pandas as pd
+from decimal import Decimal, InvalidOperation
 from django.utils import timezone
-from .models import OrderImport, Order
+from .models import OrderImport, Order, Merchant
 from config.import_map import get_import_column_mapping
 from utils.generate_snowflake_id import generate_snowflake_id
 from .profit_tasks import run_profit_allocation_with_tracking
@@ -24,14 +25,17 @@ def process_imported_excel(order_import_id, file_path):
             f.write(msg + "\n")
 
     try:
-        order_rows = []
         order_import = OrderImport.objects.get(id=order_import_id)
         column_mapping = get_import_column_mapping()
         df = pd.read_excel(file_path)
         df.rename(columns=column_mapping, inplace=True)
+
+        orders_to_create: list[Order] = []
+        merchant_ids: set[int] = set()
+        merchant_names: dict[int, str] = {}
         succeed, failed = 0, 0
+
         for idx, row in df.iterrows():
-            order_rows.append(row)
             try:
                 order_date = (
                     str(row.get("order_date"))
@@ -48,7 +52,6 @@ def process_imported_excel(order_import_id, file_path):
                     if row.get("bill_date") is not None
                     else None
                 )
-                from decimal import Decimal, InvalidOperation
 
                 agent_profit = row.get("agent_profit")
                 if agent_profit is None or (
@@ -76,50 +79,57 @@ def process_imported_excel(order_import_id, file_path):
                 except (TypeError, ValueError):
                     merchant_id = 0
 
-                Order.objects.create(
-                    id=generate_snowflake_id(),
-                    import_id=order_import_id,
-                    order_no=row.get("order_no"),
-                    order_date=order_date,
-                    bill_month=bill_month,
-                    bill_date=bill_date,
-                    order_type=row.get("order_type"),
-                    order_amount=row.get("order_amount"),
-                    merchant_name=row.get("merchant_name"),
-                    merchant_id=merchant_id,
-                    merchant_profit=merchant_profit,
-                    agent_profit=agent_profit,
-                    created_at=timezone.now(),
+                orders_to_create.append(
+                    Order(
+                        id=generate_snowflake_id(),
+                        import_id=order_import_id,
+                        order_no=row.get("order_no"),
+                        order_date=order_date,
+                        bill_month=bill_month,
+                        bill_date=bill_date,
+                        order_type=row.get("order_type"),
+                        order_amount=row.get("order_amount"),
+                        merchant_name=row.get("merchant_name"),
+                        merchant_id=merchant_id,
+                        merchant_profit=merchant_profit,
+                        agent_profit=agent_profit,
+                        created_at=timezone.now(),
+                    )
                 )
+
+                if merchant_id > 0:
+                    merchant_ids.add(merchant_id)
+                    merchant_names.setdefault(
+                        merchant_id, row.get("merchant_name") or ""
+                    )
+
                 succeed += 1
+
             except Exception as row_exc:
                 failed += 1
                 log(f"Row {idx+1} failed: {row_exc}\n{traceback.format_exc()}")
 
-        # 订单导入完成后，批量检查商户
-        from .models import Merchant
-        merchant_set = set()
-        for row in order_rows:
-            merchant_id = row.get("merchant_id")
-            merchant_name = row.get("merchant_name") or ''
-            try:
-                merchant_id = int(merchant_id)
-            except (TypeError, ValueError):
-                merchant_id = 0
-            if merchant_id > 0:
-                merchant_set.add((merchant_id, merchant_name))
+        # 批量插入订单（一次写入，避免逐行 INSERT）
+        if orders_to_create:
+            Order.objects.bulk_create(orders_to_create, ignore_conflicts=False)
 
-        for merchant_id, merchant_name in merchant_set:
-            try:
-                merchant_obj = Merchant.objects.filter(id=merchant_id).first()
-                if not merchant_obj:
-                    Merchant.objects.create(
-                        id=merchant_id,
-                        name=merchant_name,
-                        created_at=timezone.now()
-                    )
-            except Exception as merchant_exc:
-                log(f"Merchant create failed for id={merchant_id}: {merchant_exc}")
+        # 批量检查并创建缺失的商户
+        if merchant_ids:
+            existing_merchant_ids = set(
+                Merchant.objects.filter(id__in=list(merchant_ids))
+                .values_list("id", flat=True)
+            )
+            merchants_to_create = [
+                Merchant(
+                    id=mid,
+                    name=merchant_names[mid],
+                    created_at=timezone.now(),
+                )
+                for mid in merchant_ids
+                if mid not in existing_merchant_ids
+            ]
+            if merchants_to_create:
+                Merchant.objects.bulk_create(merchants_to_create, ignore_conflicts=False)
         order_import.succeed_rows = succeed
         order_import.failed_rows = failed
         order_import.status = (

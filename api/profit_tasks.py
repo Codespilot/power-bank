@@ -101,8 +101,12 @@ def _fetch_profit_summary_rows(order_import_id: int) -> list[dict]:
 
 
 def _get_superior_chain(agent_id: int) -> list[User]:
-    """从当前代理开始向上追溯直属上级链路。"""
-    chain: list[User] = []
+    """从当前代理开始向上追溯直属上级链路。
+
+    批量加载所有上级用户，将 N 次独立查询优化为 2 次查询。
+    """
+    # 第一趟：只采集 agent_id 链路（values_list 仅返回一列，开销极小）
+    ids_in_chain: list[int] = []
     visited: set[int] = set()
     current_id = int(agent_id)
 
@@ -113,20 +117,26 @@ def _get_superior_chain(agent_id: int) -> list[User]:
             )
             break
         visited.add(current_id)
+        ids_in_chain.append(current_id)
 
-        current_user = (
-            User.objects.only("id", "agent_id", "agent_rate")
-            .filter(id=current_id)
+        next_id = (
+            User.objects.filter(id=current_id)
+            .values_list("agent_id", flat=True)
             .first()
         )
-        if not current_user:
+        if not next_id:
             break
-        chain.append(current_user)
-        if not current_user.agent_id:
-            break
-        current_id = int(current_user.agent_id)
+        current_id = int(next_id)
 
-    return chain
+    # 第二趟：批量加载所有用户（1 次查询）
+    users_map: dict[int, User] = {
+        u.id: u
+        for u in User.objects.filter(id__in=ids_in_chain).only(
+            "id", "agent_id", "agent_rate"
+        )
+    }
+
+    return [users_map[uid] for uid in ids_in_chain if uid in users_map]
 
 
 def _allocate_agent_profit(

@@ -71,6 +71,7 @@ DATABASES = {
         "CONN_MAX_AGE": 600,  # 持久连接 10 分钟，避免每请求新建 TCP 连接
         "OPTIONS": {
             "charset": "utf8mb4",
+            "collation": "utf8mb4_general_ci",
         },
     }
 }

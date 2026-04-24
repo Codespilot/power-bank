@@ -20,8 +20,8 @@ from .wallet_serializers import (
 
 from utils.generate_snowflake_id import generate_snowflake_id
 
-from .auth import get_request_user_id
-from .models import Wallet, WalletRecord, Withdraw
+from ..auth import get_request_user_id
+from ..models import Wallet, WalletRecord, Withdraw
 
 
 _AMOUNT_QUANT = Decimal("0.01")

@@ -9,9 +9,9 @@ from rest_framework import serializers
 from api.auth import get_request_user_id
 from utils.generate_snowflake_id import generate_snowflake_id
 
-from .models import InviteCode
-from .user.user_serializers import _format_agent_rate
-from .user.user_views import _parse_agent_rate
+from ..models import InviteCode
+from ..user.user_serializers import _format_agent_rate
+from ..user.user_views import _parse_agent_rate
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from .invite_serializers import (
     InviteCodeListResponseSerializer,

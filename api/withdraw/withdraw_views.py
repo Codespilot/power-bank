@@ -11,9 +11,9 @@ from rest_framework.views import APIView
 
 from utils.generate_snowflake_id import generate_snowflake_id
 
-from .auth import get_request_user_id
-from .models import User, UserRole, Wallet, WalletRecord, Withdraw
-from .serializers import GenericResponseSerializer
+from ..auth import get_request_user_id
+from ..models import User, UserRole, Wallet, WalletRecord, Withdraw
+from ..serializers import GenericResponseSerializer
 from .withdraw_serializers import WithdrawListResponseSerializer
 
 _AMOUNT_QUANT = Decimal("0.01")

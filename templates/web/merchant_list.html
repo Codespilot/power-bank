@@ -113,7 +113,7 @@
 				success: function () {
 					form.render();
 					form.on('submit(merchant-assign-submit)', function (formData) {
-						fetch('/api/merchants/batch-assign-agent', {
+						fetch('/api/merchants/allocate', {
 							method: 'POST',
 							headers: {
 								'Content-Type': 'application/json'

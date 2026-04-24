@@ -32,9 +32,9 @@ urlpatterns = [
 
     # 商户管理
     path("merchants", MerchantListView.as_view(), name="api-merchants-list"),
-    path("merchants/batch-assign-agent", MerchantBatchAssignAgentView.as_view(), name="api-merchants-batch-assign-agent"),
+    path("merchants/allocate", MerchantBatchAssignAgentView.as_view(), name="api-merchants-batch-assign-agent"),
     path("merchants/<int:id>/history", MerchantHistoryListView.as_view(), name="api-merchants-history"),
-    path("merchants/<int:id>/assign-agent", MerchantAssignAgentView.as_view(), name="api-merchants-assign-agent"),
+    path("merchants/<int:id>/allocate", MerchantAssignAgentView.as_view(), name="api-merchants-assign-agent"),
 
     # 订单管理
     path("orders", OrderListView.as_view(), name="api-orders-list"),

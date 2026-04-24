@@ -52,6 +52,7 @@ class WithdrawListView(APIView):
 
     @extend_schema(
         summary="提现申请列表",
+        tags=["wallet"],
         parameters=[
             OpenApiParameter(name="keyword", description="搜索关键词，匹配用户名、姓名、手机号、邮箱", required=False),
             OpenApiParameter(name="status", description="申请状态，0=待审批，1=已批准，2=已驳回，3=已作废", required=False),
@@ -158,6 +159,15 @@ class WithdrawListView(APIView):
 class WithdrawApproveView(APIView):
     """管理员审批通过提现申请。"""
 
+    @extend_schema(
+        summary="审批通过提现申请",
+        tags=["wallet"],
+        parameters=[
+            OpenApiParameter(name="id", description="提现申请ID", required=True, type=str),
+        ],
+        request=None,
+        responses={200: None, 400: dict, 401: dict, 403: dict, 404: dict},
+    )
     def post(self, request, id: int):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
@@ -211,6 +221,15 @@ class WithdrawApproveView(APIView):
 class WithdrawRejectView(APIView):
     """管理员拒绝提现申请，并解冻资金。"""
 
+    @extend_schema(
+        summary="拒绝提现申请",
+        tags=["wallet"],
+        parameters=[
+            OpenApiParameter(name="id", description="提现申请ID", required=True, type=str),
+        ],
+        request=None,
+        responses={200: None, 400: dict, 401: dict, 403: dict, 404: dict},
+    )
     def post(self, request, id: int):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
@@ -257,6 +276,15 @@ class WithdrawRejectView(APIView):
 class WithdrawCancelView(APIView):
     """用户自行作废提现申请，并解冻资金。"""
 
+    @extend_schema(
+        summary="作废提现申请",
+        tags=["wallet"],
+        parameters=[
+            OpenApiParameter(name="id", description="提现申请ID", required=True, type=str),
+        ],
+        request=None,
+        responses={200: None, 400: dict, 401: dict, 403: dict, 404: dict},
+    )
     def post(self, request, id: int):
         current_user_id = get_request_user_id(request)
         if not current_user_id:

@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 from decimal import Decimal
 import secrets
@@ -53,7 +54,10 @@ class User(BaseEntity):
         null=True,
         blank=True,
     )
-    agent_rate = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
+    agent_rate = models.DecimalField(
+        max_digits=18, decimal_places=4, default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("1.00"))],
+    )
     created_at = models.DateTimeField(default=timezone.now)
 
     def save(self, *args, **kwargs):
@@ -206,7 +210,10 @@ class ProfitAllocation(BaseEntity):
         null=True,
         blank=True,
     )
-    rate = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    rate = models.DecimalField(
+        max_digits=18, decimal_places=4, null=True, blank=True,
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("1.00"))],
+    )
     profit_amount = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
     order_amount = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
     settle_amount = models.DecimalField(max_digits=18, decimal_places=2)
@@ -228,7 +235,10 @@ class InviteCode(BaseEntity):
     id = models.BigIntegerField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="invite_codes")
     code = models.CharField(max_length=8, unique=True)
-    rate = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
+    rate = models.DecimalField(
+        max_digits=18, decimal_places=4, default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("1.00"))],
+    )
     register_count = models.IntegerField(default=0)
     is_valid = models.BooleanField(default=True)
     created_at = models.DateTimeField(default=timezone.now)

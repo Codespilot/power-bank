@@ -66,9 +66,9 @@ class HomePageView(BaseTemplateView):
             active_menu = "profile"
         elif path.startswith("/invite/"):
             active_menu = "invite"
-        elif path.startswith("/wallet"):
+        elif path.startswith("/wallet/"):
             active_menu = "wallet"
-        elif path.startswith("/withdraw"):
+        elif path.startswith("/withdraw/"):
             active_menu = "withdraw"
         else:
             active_menu = ""

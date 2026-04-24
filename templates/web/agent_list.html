@@ -165,10 +165,15 @@
         });
 
         form.on('submit(agent-rate-submit)', function (data) {
+            var field = data.field;
+            // 将百分比转换为 0-1
+            if (field.rate) {
+                field.rate = parseFloat(field.rate) / 100;
+            }
             fetch('/api/users/agent', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data.field)
+                body: JSON.stringify(field)
             }).then(function (response) {
                 return response.json().then(function (res) { return { ok: response.ok, body: res }; });
             }).then(function (result) {

@@ -7,7 +7,7 @@
 		<div class="layui-form-item">
 			<div class="layui-input-group">
 				<div class="layui-input-prefix search-label">商户名称</div>
-				<input type="text" name="merchant_name" value="{{ request.GET.merchant_name|default:'' }}"
+				<input type="text" name="merchant" value="{{ request.GET.merchant|default:'' }}"
 					placeholder="请输入商户名称" class="layui-input">
 			</div>
 		</div>
@@ -18,7 +18,7 @@
 		<div class="layui-form-item">
 			<div class="layui-input-group">
 				<div class="layui-input-prefix search-label">代理商</div>
-				<input type="text" name="agent_keyword" value="{{ request.GET.agent_keyword|default:'' }}"
+				<input type="text" name="agent" value="{{ request.GET.agent|default:'' }}"
 					placeholder="关键字" class="layui-input">
 			</div>
 		</div>
@@ -140,6 +140,7 @@
 		}
 
 		form.on('submit(list-search)', function (data) {
+			console.log('搜索条件:', data.field);
 			table.reload('merchantTable', {
 				page: {
 					curr: 1

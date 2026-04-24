@@ -379,18 +379,15 @@ class UserListView(generics.ListAPIView):
         return qs
 
 def _parse_agent_rate(value) -> Decimal:
+    """解析并验证分润比例（接口仅接受 0~1 的值）。"""
     raw = str(value or '').strip()
     if not raw:
         return Decimal('0.00')
-    if raw.endswith('%'):
-        raw = raw[:-1].strip()
     rate = Decimal(raw)
     if rate < 0:
-        raise ValueError('分润比例不能小于0%')
-    if rate > 1:
-        if rate > 100:
-            raise ValueError('分润比例必须在0到100%之间')
-        rate = rate / Decimal('100')
+        raise ValueError('分润比例不能小于0')
+    if rate > Decimal('1.00'):
+        raise ValueError('分润比例不能超过1')
     return rate
 
 

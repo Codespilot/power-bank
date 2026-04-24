@@ -202,7 +202,10 @@
 									form.render(layero.find('input'));
 									form.on('submit(assign-superior-agent-submit)', function (formdata) {
 										var field = formdata.field; // 获取表单字段值
-										console.log(field);
+										// 将百分比转换为 0-1
+										if (field.rate) {
+											field.rate = parseFloat(field.rate) / 100;
+										}
 										fetch(`/api/users/agent`, {
 											method: 'POST',
 											headers: { 'Content-Type': 'application/json' },
@@ -311,7 +314,10 @@
 						// 表单提交事件
 						form.on('submit(add-user-submit)', function (data) {
 							var field = data.field; // 获取表单字段值
-							// 显示填写结果，仅作演示用
+							// 将百分比转换为 0-1
+							if (field.agent_rate) {
+								field.agent_rate = parseFloat(field.agent_rate) / 100;
+							}
 							fetch('/api/users/create', {
 								method: 'POST',
 								headers: { 'Content-Type': 'application/json' },

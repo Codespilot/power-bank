@@ -52,8 +52,8 @@ class MerchantListView(APIView):
         summary="获取商户列表",
         description="分页查询商户列表，支持按商户名称和代理商关键字筛选。管理员可见所有商户，普通代理商仅可见自己名下的商户。",
         parameters=[
-            OpenApiParameter(name="merchant_name", description="商户名称关键字", required=False, type=str),
-            OpenApiParameter(name="agent_keyword", description="代理商关键字（手机号/姓名/用户名/邮箱）", required=False, type=str),
+            OpenApiParameter(name="merchant", description="商户名称关键字", required=False, type=str),
+            OpenApiParameter(name="agent", description="代理商关键字（手机号/姓名/用户名/邮箱）", required=False, type=str),
             OpenApiParameter(name="page", description="页码，默认1", required=False, type=int),
             OpenApiParameter(name="limit", description="每页数量，默认10", required=False, type=int),
         ],
@@ -69,8 +69,8 @@ class MerchantListView(APIView):
 
         is_admin = UserRole.objects.filter(user_id=current_user_id, role=UserRole.ROLE_ADMIN).exists()
 
-        merchant_name = str(request.GET.get("merchant_name", "")).strip()
-        agent_keyword = str(request.GET.get("agent_keyword", "")).strip()
+        merchant = str(request.GET.get("merchant", "")).strip()
+        agent = str(request.GET.get("agent", "")).strip()
 
         page = _parse_int(request.GET.get("page", 1), 1)
         if page <= 0:
@@ -89,19 +89,19 @@ class MerchantListView(APIView):
             where_clauses.append("mch.agent_id = %s")
             params.append(int(current_user_id))
 
-        if merchant_name:
+        if merchant:
             where_clauses.append("mch.name LIKE %s")
-            params.append(f"%{merchant_name}%")
+            params.append(f"%{merchant}%")
 
-        if agent_keyword:
-            if FULL_PHONE_REGEX.fullmatch(agent_keyword):
+        if agent:
+            if FULL_PHONE_REGEX.fullmatch(agent):
                 where_clauses.append("usr.phone = %s")
-                params.append(agent_keyword)
+                params.append(agent)
             else:
                 where_clauses.append(
                     "(usr.username LIKE %s OR usr.fullname LIKE %s OR usr.phone LIKE %s OR usr.email LIKE %s)"
                 )
-                fuzzy_value = f"%{agent_keyword}%"
+                fuzzy_value = f"%{agent}%"
                 params.extend([fuzzy_value, fuzzy_value, fuzzy_value, fuzzy_value])
 
         where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""

@@ -4,12 +4,10 @@ from .views import CaptchaImageView, HomePageView, LoginPageView, RegisterPageVi
 
 urlpatterns = [
     path("", HomePageView.as_view(), name="home"),
-    path("login", LoginPageView.as_view(), name="login"),
-    path("register", RegisterPageView.as_view(), name="register"),
-    path("register/", RegisterPageView.as_view()),
+    path("login/", LoginPageView.as_view(), name="login"),
+    path("register/", RegisterPageView.as_view(), name="register"),
     path("login/captcha/", CaptchaImageView.as_view(), name="login-captcha"),
-    path("logout", LogoutView.as_view(), name="logout"),
-    path("logout/", LogoutView.as_view()),
+    path("logout/", LogoutView.as_view(), name="logout"),
     path("user/", UserListPageView.as_view(), name="user-list"),
     path("agent/", AgentListPageView.as_view(), name="agent-list"),
     path("merchant/", MerchantListPageView.as_view(), name="merchant-list"),
@@ -18,10 +16,8 @@ urlpatterns = [
     path("task/", TaskRecordListPageView.as_view(), name="task-record-list"),
     path("profile/", ProfilePageView.as_view(), name="profile-page"),
     path("invite/", InvitePageView.as_view(), name="invite-page"),
-    path("wallet", WalletPageView.as_view(), name="wallet-page"),
-    path("wallet/", WalletPageView.as_view()),
-    path("withdraw", WithdrawPageView.as_view(), name="withdraw-page"),
-    path("withdraw/", WithdrawPageView.as_view()),
+    path("wallet/", WalletPageView.as_view(), name="wallet-page"),
+    path("withdraw/", WithdrawPageView.as_view(), name="withdraw-page"),
     path("order/", OrderListPageView.as_view(), name="order-list"),
     path("order/import/", OrderImportListPageView.as_view(), name="order-import-list"),
 ]

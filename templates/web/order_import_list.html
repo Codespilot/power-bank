@@ -23,18 +23,17 @@
 		</div>
 	</div>
 	<div class="layui-col-md3 layui-col-md-offset4" style="text-align: right;">
-		<div class="layui-form-item">
-			<button class="layui-btn layui-btn-primary" lay-submit lay-filter="btn-search">
-				<i class="layui-icon layui-icon-search"></i> 查询
-			</button>
-			<button type="button" class="layui-btn" id="import-order-btn">
-				<i class="layui-icon layui-icon-upload"></i> 导入订单
-			</button>
-		</div>
+		<button class="layui-btn layui-btn-primary" lay-submit lay-filter="list-search">
+			<i class="layui-icon layui-icon-search"></i> 搜索
+		</button>
+		<button type="button" class="layui-btn" id="import-order-btn">
+			<i class="layui-icon layui-icon-upload"></i> 导入订单
+		</button>
+	</div>
 	</div>
 </form>
 
-<table class="layui-hide" id="list" lay-filter="list"></table>
+<table class="layui-hide" id="list"></table>
 
 {% endblock %}
 {% block extra_js %}
@@ -43,7 +42,7 @@
 		var table = layui.table;
 		var laydate = layui.laydate;
 		var upload = layui.upload;
-		form = layui.form;
+		var form = layui.form;
 		// 初始化日期范围选择器
 		laydate.render({
 			elem: '#import-date-range',
@@ -55,11 +54,11 @@
 			}
 		});
 
-		form.on('submit(btn-search)', function (data) {
+		form.on('submit(list-search)', function (data) {
 			console.log('搜索条件:', data.field);
 			var field = data.field; // 获得表单字段
 			// 执行搜索重载
-			table.reload('list', {
+			table.reload('orderImportTable', {
 				page: {
 					curr: 1 // 重新从第 1 页开始
 				},

@@ -13,7 +13,7 @@ from .models import InviteCode
 from .user_serializers import _format_agent_rate
 from .user_views import _parse_agent_rate
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from .order_serializers import (
+from .invite_serializers import (
     InviteCodeListResponseSerializer,
     InviteCodeCreateRequestSerializer,
     InviteCodeCreateResponseSerializer,

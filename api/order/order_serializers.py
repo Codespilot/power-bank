@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from .models import Order, OrderImport
-from .serializers import SafeBigIntModelSerializer
+from ..models import Order, OrderImport
+from ..serializers import SafeBigIntModelSerializer
 
 class OrderSerializer(SafeBigIntModelSerializer):
     order_date = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")

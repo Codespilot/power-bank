@@ -18,8 +18,8 @@ from .merchant_serializers import (
 
 from utils.generate_snowflake_id import generate_snowflake_id
 
-from .auth import get_request_user_id
-from .models import Merchant, MerchantHistory, User, UserRole
+from ..auth import get_request_user_id
+from ..models import Merchant, MerchantHistory, User, UserRole
 
 
 FULL_PHONE_REGEX = re.compile(r"^1[3-9]\d{9}$")

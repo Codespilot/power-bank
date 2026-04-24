@@ -8,7 +8,7 @@ from rest_framework.generics import ListAPIView
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q
-from .models import Order, OrderImport
+from ..models import Order, OrderImport
 from .order_serializers import OrderSerializer, OrderImportSerializer
 
 logger = logging.getLogger(__name__)

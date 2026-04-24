@@ -52,7 +52,7 @@ class WithdrawListView(APIView):
 
     @extend_schema(
         summary="提现申请列表",
-        tags=["wallet"],
+        tags=["withdraws"],
         parameters=[
             OpenApiParameter(name="keyword", description="搜索关键词，匹配用户名、姓名、手机号、邮箱", required=False),
             OpenApiParameter(name="status", description="申请状态，0=待审批，1=已批准，2=已驳回，3=已作废", required=False),
@@ -161,7 +161,7 @@ class WithdrawApproveView(APIView):
 
     @extend_schema(
         summary="审批通过提现申请",
-        tags=["wallet"],
+        tags=["withdraws"],
         parameters=[
             OpenApiParameter(name="id", description="提现申请ID", required=True, type=str),
         ],
@@ -223,7 +223,7 @@ class WithdrawRejectView(APIView):
 
     @extend_schema(
         summary="拒绝提现申请",
-        tags=["wallet"],
+        tags=["withdraws"],
         parameters=[
             OpenApiParameter(name="id", description="提现申请ID", required=True, type=str),
         ],

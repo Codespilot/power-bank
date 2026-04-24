@@ -138,7 +138,7 @@
         });
 
         form.on('submit(password-submit)', function (data) {
-            fetch('/api/profile/change-password/', {
+            fetch('/api/users/change-password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data.field)

@@ -2,10 +2,10 @@ from django.urls import path
 
 from .invite_views import InviteCodeListCreateView, InviteCodeToggleView
 from .merchant_views import MerchantAssignAgentView, MerchantBatchAssignAgentView, MerchantHistoryListView, MerchantListView
-from .profile_views import CurrentUserPasswordView, CurrentUserProfileView
+from .profile_views import UserProfileView
 from .profit_views import ProfitListView, ProfitTaskListView
 from .views import HealthCheckView, ItemListCreateView
-from .user_views import UserAgentAssignView, LoginAPIView, RegisterAPIView, TokenGrantView, TokenRefreshView, UserListView, UserCreateView, UserDetailView, UserResetPasswordView
+from .user_views import UserAgentAssignView, LoginAPIView, RegisterAPIView, TokenGrantView, TokenRefreshView, UserListView, UserCreateView, UserDetailView, UserPasswordChangeView, UserPasswordResetView
 from .order_views import (
     OrderListView,
     OrderImportDetailView,
@@ -27,7 +27,7 @@ urlpatterns = [
     path("users/create", UserCreateView.as_view(), name="api-users-create"),
     path("users/<int:id>", UserDetailView.as_view(), name="api-users-detail"),
     path("users/<int:id>/assign-superior-agent", UserAgentAssignView.as_view(), name="api-users-assign-superior-agent"),
-    path("users/<int:id>/reset-password", UserResetPasswordView.as_view(), name="api-users-reset-password"),
+    path("users/<int:id>/reset-password", UserPasswordResetView.as_view(), name="api-users-reset-password"),
     path("users/agent", UserAgentAssignView.as_view(), name="api-agent"),
 
     # 商户管理
@@ -52,8 +52,8 @@ urlpatterns = [
     path("invite-codes/<int:id>/toggle-status", InviteCodeToggleView.as_view(), name="api-invite-codes-toggle"),
 
     # 个人资料
-    path("profile", CurrentUserProfileView.as_view(), name="api-profile"),
-    path("profile/change-password", CurrentUserPasswordView.as_view(), name="api-profile-change-password"),
+    path("profile", UserProfileView.as_view(), name="api-profile"),
+    path("users/change-password", UserPasswordChangeView.as_view(), name="api-profile-change-password"),
 
     # 钱包管理
     path("wallet", WalletView.as_view(), name="api-wallet"),

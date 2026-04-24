@@ -28,7 +28,7 @@ from .user_serializers import (
     UserResetPasswordSerializer,
 )
 from utils.generate_snowflake_id import generate_snowflake_id
-from .auth import EMAIL_REGEX, MOBILE_REGEX, compute_lock_until, create_access_token, create_refresh_token, decode_jwt, get_request_user_id, get_user_by_identifier, is_valid_username, verify_password
+from .auth import EMAIL_REGEX, MOBILE_REGEX, compute_lock_until, create_access_token, create_refresh_token, decode_jwt, get_request_user_id, get_user_by_identifier, hash_password, is_valid_username, verify_password
 
 
 def _authenticate_credentials(request, use_session_captcha: bool):
@@ -554,7 +554,7 @@ class UserAgentAssignView(APIView):
         return Response({'message': '上级代理商分配成功'})
 
 
-class UserResetPasswordView(APIView):
+class UserPasswordResetView(APIView):
     serializer_class = UserResetPasswordSerializer
 
     @extend_schema(
@@ -570,9 +570,38 @@ class UserResetPasswordView(APIView):
         password = request.data.get('password', '').strip()
         if not password or len(password) < 6:
             return Response({'message': '密码至少6位'}, status=status.HTTP_400_BAD_REQUEST)
-        from api.auth import hash_password
         password_hash, password_salt = hash_password(password)
         user.password_hash = password_hash
         user.password_salt = password_salt
         user.save(update_fields=['password_hash', 'password_salt'])
         return Response({'message': '密码重置成功'})
+
+
+class UserPasswordChangeView(APIView):
+    def post(self, request):
+        user_id = get_request_user_id(request)
+        if not user_id:
+            return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return Response({"message": "用户不存在"}, status=status.HTTP_404_NOT_FOUND)
+
+        old_password = str(request.data.get("old_password", ""))
+        new_password = str(request.data.get("new_password", ""))
+        confirm_password = str(request.data.get("confirm_password", ""))
+
+        if not verify_password(user, old_password):
+            return Response({"message": "原密码错误"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not new_password or len(new_password) < 6:
+            return Response({"message": "新密码至少6位"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if new_password != confirm_password:
+            return Response({"message": "两次输入的新密码不一致"}, status=status.HTTP_400_BAD_REQUEST)
+
+        password_hash_value, password_salt_value = hash_password(new_password)
+        user.password_hash = password_hash_value
+        user.password_salt = password_salt_value
+        user.save(update_fields=["password_hash", "password_salt"])
+        return Response({"message": "密码修改成功"})

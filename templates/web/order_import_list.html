@@ -71,7 +71,7 @@
 		table.render({
 			elem: '#list',
 			id: 'orderImportTable',
-			url: '/api/order-imports/',
+			url: '/api/orders/import/',
 			response: {
 				statusCode: 200 // 重新规定成功的状态码为 200，table 组件默认为 0
 			},
@@ -140,7 +140,7 @@
 					layer.close(idx);
 					var loading = layer.load(1, { shade: 0.2 });
 					try {
-						var res = await fetch('/api/order-imports/' + row.id + '/run-profit', {
+						var res = await fetch('/api/orders/import/' + row.id + '/run-profit', {
 							method: 'POST',
 							headers: {
 								'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : ''
@@ -167,7 +167,7 @@
 					layer.close(idx);
 					var loading = layer.load(1, { shade: 0.2 });
 					try {
-						var res = await fetch('/api/order-imports/' + row.id, {
+						var res = await fetch('/api/orders/import/' + row.id, {
 							method: 'DELETE',
 							headers: {
 								'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : ''
@@ -192,7 +192,7 @@
 
 		upload.render({
 			elem: '#import-order-btn',
-			url: '/api/order-imports/',
+			url: '/api/orders/import/',
 			accept: 'file', // 普通文件
 			headers: {
 				'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : ''

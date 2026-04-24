@@ -38,10 +38,10 @@ urlpatterns = [
 
     # 订单管理
     path("orders", OrderListView.as_view(), name="api-orders-list"),
-    path("order-imports", OrderImportListCreateView.as_view(), name="api-order-imports-list-create"),
-    path("order-imports/<int:id>", OrderImportDetailView.as_view(), name="api-order-imports-detail"),
-    path("order-imports/<int:id>/run-profit", OrderImportRunProfitView.as_view(), name="api-order-imports-run-profit"),
-    path("order-imports/running-count", OrderImportRunningCountView.as_view(), name="api-order-imports-running-count"),
+    path("orders/import", OrderImportListCreateView.as_view(), name="api-order-imports-list-create"),
+    path("orders/import/<int:id>", OrderImportDetailView.as_view(), name="api-order-imports-detail"),
+    path("orders/import/<int:id>/run-profit", OrderImportRunProfitView.as_view(), name="api-order-imports-run-profit"),
+    path("orders/import/running-count", OrderImportRunningCountView.as_view(), name="api-order-imports-running-count"),
 
     # 分润管理
     path("profits", ProfitListView.as_view(), name="api-profits-list"),

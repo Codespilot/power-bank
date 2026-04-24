@@ -42,7 +42,7 @@
 			<i class="layui-icon layui-icon-upload"></i>
 			导入订单
 		</button>
-		<a href="/order/import/" class="layui-btn layui-btn-normal" id="export-btn"
+		<a href="/orders/import/" class="layui-btn layui-btn-normal" id="export-btn"
 			style="border-radius: 0 !important;">
 			<i class="layui-icon layui-icon-download"></i> 导入记录
 		</a>
@@ -118,7 +118,7 @@
 
 		upload.render({
 			elem: '.demo-class-accept',
-			url: '/api/order-imports/',
+			url: '/api/orders/import/',
 			accept: 'file', // 普通文件
 			headers: {
 				'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : ''

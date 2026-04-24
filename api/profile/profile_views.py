@@ -8,12 +8,12 @@ from rest_framework.views import APIView
 from api.auth import EMAIL_REGEX, MOBILE_REGEX, get_request_user_id
 from django.http import HttpRequest
 
-from api.profile_serializers import (
+from api.profile.profile_serializers import (
     UserProfileResponseSerializer,
     UserProfileUpdateRequestSerializer,
 )
-from .models import User, UserRole
-from .user_serializers import _format_agent_rate, _get_superior_agent_display
+from ..models import User, UserRole
+from ..user.user_serializers import _format_agent_rate, _get_superior_agent_display
 
 
 class UserProfileView(APIView):

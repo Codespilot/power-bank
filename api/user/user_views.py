@@ -12,7 +12,7 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema
 from django.db import transaction
 from django.db.models import Q, OuterRef, Subquery
 from django.utils import timezone
-from .models import AgentHistory, InviteCode, User, Wallet
+from ..models import AgentHistory, InviteCode, User, Wallet
 from .user_serializers import (
     AgentAssignSerializer,
     IdMessageSerializer,
@@ -28,7 +28,7 @@ from .user_serializers import (
     UserResetPasswordSerializer,
 )
 from utils.generate_snowflake_id import generate_snowflake_id
-from .auth import EMAIL_REGEX, MOBILE_REGEX, compute_lock_until, create_access_token, create_refresh_token, decode_jwt, get_request_user_id, get_user_by_identifier, hash_password, is_valid_username, verify_password
+from ..auth import EMAIL_REGEX, MOBILE_REGEX, compute_lock_until, create_access_token, create_refresh_token, decode_jwt, get_request_user_id, get_user_by_identifier, hash_password, is_valid_username, verify_password
 
 
 def _authenticate_credentials(request, use_session_captcha: bool):

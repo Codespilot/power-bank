@@ -1,8 +1,8 @@
 from decimal import Decimal, ROUND_HALF_UP
 
-from .serializers import SafeBigIntModelSerializer
+from ..serializers import SafeBigIntModelSerializer
 from rest_framework import serializers
-from .models import User
+from ..models import User
 
 
 class MessageSerializer(serializers.Serializer):

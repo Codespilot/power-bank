@@ -2,10 +2,9 @@ from django.urls import path
 
 from .invite_views import InviteCodeListCreateView, InviteCodeToggleView
 from .merchant_views import MerchantAssignAgentView, MerchantBatchAssignAgentView, MerchantHistoryListView, MerchantListView
-from .profile_views import UserProfileView
 from .profit_views import ProfitListView, ProfitTaskListView
-from .views import HealthCheckView, ItemListCreateView
-from .user_views import UserAgentAssignView, LoginAPIView, RegisterAPIView, TokenGrantView, TokenRefreshView, UserListView, UserCreateView, UserDetailView, UserPasswordChangeView, UserPasswordResetView
+from .views import HealthCheckView
+from .user.user_views import TokenGrantView, TokenRefreshView
 from .order_views import (
     OrderListView,
     OrderImportDetailView,
@@ -16,19 +15,14 @@ from .order_views import (
 from .wallet_views import WalletRecordListView, WalletView
 from .withdraw_views import WithdrawApproveView, WithdrawCancelView, WithdrawListView, WithdrawRejectView
 
+from .profile.profile_urls import profile_urlpatterns
+from .user.user_urls import user_urlpatterns
+
 urlpatterns = [
     path("health", HealthCheckView.as_view(), name="api-health"),
-    path("items", ItemListCreateView.as_view(), name="api-items"),
-    path("users/login", LoginAPIView.as_view(), name="api-auth-login"),
-    path("users/register", RegisterAPIView.as_view(), name="api-users-register"),
+
     path("token/grant", TokenGrantView.as_view(), name="api-token-grant"),
     path("token/refresh", TokenRefreshView.as_view(), name="api-token-refresh"),
-    path("users", UserListView.as_view(), name="api-users-list"),
-    path("users/create", UserCreateView.as_view(), name="api-users-create"),
-    path("users/<int:id>", UserDetailView.as_view(), name="api-users-detail"),
-    path("users/<int:id>/assign-superior-agent", UserAgentAssignView.as_view(), name="api-users-assign-superior-agent"),
-    path("users/<int:id>/reset-password", UserPasswordResetView.as_view(), name="api-users-reset-password"),
-    path("users/agent", UserAgentAssignView.as_view(), name="api-agent"),
 
     # 商户管理
     path("merchants", MerchantListView.as_view(), name="api-merchants-list"),
@@ -51,10 +45,6 @@ urlpatterns = [
     path("invite-codes", InviteCodeListCreateView.as_view(), name="api-invite-codes"),
     path("invite-codes/<int:id>/toggle-status", InviteCodeToggleView.as_view(), name="api-invite-codes-toggle"),
 
-    # 个人资料
-    path("profile", UserProfileView.as_view(), name="api-profile"),
-    path("users/change-password", UserPasswordChangeView.as_view(), name="api-profile-change-password"),
-
     # 钱包管理
     path("wallet", WalletView.as_view(), name="api-wallet"),
     path("wallet/record", WalletRecordListView.as_view(), name="api-wallet-record"),
@@ -65,3 +55,9 @@ urlpatterns = [
     path("withdraws/<int:id>/reject", WithdrawRejectView.as_view(), name="api-withdraws-reject"),
     path("withdraws/<int:id>/cancel", WithdrawCancelView.as_view(), name="api-withdraws-cancel"),
 ]
+
+# 用户管理
+urlpatterns.extend(user_urlpatterns)
+
+# 个人资料
+urlpatterns.extend(profile_urlpatterns)

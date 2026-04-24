@@ -68,6 +68,7 @@ DATABASES = {
         "PASSWORD": os.getenv("MYSQL_PASSWORD", "password"),
         "HOST": os.getenv("MYSQL_HOST", "127.0.0.1"),
         "PORT": os.getenv("MYSQL_PORT", "3306"),
+        "CONN_MAX_AGE": 600,  # 持久连接 10 分钟，避免每请求新建 TCP 连接
         "OPTIONS": {
             "charset": "utf8mb4",
         },

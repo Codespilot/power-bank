@@ -15,7 +15,7 @@ from .wallet.wallet_urls import wallet_urlpatterns
 from .invite.invite_urls import invite_urlpatterns
 
 urlpatterns = [
-    # path("health", HealthCheckView.as_view(), name="api-health-check"),
+    path("health", HealthCheckView.as_view(), name="api-health-check"),
 
     # 个人资料
     *profile_urlpatterns,

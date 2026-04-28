@@ -101,10 +101,10 @@
             fetch('/api/profile')
                 .then(function (response) { return response.json(); })
                 .then(function (res) {
-                    if (res.message !== '查询成功') {
-                        layer.msg(res.message || '加载失败', { icon: 5 });
-                        return;
-                    }
+                    // if (res.message !== '查询成功') {
+                    //     layer.msg(res.message || '加载失败', { icon: 5 });
+                    //     return;
+                    // }
                     form.val('profile-form', {
                         username: res.username || '',
                         fullname: res.fullname || '',

@@ -55,4 +55,3 @@ uv run python manage.py runserver
 
 - 前端页面: `http://127.0.0.1:8000/`
 - API 健康检查: `http://127.0.0.1:8000/api/health/`
-- API 示例（列表/创建）: `http://127.0.0.1:8000/api/items/`

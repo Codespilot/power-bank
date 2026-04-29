@@ -1,0 +1,218 @@
+{% extends "web/base.html" %}
+{% block title %}{% if bankcard_id %}编辑银行卡{% else %}新增银行卡{% endif %}{% endblock %}
+{% block header %}{% if bankcard_id %}编辑银行卡{% else %}新增银行卡{% endif %}{% endblock %}
+{% block content %}
+
+<div class="layui-row">
+	<div class="layui-col-md9">
+		<div class="layui-card">
+			<div class="layui-card-body">
+				<form class="layui-form" lay-filter="bankcard-form">
+					<input type="hidden" name="id" value="{{ bankcard_id }}">
+
+					<div class="layui-form-item">
+						<label class="layui-form-label required">身份证照片</label>
+						<div class="layui-input-block" style="display: flex; column-gap: 24px;">
+							<div class="layui-upload">
+								<button type="button" class="layui-btn" id="btn-upload-badge">上传图片</button>
+								<input type="hidden" name="id_photo_badge" id="field-id_photo_badge">
+								<div id="preview-id_photo_badge" style="margin-top:10px;"></div>
+							</div>
+
+							<div class="layui-upload">
+								<button type="button" class="layui-btn" id="btn-upload-face">上传图片</button>
+								<input type="hidden" name="id_photo_face" id="field-id_photo_face">
+								<div id="preview-id_photo_face" style="margin-top:10px;"></div>
+							</div>
+						</div>
+					</div>
+
+					<div class="layui-form-item">
+						<label class="layui-form-label required">持卡人姓名</label>
+						<div class="layui-input-block">
+							<input type="text" name="name" id="field-name" placeholder="请输入持卡人姓名" maxlength="50"
+								class="layui-input" lay-verify="required" lay-reqtext="请输入持卡人姓名">
+						</div>
+					</div>
+
+					<div class="layui-form-item">
+						<label class="layui-form-label required">身份证</label>
+						<div class="layui-input-block">
+							<input type="text" name="id_no" id="field-id_no" placeholder="请输入持卡人身份证号" maxlength="18"
+								class="layui-input" lay-verify="required" lay-reqtext="请输入持卡人身份证号">
+						</div>
+					</div>
+
+					<div class="layui-form-item">
+						<label class="layui-form-label required">银行卡号</label>
+						<div class="layui-input-block">
+							<input type="text" name="card_no" id="field-card_no" placeholder="请输入银行卡号" maxlength="32"
+								class="layui-input" lay-verify="required" lay-reqtext="请输入银行卡号">
+						</div>
+					</div>
+
+					<div class="layui-form-item">
+						<label class="layui-form-label required">银行卡照片</label>
+						<div class="layui-input-block">
+							<div class="layui-upload">
+								<button type="button" class="layui-btn" id="btn-upload-card">上传图片</button>
+								<input type="hidden" name="card_photo" id="field-card_photo">
+								<div id="preview-card_photo" style="margin-top:10px;"></div>
+							</div>
+						</div>
+					</div>
+
+					<div class="layui-form-item">
+						<label class="layui-form-label">预留手机号</label>
+						<div class="layui-input-block">
+							<input type="text" name="mobile" id="field-mobile" placeholder="请输入银行预留手机号" maxlength="20"
+								class="layui-input">
+						</div>
+					</div>
+
+					<div class="layui-form-item">
+						<label class="layui-form-label">是否默认</label>
+						<div class="layui-input-block">
+							<input type="checkbox" name="is_default" lay-skin="switch" value="true"
+								title="是否默认">
+						</div>
+					</div>
+
+					<div class="layui-form-item">
+						<div class="layui-input-block">
+							<button class="layui-btn" lay-submit lay-filter="bankcard-submit">保存</button>
+							<a class="layui-btn layui-btn-primary" href="/bankcard">返回</a>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+	layui.use(function () {
+		var form = layui.form;
+		var layer = layui.layer;
+		var upload = layui.upload;
+		var $ = layui.$;
+
+		var bankcardId = '{{ bankcard_id }}';
+
+		// 通用上传函数
+		function setupUpload(btnId, fieldId, previewId) {
+			upload.render({
+				elem: '#' + btnId,
+				url: '/api/attachments/upload/form',
+				accept: 'images',
+				exts: 'jpg|png|jpeg|gif|bmp|webp',
+				size: 10240,
+				done: function (res) {
+					if (res.file_name) {
+						$('#' + fieldId).val(res.file_name);
+						var previewHtml = '<img src="/files/attachments/' + res.file_name + '" style="max-width:150px;max-height:150px;border:1px solid #ddd;border-radius:4px;">';
+						$('#' + previewId).html(previewHtml);
+						layer.msg('上传成功', { icon: 1 });
+					} else {
+						layer.msg(res.message || '上传失败', { icon: 5 });
+					}
+				},
+				error: function () {
+					layer.msg('上传失败', { icon: 5 });
+				}
+			});
+		}
+
+		setupUpload('btn-upload-card', 'field-card_photo', 'preview-card_photo');
+		setupUpload('btn-upload-badge', 'field-id_photo_badge', 'preview-id_photo_badge');
+		setupUpload('btn-upload-face', 'field-id_photo_face', 'preview-id_photo_face');
+
+		// 编辑模式：加载数据
+		if (bankcardId) {
+			fetch('/api/bankcards/' + bankcardId)
+				.then(function (res) { return res.json(); })
+				.then(function (res) {
+					var d = res;
+					$('#field-name').val(d.name || '');
+					$('#field-id_no').val(d.id_no || '');
+					$('#field-card_no').val(d.card_no || '');
+					$('#field-mobile').val(d.mobile || '');
+					$('#field-card_photo').val(d.card_photo || '');
+					$('#field-id_photo_badge').val(d.id_photo_badge || '');
+					$('#field-id_photo_face').val(d.id_photo_face || '');
+
+					if (d.is_default) {
+						$('input[name="is_default"]').prop('checked', true);
+					}
+
+					// 显示已有图片预览
+					if (d.card_photo_url) {
+						$('#preview-card_photo').html('<img src="' + d.card_photo_url + '" style="max-width:150px;max-height:150px;border:1px solid #ddd;border-radius:4px;">');
+					}
+					if (d.id_photo_badge_url) {
+						$('#preview-id_photo_badge').html('<img src="' + d.id_photo_badge_url + '" style="max-width:150px;max-height:150px;border:1px solid #ddd;border-radius:4px;">');
+					}
+					if (d.id_photo_face_url) {
+						$('#preview-id_photo_face').html('<img src="' + d.id_photo_face_url + '" style="max-width:150px;max-height:150px;border:1px solid #ddd;border-radius:4px;">');
+					}
+
+					form.render();
+				})
+				.catch(function () {
+					layer.msg('加载数据失败', { icon: 5 });
+				});
+		}
+
+		// 提交
+		form.on('submit(bankcard-submit)', function (data) {
+			var field = data.field;
+			var isDefault = field.is_default === 'true' || field.is_default === true;
+
+			var payload = {
+				card_no: field.card_no,
+				name: field.name,
+				id_no: field.id_no,
+				mobile: field.mobile,
+				card_photo: field.card_photo,
+				id_photo_badge: field.id_photo_badge,
+				id_photo_face: field.id_photo_face,
+				is_default: isDefault,
+			};
+
+			if (!payload.card_no) { layer.msg('请输入银行卡号', { icon: 5 }); return false; }
+			if (!payload.name) { layer.msg('请输入持卡人姓名', { icon: 5 }); return false; }
+			if (!payload.id_no) { layer.msg('请输入身份证号', { icon: 5 }); return false; }
+			if (!payload.card_photo) { layer.msg('请上传银行卡照片', { icon: 5 }); return false; }
+			if (!payload.id_photo_badge) { layer.msg('请上传身份证国徽面', { icon: 5 }); return false; }
+			if (!payload.id_photo_face) { layer.msg('请上传身份证人像面', { icon: 5 }); return false; }
+
+			var url = bankcardId ? '/api/bankcards/' + bankcardId : '/api/bankcards';
+			fetch(url, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+				},
+				body: JSON.stringify(payload)
+			})
+				.then(function (res) { return res.json(); })
+				.then(function (res) {
+					if (res.message === '新增成功' || res.message === '修改成功') {
+						layer.msg(res.message, { icon: 1 }, function () {
+							window.location.href = '/bankcard';
+						});
+					} else {
+						layer.msg(res.message || '操作失败', { icon: 5 });
+					}
+				})
+				.catch(function () {
+					layer.msg('请求失败', { icon: 5 });
+				});
+
+			return false;
+		});
+	});
+</script>
+{% endblock %}

@@ -76,6 +76,8 @@ class HomePageView(BaseTemplateView):
             active_menu = "term"
         elif path.startswith("/attachment/"):
             active_menu = "attachment"
+        elif path.startswith("/bankcard/"):
+            active_menu = "bankcard"
         else:
             active_menu = ""
         context["active_menu"] = active_menu
@@ -337,4 +339,25 @@ class AttachmentListPageView(BaseTemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "attachment"
+        return context
+
+
+class BankCardListPageView(BaseTemplateView):
+    """银行卡管理列表页面。"""
+
+    template_name = "web/bankcard_list.html"
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_menu"] = "bankcard"
+        return context
+
+
+class BankCardFormPageView(BaseTemplateView):
+    """银行卡新增/编辑页面。"""
+
+    template_name = "web/bankcard_form.html"
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_menu"] = "bankcard"
+        context["bankcard_id"] = kwargs.get("id", "")
         return context

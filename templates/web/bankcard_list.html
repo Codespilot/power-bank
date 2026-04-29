@@ -1,0 +1,166 @@
+{% extends "web/base.html" %}
+{% block title %}银行卡管理{% endblock %}
+{% block header %}银行卡管理{% endblock %}
+{% block content %}
+<form class="layui-form layui-row layui-col-space16">
+	<div class="layui-col-md3">
+		<div class="layui-form-item">
+			<div class="layui-input-group">
+				<div class="layui-input-prefix search-label">关键字</div>
+				<input type="text" name="keyword" value="{{ request.GET.keyword|default:'' }}"
+					placeholder="搜索银行卡号、身份证号、姓名、手机号" class="layui-input">
+			</div>
+		</div>
+	</div>
+
+	<div class="layui-col-md3 layui-col-md-offset6" style="text-align: right;">
+
+		<button class="layui-btn layui-btn-primary" lay-submit lay-filter="list-search">
+			<i class="layui-icon layui-icon-search"></i> 搜索
+		</button>
+
+		<a href="/bankcard/add" class="layui-btn"><i class="layui-icon layui-icon-add-1"></i> 新增银行卡</a>
+	</div>
+</form>
+
+<table class="layui-hide" id="list" lay-filter="list"></table>
+
+{% endblock %}
+
+{% block extra_js %}
+<script type="text/html" id="bankcardToolBar">
+  <div class="layui-btn-container">
+    <a class="layui-btn layui-btn-xs" lay-event="detail">查看</a>
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="delete">删除</a>
+  </div>
+</script>
+
+<script type="text/html" id="idPhotoTpl">
+  <div>
+    <a href="javascript:void(0);" class="photo-preview" lay-event="id_photo_badge-preview" style="color:#2f6fed;">国徽面</a>
+    <a href="javascript:void(0);" class="photo-preview" lay-event="id_photo_face-preview" style="color:#2f6fed;">人像面</a>
+  </div>
+</script>
+
+<script>
+	layui.use(function () {
+		var table = layui.table;
+		var form = layui.form;
+		var layer = layui.layer;
+		table.render({
+			elem: '#list',
+			id: 'bankcardTable',
+			url: '/api/bankcards',
+			response: {
+				statusCode: 200
+			},
+			parseData: function (res) {
+				return {
+					code: 200,
+					msg: res.message || '',
+					count: res.count || 0,
+					data: res.results || []
+				};
+			},
+			cols: [[
+				{ field: 'card_no', title: '卡号', minWidth: 160 },
+				{ field: 'card_photo_url', title: '银行卡照片', width: 120, templet: ' <a href="javascript:void(0);" class="photo-preview" lay-event="card-photo-preview" style="color:#2f6fed;">点击查看</a>' },
+				{ field: 'name', title: '持卡人姓名', width: 120 },
+				{ field: 'id_no', title: '身份证号', minWidth: 180 },
+				{ field: 'mobile', title: '预留手机号', width: 140 },
+				{ title: '身份证照片', width: 140, templet: '#idPhotoTpl' },
+				{ field: 'is_default', title: '默认', width: 70, templet: function (d) { return d.is_default ? '是' : '否'; } },
+				{ field: 'created_at', title: '创建时间', width: 180 },
+				{ fixed: 'right', title: '操作', width: 190, toolbar: '#bankcardToolBar' }
+			]],
+			page: true,
+			limit: 10,
+			limits: [10, 20, 50, 100],
+		});
+
+		// 搜索
+		form.on('submit(list-search)', function (data) {
+			table.reload('bankcardTable', {
+				page: { curr: 1 },
+				where: data.field
+			});
+			return false;
+		});
+
+		// 删除
+		table.on('tool(list)', function (obj) {
+			var data = obj.data;
+			if(obj.event === 'detail') {
+				window.location.href = '/bankcard/edit/' + data.id;
+				return;
+			} else if (obj.event === 'edit') {
+				window.location.href = '/bankcard/edit/' + data.id;
+				return;
+			} else if(obj.event.endsWith('-preview')) {
+
+				var url = '';
+				switch(obj.event) {
+					case 'card-photo-preview':
+						url = data.card_photo_url;
+						break;
+					case 'id_photo_badge-preview':
+						url = data.id_photo_badge_url;
+						break;
+					case 'id_photo_face-preview':
+						url = data.id_photo_face_url;
+						break;
+				}
+
+				if (url) {
+					layer.open({
+						type: 1,
+						title: false,
+						area: ['auto', 'auto'],
+						shadeClose: true,
+						content: '<img src="' + url + '" style="max-width:600px;max-height:600px;padding:10px;">'
+					});
+				}
+				return;
+			} else if (obj.event === 'delete') {
+				layer.confirm('确认删除银行卡「' + data.card_no + '」吗？', function (index) {
+					fetch('/api/bankcards/' + data.id, {
+						method: 'DELETE',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+						}
+					})
+						.then(function (res) { return res.json(); })
+						.then(function (res) {
+							if (res.message === '删除成功') {
+								layer.msg('删除成功', { icon: 1 });
+								table.reload('bankcardTable');
+							} else {
+								layer.msg(res.message || '删除失败', { icon: 5 });
+							}
+						})
+						.catch(function () {
+							layer.msg('请求失败', { icon: 5 });
+						});
+					layer.close(index);
+				});
+			}
+		});
+
+		// 图片预览
+		// $(document).on('click', '.photo-preview', function () {
+		// 	var url = $(this).data('url');
+		// 	if (url) {
+		// 		layer.open({
+		// 			type: 1,
+		// 			title: false,
+		// 			area: ['auto', 'auto'],
+		// 			shadeClose: true,
+		// 			content: '<img src="' + url + '" style="max-width:600px;max-height:600px;padding:10px;">'
+		// 		});
+		// 	}
+		// });
+	});
+</script>
+{% endblock %}

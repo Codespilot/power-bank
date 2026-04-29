@@ -13,6 +13,7 @@ from .wallet.wallet_urls import wallet_urlpatterns
 from .invite.invite_urls import invite_urlpatterns
 from .term.term_urls import term_urlpatterns
 from .attachment.attachment_urls import attachment_urlpatterns
+from .bankcard.bankcard_urls import bankcard_urlpatterns
 
 urlpatterns = [
     path("health", HealthCheckView.as_view(), name="api-health-check"),
@@ -50,4 +51,7 @@ urlpatterns = [
 
     # 附件管理
     *attachment_urlpatterns,
+
+    # 银行卡管理
+    *bankcard_urlpatterns,
 ]

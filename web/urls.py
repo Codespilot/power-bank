@@ -1,6 +1,6 @@
 from django.urls import path, re_path
 
-from .views import CaptchaImageView, HomePageView, LoginPageView, RegisterPageView, LogoutView, UserListPageView, AgentListPageView, MerchantListPageView, MerchantHistoryPageView, ProfitListPageView, TaskRecordListPageView, ProfilePageView, InvitePageView, WalletPageView, WithdrawPageView, OrderListPageView, OrderImportListPageView, TermListPageView, TermFormPageView, AttachmentListPageView
+from .views import CaptchaImageView, HomePageView, LoginPageView, RegisterPageView, LogoutView, UserListPageView, AgentListPageView, MerchantListPageView, MerchantHistoryPageView, ProfitListPageView, TaskRecordListPageView, ProfilePageView, InvitePageView, WalletPageView, WithdrawPageView, OrderListPageView, OrderImportListPageView, TermListPageView, TermFormPageView, AttachmentListPageView, BankCardListPageView, BankCardFormPageView
 
 urlpatterns = [
     path("", HomePageView.as_view(), name="home"),
@@ -24,4 +24,7 @@ urlpatterns = [
     path("term/add", TermFormPageView.as_view(), name="term-add"),
     re_path(r"^term/edit/(?P<id>\d+)$", TermFormPageView.as_view(), name="term-edit"),
     path("attachment", AttachmentListPageView.as_view(), name="attachment-list"),
+    path("bankcard", BankCardListPageView.as_view(), name="bankcard-list"),
+    path("bankcard/add", BankCardFormPageView.as_view(), name="bankcard-add"),
+    re_path(r"^bankcard/edit/(?P<id>\d+)$", BankCardFormPageView.as_view(), name="bankcard-edit"),
 ]

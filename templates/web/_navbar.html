@@ -80,6 +80,7 @@
     {% if user_is_admin %}
     <li class="layui-nav-item {% if active_menu == 'attachment' %}layui-this{% endif %}"><a href="/attachment">附件管理</a></li>
     {% endif %}
+    <li class="layui-nav-item {% if active_menu == 'bankcard' %}layui-this{% endif %}"><a href="/bankcard">银行卡管理</a></li>
     <li class="layui-nav-item {% if active_menu == 'withdraw' %}layui-this{% endif %}"><a href="/withdraw">提现管理</a></li>
     <!-- <li class="layui-nav-item layui-layout-right">
         <a href="javascript:;">{% if current_user %}{{ current_user.username }}{% endif %}</a>

@@ -509,3 +509,44 @@ class Attachment(BaseEntity):
         app_label = "api"
         verbose_name = "附件管理"
         verbose_name_plural = "附件管理"
+
+
+class BankCard(BaseEntity):
+    """
+    用户银行卡信息。
+
+    Attributes:
+        id: 主键，通过SnowflakeId产生
+        user: 外键，关联到 User 模型
+        card_no: 银行卡号，纯数字，保存前去除空格，不能重复
+        name: 持卡人姓名
+        id_no: 身份证号
+        mobile: 银行预留手机号
+        card_photo: 银行卡照片，对应attachment表的file_name
+        id_photo_badge: 身份证国徽面照片，对应attachment表的file_name
+        id_photo_face: 身份证人像面照片，对应attachment表的file_name
+        is_default: 是否默认
+        created_at: 创建时间
+    """
+    id = models.BigIntegerField(primary_key=True)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        db_column="user_id",
+        related_name="bank_cards",
+    )
+    card_no = models.CharField(max_length=32, unique=True, verbose_name="银行卡号")
+    name = models.CharField(max_length=50, verbose_name="持卡人姓名")
+    id_no = models.CharField(max_length=18, verbose_name="身份证号")
+    mobile = models.CharField(max_length=20, null=True, blank=True, verbose_name="预留手机号")
+    card_photo = models.CharField(max_length=50, verbose_name="银行卡照片")
+    id_photo_badge = models.CharField(max_length=50, verbose_name="身份证国徽照片")
+    id_photo_face = models.CharField(max_length=50, verbose_name="身份证人像照片")
+    is_default = models.BooleanField(default=False, verbose_name="是否默认")
+    created_at = models.DateTimeField(default=timezone.now, verbose_name="创建时间")
+
+    class Meta:
+        db_table = "bank_card"
+        app_label = "api"
+        verbose_name = "银行卡管理"
+        verbose_name_plural = "银行卡管理"

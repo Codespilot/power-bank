@@ -355,7 +355,7 @@ class TermPublishView(BaseAPIView):
     @extend_schema(
         tags=["terms"],
         summary="发布协议",
-        description="发布协议，生成HTML文件保存到files/attachments/目录。",
+        description="发布协议，生成HTML文件保存到files/terms/目录。",
         responses={200: dict, 400: dict, 404: dict},
     )
     def put(self, request, id):
@@ -374,7 +374,7 @@ class TermPublishView(BaseAPIView):
             file_uuid = str(uuid.uuid4())
             file_name = f"{file_uuid}.html"
 
-            files_dir = settings.BASE_DIR / "files" / "attachments"
+            files_dir = settings.BASE_DIR / "files" / "terms"
             files_dir.mkdir(parents=True, exist_ok=True)
 
             file_path = files_dir / file_name
@@ -442,7 +442,7 @@ class TermPrivacyView(BaseAPIView):
         })
 
     def _read_file_content(self, file_name: str) -> str | None:
-        file_path = settings.BASE_DIR / "files" / "attachments" / file_name
+        file_path = settings.BASE_DIR / "files" / "terms" / file_name
         if not file_path.exists():
             return None
         try:
@@ -500,7 +500,7 @@ class TermUserAgreementView(BaseAPIView):
         })
 
     def _read_file_content(self, file_name: str) -> str | None:
-        file_path = settings.BASE_DIR / "files" / "attachments" / file_name
+        file_path = settings.BASE_DIR / "files" / "terms" / file_name
         if not file_path.exists():
             return None
         try:

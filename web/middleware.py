@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse
 
@@ -33,6 +34,7 @@ EXCLUDE_PATHS = [
     "/static/",
     "/api/terms/privacy",
     "/api/terms/userterm",
+    "/files/terms/",
     "/files/attachments/",
     "/api/attachments/upload/",
 ]
@@ -53,6 +55,9 @@ class LoginRequiredMiddleware:
         # 已登录
         if request.session.get("current_user_id"):
             return self.get_response(request)
-        # 未登录，跳转到登录页并带next参数
+        # 未登录
+        if path.startswith("/api/"):
+            return JsonResponse({"message": "认证失败，请先登录"}, status=401)
+        # 页面请求，跳转到登录页并带next参数
         login_url = reverse("login")
         return redirect(f"{login_url}?next={path}")

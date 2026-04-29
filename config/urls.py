@@ -12,7 +12,7 @@ urlpatterns = [
     path("", include("web.urls")),
     path("api/", include("api.urls")),
     # 协议发布的HTML文件访问
-    re_path(r"^files/(?P<path>.*)$", serve, {
-        "document_root": settings.BASE_DIR / "files",
+    re_path(r"^files/attachments/(?P<path>.*)$", serve, {
+        "document_root": settings.BASE_DIR / "files" / "attachments",
     }),
 ]

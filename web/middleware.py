@@ -33,7 +33,7 @@ EXCLUDE_PATHS = [
     "/static/",
     "/api/terms/privacy",
     "/api/terms/userterm",
-    "/files/",
+    "/files/attachments/",
 ]
 
 

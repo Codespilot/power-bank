@@ -731,7 +731,7 @@ class UserPasswordChangeView(APIView):
 
         old_password = str(request.data.get("old_password", ""))
         new_password = str(request.data.get("new_password", ""))
-        confirm_password = str(request.data.get("confirm_password", ""))
+        # confirm_password = str(request.data.get("confirm_password", ""))
 
         if not verify_password(user, old_password):
             return Response(
@@ -743,11 +743,11 @@ class UserPasswordChangeView(APIView):
                 {"message": "新密码至少6位"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        if new_password != confirm_password:
-            return Response(
-                {"message": "两次输入的新密码不一致"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # if new_password != confirm_password:
+        #     return Response(
+        #         {"message": "两次输入的新密码不一致"},
+        #         status=status.HTTP_400_BAD_REQUEST,
+        #     )
 
         password_hash_value, password_salt_value = hash_password(new_password)
         user.password_hash = password_hash_value

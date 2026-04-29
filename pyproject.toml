@@ -8,6 +8,7 @@ dependencies = [
     "django",
     "djangorestframework",
     "djangorestframework-stubs",
+    "django-cors-headers",
     "drf-spectacular",
     "drf-spectacular-sidecar",
     "mysql-connector-python",

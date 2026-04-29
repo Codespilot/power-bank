@@ -34,6 +34,7 @@ EXCLUDE_PATHS = [
     "/api/terms/privacy",
     "/api/terms/userterm",
     "/files/attachments/",
+    "/api/attachments/upload/",
 ]
 
 

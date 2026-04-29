@@ -137,6 +137,7 @@ SPECTACULAR_SETTINGS = {
         {"name": "wallet", "description": "钱包管理接口"},
         {"name": "withdraws", "description": "提现管理接口"},
         {"name": "terms", "description": "协议管理接口"},
+        {"name": "attachments", "description": "附件管理接口"},
         # {"name": "health", "description": "系统健康检查接口"},
         # {"name": "items", "description": "示例数据接口"},
     ],

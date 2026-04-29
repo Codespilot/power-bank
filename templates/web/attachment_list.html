@@ -1,0 +1,140 @@
+{% extends "web/base.html" %}
+{% block title %}附件管理{% endblock %}
+{% block header %}附件管理{% endblock %}
+{% block content %}
+<form class="layui-form layui-row layui-col-space16">
+	<div class="layui-col-md3">
+		<div class="layui-form-item">
+			<div class="layui-input-group">
+				<div class="layui-input-prefix search-label">关键字</div>
+				<input type="text" name="keyword" value="{{ request.GET.keyword|default:'' }}" placeholder="搜索文件名"
+					class="layui-input">
+			</div>
+		</div>
+	</div>
+
+	<div class="layui-col-md3 layui-col-md-offset6" style="text-align: right;">
+		<button class="layui-btn layui-btn-primary" lay-submit lay-filter="list-search">
+			<i class="layui-icon layui-icon-search"></i> 搜索
+		</button>
+	</div>
+</form>
+
+<table class="layui-hide" id="list" lay-filter="list"></table>
+
+{% endblock %}
+
+{% block extra_js %}
+<script type="text/html" id="attachmentToolBar">
+  <div class="layui-btn-container">
+    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="delete">删除</a>
+  </div>
+</script>
+
+<script>
+	layui.use(function () {
+		var table = layui.table;
+		var form = layui.form;
+		var layer = layui.layer;
+		table.render({
+			elem: '#list',
+			id: 'attachmentTable',
+			url: '/api/attachments',
+			response: {
+				statusCode: 200
+			},
+			parseData: function (res) {
+				return {
+					code: 200,
+					msg: res.message || '',
+					count: res.count || 0,
+					data: res.results || []
+				};
+			},
+			cols: [[
+				{
+					field: 'file_name', title: '文件名', minWidth: 220,
+					templet: function (d) {
+						return '<a href="javascript:void(0);" class="preview-link" style="color:#2f6fed;">' + d.file_name + '</a>';
+					}
+				},
+				{ field: 'origin_name', title: '原始名称', minWidth: 180 },
+				{ field: 'file_size', title: '文件大小', width: 100 },
+				{ field: 'file_ext', title: '扩展名', width: 80 },
+				{ field: 'upload_by_name', title: '上传人', width: 120 },
+				{ field: 'created_at', title: '上传时间', width: 180 },
+				{ fixed: 'right', title: '操作', width: 100, toolbar: '#attachmentToolBar' }
+			]],
+			page: true,
+			limit: 10,
+			limits: [10, 20, 50, 100],
+		});
+
+		// 搜索
+		form.on('submit(list-search)', function (data) {
+			table.reload('attachmentTable', {
+				page: { curr: 1 },
+				where: data.field
+			});
+			return false;
+		});
+
+		// 删除
+		table.on('tool(list)', function (obj) {
+			var data = obj.data;
+			if (obj.event === 'delete') {
+				layer.confirm('确认删除附件「' + data.file_name + '」吗？删除后不可恢复。', function (index) {
+					fetch('/api/attachments/' + data.id, {
+						method: 'DELETE',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+						}
+					})
+						.then(function (res) { return res.json(); })
+						.then(function (res) {
+							if (res.message === '删除成功') {
+								layer.msg('删除成功', { icon: 1 });
+								table.reload('attachmentTable');
+							} else {
+								layer.msg(res.message || '删除失败', { icon: 5 });
+							}
+						})
+						.catch(function () {
+							layer.msg('请求失败', { icon: 5 });
+						});
+					layer.close(index);
+				});
+			}
+		});
+
+		// 预览点击 — 生成token后在新窗口打开
+		$(document).on('click', '.preview-link', function () {
+			var tr = $(this).closest('tr');
+			var index = tr.data('index');
+			var data = table.cache.attachmentTable[index];
+			if (data && data.file_name) {
+				fetch('/api/attachments/token', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+					},
+					body: JSON.stringify({ file_name: data.file_name })
+				})
+					.then(function (res) { return res.json(); })
+					.then(function (res) {
+						if (res.token) {
+							window.open(res.url, '_blank');
+						} else {
+							layer.msg(res.message || '获取token失败', { icon: 5 });
+						}
+					})
+					.catch(function () {
+						layer.msg('请求失败', { icon: 5 });
+					});
+			}
+		});
+	});
+</script>
+{% endblock %}

@@ -188,3 +188,76 @@ class JWTAuthenticationScheme(OpenApiAuthenticationExtension):
             "bearerFormat": "JWT",
             "description": "在请求头中使用 Bearer Token，例如：Bearer eyJ...",
         }
+
+
+# ========= 文件访问 Token 生成 =========
+
+def create_file_access_token(file_name: str, file_ext: str, signature_key: str) -> str:
+    """生成文件访问Token。
+
+    使用附件的 signature_key 进行签名，file_name 作为 subject，
+    file_ext 作为 ext 字段，有效期120分钟。
+
+    Args:
+        file_name: 附件存储文件名（UUID格式）
+        file_ext: 文件扩展名（如 .jpg）
+        signature_key: 附件记录的签名密钥
+
+    Returns:
+        base64url 编码的 token 字符串
+    """
+    now_ts = int(timezone.now().timestamp())
+    exp = now_ts + 7200  # 120分钟
+    header_b64 = _b64url_encode(json.dumps({"alg": "HS256", "typ": "FILE"}).encode("utf-8"))
+    payload = {
+        "subject": file_name,
+        "ext": file_ext,
+        "iat": now_ts,
+        "exp": exp,
+    }
+    payload_b64 = _b64url_encode(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+    signing_input = f"{header_b64}.{payload_b64}".encode("utf-8")
+    signature = hmac.new(signature_key.encode("utf-8"), signing_input, hashlib.sha256).digest()
+    return f"{header_b64}.{payload_b64}.{_b64url_encode(signature)}"
+
+
+def verify_file_access_token(token: str, file_name: str, signature_key: str) -> bool:
+    """校验文件访问Token。
+
+    验证签名的有效性，同时比对 subject 是否等于 file_name，
+    以及 token 是否在有效期内。
+
+    Returns:
+        True 表示 token 合法且匹配，否则返回 False。
+    """
+    try:
+        parts = token.split(".")
+        if len(parts) != 3:
+            return False
+        header_b64, payload_b64, signature_b64 = parts
+        signing_input = f"{header_b64}.{payload_b64}".encode("utf-8")
+        expected_signature = hmac.new(
+            signature_key.encode("utf-8"), signing_input, hashlib.sha256
+        ).digest()
+        signature = _b64url_decode(signature_b64)
+    except (ValueError, binascii.Error):
+        return False
+
+    if not hmac.compare_digest(signature, expected_signature):
+        return False
+
+    try:
+        payload = json.loads(_b64url_decode(payload_b64).decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError, binascii.Error):
+        return False
+
+    # 校验 subject 是否匹配
+    if str(payload.get("subject", "")) != file_name:
+        return False
+
+    # 校验有效期
+    exp = int(payload.get("exp", 0))
+    if exp <= int(timezone.now().timestamp()):
+        return False
+
+    return True

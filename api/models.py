@@ -471,3 +471,41 @@ class Term(BaseEntity):
         app_label = "api"
         verbose_name = "协议管理"
         verbose_name_plural = "协议管理"
+
+
+class Attachment(BaseEntity):
+    """
+    附件/文件管理。
+
+    Attributes:
+        id: 主键，通过SnowflakeId产生
+        file_name: 存储在磁盘上的文件名，UUID格式
+        origin_name: 用户上传时的原始文件名
+        file_size: 文件大小（字节）
+        file_ext: 文件扩展名，如 .jpg、.png、.pdf
+        signature_key: 用于签名文件访问token的密钥
+        upload_by: 上传用户
+        created_at: 上传时间
+    """
+    id = models.BigIntegerField(primary_key=True)
+    file_name = models.CharField(max_length=50, unique=True, verbose_name="存储文件名")
+    origin_name = models.CharField(max_length=255, verbose_name="原始文件名")
+    file_size = models.BigIntegerField(default=0, verbose_name="文件大小")
+    file_ext = models.CharField(max_length=10, verbose_name="文件扩展名")
+    signature_key = models.CharField(max_length=64, verbose_name="签名密钥")
+    upload_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        db_column="upload_by",
+        related_name="attachments",
+        null=True,
+        blank=True,
+        verbose_name="上传用户",
+    )
+    created_at = models.DateTimeField(default=timezone.now, verbose_name="上传时间")
+
+    class Meta:
+        db_table = "attachment"
+        app_label = "api"
+        verbose_name = "附件管理"
+        verbose_name_plural = "附件管理"

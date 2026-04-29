@@ -74,6 +74,8 @@ class HomePageView(BaseTemplateView):
             active_menu = "withdraw"
         elif path.startswith("/term/"):
             active_menu = "term"
+        elif path.startswith("/attachment/"):
+            active_menu = "attachment"
         else:
             active_menu = ""
         context["active_menu"] = active_menu
@@ -325,4 +327,14 @@ class TermFormPageView(BaseTemplateView):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "term"
         context["term_id"] = kwargs.get("id", "")
+        return context
+
+
+class AttachmentListPageView(BaseTemplateView):
+    """附件管理列表页面。"""
+
+    template_name = "web/attachment_list.html"
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_menu"] = "attachment"
         return context

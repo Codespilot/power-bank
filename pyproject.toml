@@ -15,4 +15,5 @@ dependencies = [
     "python-dotenv",
     "pandas",
     "openpyxl",
+    "Pillow",
 ]

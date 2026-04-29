@@ -10,6 +10,7 @@ class UserProfileResponseSerializer(serializers.Serializer):
     superior_agent = serializers.CharField(help_text="上级代理")
     agent_rate = serializers.CharField(help_text="代理费率")
     user_is_admin = serializers.BooleanField(help_text="是否为管理员")
+    invite_code = serializers.CharField(help_text="邀请码")
 
 class UserProfileUpdateRequestSerializer(serializers.Serializer):
     '''用户个人资料更新请求序列化器，包含可选的全名、手机号和邮箱字段。'''

@@ -54,6 +54,7 @@ class UserProfileView(APIView):
                 "superior_agent": _get_superior_agent_display(user),
                 "agent_rate": _format_agent_rate(user.agent_rate, bool(user.agent_id)),
                 "user_is_admin": is_admin,
+                "invite_code": user.invite_code,
             }
         )
 

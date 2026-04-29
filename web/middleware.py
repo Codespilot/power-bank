@@ -21,6 +21,7 @@ class StripTrailingSlashMiddleware:
 
 EXCLUDE_PATHS = [
     "/login",
+    "/captcha",
     "/register",
     "/api/users/login",
     "/api/users/register",

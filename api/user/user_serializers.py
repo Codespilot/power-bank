@@ -38,14 +38,14 @@ class TokenGrantResponseSerializer(serializers.Serializer):
 
 
 class UserRegisterSerializer(serializers.Serializer):
-    username = serializers.CharField(required=True)
-    fullname = serializers.CharField(required=True)
-    phone = serializers.CharField(required=True)
-    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
-    password = serializers.CharField(required=True, write_only=True)
-    confirm_password = serializers.CharField(required=True, write_only=True)
-    captcha = serializers.CharField(required=True)
-    invite_code = serializers.CharField(required=True)
+    username = serializers.CharField(required=True, help_text="用户名，必须唯一")
+    fullname = serializers.CharField(required=False, help_text="用户全名")
+    phone = serializers.CharField(required=True, help_text="用户手机号")
+    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True, help_text="用户邮箱")
+    password = serializers.CharField(required=True, write_only=True, help_text="用户密码")
+    # confirm_password = serializers.CharField(required=True, write_only=True, help_text="确认密码")
+    # captcha = serializers.CharField(required=True, help_text="验证码")
+    invite_code = serializers.CharField(required=True, help_text="邀请码")
 
 
 class AgentAssignSerializer(serializers.Serializer):

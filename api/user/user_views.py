@@ -291,7 +291,8 @@ def _create_user_account(data, *, invite_code: str = ""):
     if User.objects.filter(username=username).exists():
         raise ValueError("用户名已存在")
     if not fullname:
-        raise ValueError("姓名不能为空")
+        fullname = username
+        # raise ValueError("姓名不能为空")
     if not MOBILE_REGEX.fullmatch(phone):
         raise ValueError("手机号格式错误")
     if User.objects.filter(phone=phone).exists():
@@ -531,19 +532,19 @@ class RegisterAPIView(APIView):
         responses={200: IdMessageSerializer, 400: MessageSerializer},
     )
     def post(self, request):
-        captcha = str(request.data.get("captcha", "")).strip()
-        session_captcha = str(request.session.get("login_captcha_code", "")).strip()
-        if not session_captcha or captcha != session_captcha:
-            return Response(
-                {"message": "验证码错误"}, status=status.HTTP_400_BAD_REQUEST
-            )
+        # captcha = str(request.data.get("captcha", "")).strip()
+        # session_captcha = str(request.session.get("login_captcha_code", "")).strip()
+        # if not session_captcha or captcha != session_captcha:
+        #     return Response(
+        #         {"message": "验证码错误"}, status=status.HTTP_400_BAD_REQUEST
+        #     )
 
         password = str(request.data.get("password", "")).strip()
-        confirm_password = str(request.data.get("confirm_password", "")).strip()
-        if password != confirm_password:
-            return Response(
-                {"message": "两次输入的密码不一致"}, status=status.HTTP_400_BAD_REQUEST
-            )
+        # confirm_password = str(request.data.get("confirm_password", "")).strip()
+        # if password != confirm_password:
+        #     return Response(
+        #         {"message": "两次输入的密码不一致"}, status=status.HTTP_400_BAD_REQUEST
+        #     )
 
         invite_code = (
             str(

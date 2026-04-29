@@ -44,8 +44,8 @@
                         </div>
                         <div class="layui-col-xs5">
                             <div style="margin-left: 10px;">
-                                <img id="register-captcha-img" src="/login/captcha/" alt="验证码" class="captcha-image"
-                                    title="点击刷新验证码" onclick="this.src='/login/captcha/?t=' + Date.now();">
+                                <img id="register-captcha-img" src="/captcha" alt="验证码" class="captcha-image"
+                                    title="点击刷新验证码" onclick="this.src='/captcha?t=' + Date.now();">
                             </div>
                         </div>
                     </div>
@@ -141,7 +141,7 @@
                     layer.msg(res.message || '注册失败', { icon: 5 });
                     const captchaImg = document.getElementById('register-captcha-img');
                     if (captchaImg) {
-                        captchaImg.src = '/login/captcha/?t=' + Date.now();
+                        captchaImg.src = 'captcha?t=' + Date.now();
                     }
                 }
                 return false;

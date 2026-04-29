@@ -74,6 +74,9 @@
     <!-- {% if user_is_admin %}
     <li class="layui-nav-item {% if active_menu == 'task' %}layui-this{% endif %}"><a href="/task">任务管理</a></li>
     {% endif %} -->
+    {% if user_is_admin %}
+    <li class="layui-nav-item {% if active_menu == 'term' %}layui-this{% endif %}"><a href="/term">协议管理</a></li>
+    {% endif %}
     <li class="layui-nav-item {% if active_menu == 'withdraw' %}layui-this{% endif %}"><a href="/withdraw">提现管理</a></li>
     <!-- <li class="layui-nav-item layui-layout-right">
         <a href="javascript:;">{% if current_user %}{{ current_user.username }}{% endif %}</a>

@@ -11,6 +11,7 @@ from .merchant.merchant_urls import merchant_urlpatterns
 from .withdraw.withdraw_urls import withdraw_urlpatterns
 from .wallet.wallet_urls import wallet_urlpatterns
 from .invite.invite_urls import invite_urlpatterns
+from .term.term_urls import term_urlpatterns
 
 urlpatterns = [
     path("health", HealthCheckView.as_view(), name="api-health-check"),
@@ -42,4 +43,7 @@ urlpatterns = [
 
     # 提现管理
     *withdraw_urlpatterns,
+
+    # 协议管理
+    *term_urlpatterns,
 ]

@@ -72,6 +72,8 @@ class HomePageView(BaseTemplateView):
             active_menu = "wallet"
         elif path.startswith("/withdraw/"):
             active_menu = "withdraw"
+        elif path.startswith("/term/"):
+            active_menu = "term"
         else:
             active_menu = ""
         context["active_menu"] = active_menu
@@ -302,4 +304,25 @@ class OrderImportListPageView(BaseTemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_menu"] = "order"
+        return context
+
+
+class TermListPageView(BaseTemplateView):
+    """协议管理列表页面。"""
+
+    template_name = "web/term_list.html"
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_menu"] = "term"
+        return context
+
+
+class TermFormPageView(BaseTemplateView):
+    """协议新增/编辑页面。"""
+
+    template_name = "web/term_form.html"
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_menu"] = "term"
+        context["term_id"] = kwargs.get("id", "")
         return context

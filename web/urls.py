@@ -1,6 +1,6 @@
-from django.urls import path
+from django.urls import path, re_path
 
-from .views import CaptchaImageView, HomePageView, LoginPageView, RegisterPageView, LogoutView, UserListPageView, AgentListPageView, MerchantListPageView, MerchantHistoryPageView, ProfitListPageView, TaskRecordListPageView, ProfilePageView, InvitePageView, WalletPageView, WithdrawPageView, OrderListPageView, OrderImportListPageView
+from .views import CaptchaImageView, HomePageView, LoginPageView, RegisterPageView, LogoutView, UserListPageView, AgentListPageView, MerchantListPageView, MerchantHistoryPageView, ProfitListPageView, TaskRecordListPageView, ProfilePageView, InvitePageView, WalletPageView, WithdrawPageView, OrderListPageView, OrderImportListPageView, TermListPageView, TermFormPageView
 
 urlpatterns = [
     path("", HomePageView.as_view(), name="home"),
@@ -20,4 +20,7 @@ urlpatterns = [
     path("withdraw", WithdrawPageView.as_view(), name="withdraw-page"),
     path("order", OrderListPageView.as_view(), name="order-list"),
     path("order/import", OrderImportListPageView.as_view(), name="order-import-list"),
+    path("term", TermListPageView.as_view(), name="term-list"),
+    path("term/add", TermFormPageView.as_view(), name="term-add"),
+    re_path(r"^term/edit/(?P<id>\d+)$", TermFormPageView.as_view(), name="term-edit"),
 ]

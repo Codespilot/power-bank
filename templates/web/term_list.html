@@ -1,0 +1,307 @@
+{% extends "web/base.html" %}
+{% block title %}协议管理{% endblock %}
+{% block header %}协议管理{% endblock %}
+{% block content %}
+<form class="layui-form layui-row layui-col-space16">
+	<div class="layui-col-md3">
+		<div class="layui-form-item">
+			<div class="layui-input-group">
+				<div class="layui-input-prefix search-label">关键字</div>
+				<input type="text" name="keyword" value="{{ request.GET.keyword|default:'' }}" placeholder="搜索名称"
+					class="layui-input">
+			</div>
+		</div>
+	</div>
+
+	<div class="layui-col-md2">
+		<div class="layui-form-item">
+			<select name="type">
+				<option value="">全部类型</option>
+				<option value="1">隐私政策</option>
+				<option value="2">用户协议</option>
+			</select>
+		</div>
+	</div>
+
+	<div class="layui-col-md2">
+		<div class="layui-form-item">
+			<select name="platform">
+				<option value="">全部平台</option>
+				<option value="1">全部</option>
+				<option value="2">Web</option>
+				<option value="3">小程序</option>
+				<option value="4">App</option>
+				<option value="5">其他</option>
+			</select>
+		</div>
+	</div>
+
+	<div class="layui-col-md3 layui-col-md-offset2" style="text-align: right;">
+		<button class="layui-btn layui-btn-primary" lay-submit lay-filter="list-search">
+			<i class="layui-icon layui-icon-search"></i> 搜索
+		</button>
+		<a class="layui-btn" href="/term/add">
+			<i class="layui-icon layui-icon-add-1"></i> 新增
+		</a>
+	</div>
+</form>
+
+<table class="layui-hide" id="list" lay-filter="list"></table>
+
+{% endblock %}
+
+{% block extra_js %}
+<script type="text/html" id="termToolBar">
+  <div class="layui-btn-container">
+    <a class="layui-btn layui-btn-xs layui-btn-primary" lay-event="view">查看</a>
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="more">
+      更多
+      <i class="layui-icon layui-icon-down"></i>
+    </a>
+  </div>
+</script>
+
+<script>
+	layui.use(function () {
+		var table = layui.table;
+		var form = layui.form;
+		var layer = layui.layer;
+		var dropdown = layui.dropdown;
+		table.render({
+			elem: '#list',
+			id: 'termTable',
+			url: '/api/terms',
+			response: {
+				statusCode: 200
+			},
+			parseData: function (res) {
+				return {
+					code: 200,
+					msg: res.message || '',
+					count: res.count || 0,
+					data: res.results || []
+				};
+			},
+			cols: [[
+				{ field: 'name', title: '协议名称', minWidth: 180 },
+				{ field: 'type_name', title: '协议类型', width: 120 },
+				{ field: 'platform_name', title: '平台', width: 100 },
+				{
+					field: 'file_name', title: '文件名', width: 160,
+					templet: function (d) {
+						if (d.file_name) {
+							return '<a href="/files/' + d.file_name + '" target="_blank" style="color:#2f6fed;">' + d.file_name + '</a>';
+						}
+						return '--';
+					}
+				},
+				{
+					field: 'status_name', title: '发布状态', width: 100,
+					templet: function (d) {
+						if (d.status === 2) {
+							return '<span style="color:#16baaa;">已发布</span>';
+						}
+						return '<span style="color:#ffb800;">待发布</span>';
+					}
+				},
+				{ field: 'created_at', title: '创建时间', width: 180 },
+				{ field: 'published_at', title: '发布时间', width: 180 },
+				{ fixed: 'right', title: '操作', minWidth: 240, toolbar: '#termToolBar' }
+			]],
+			page: true,
+			limit: 10,
+			limits: [10, 20, 50, 100],
+		});
+
+		form.on('submit(list-search)', function (data) {
+			table.reload('termTable', {
+				page: { curr: 1 },
+				where: data.field
+			});
+			return false;
+		});
+
+		// 操作栏事件
+		table.on('tool(list)', function (obj) {
+			var data = obj.data;
+			if (obj.event === 'view') {
+				// 查看详情
+				layer.open({
+					type: 2,
+					title: '协议详情 - ' + data.name,
+					area: ['800px', '600px'],
+					content: '/term/edit/' + data.id,
+					success: function (layero, index) {
+						var body = layer.getChildFrame('body', index);
+						body.find('input,textarea').attr('readonly', 'readonly');
+						body.find('select').attr('disabled', 'disabled');
+						body.find('.layui-btn').hide();
+					}
+				});
+			} else if (obj.event === 'edit') {
+				window.location.href = '/term/edit/' + data.id;
+			} else if (obj.event === 'publish') {
+				layer.confirm('确认发布协议「' + data.name + '」吗？', function (index) {
+					fetch('/api/terms/' + data.id + '/publish', {
+						method: 'PUT',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+						}
+					})
+						.then(function (res) { return res.json(); })
+						.then(function (res) {
+							if (res.message === '发布成功') {
+								layer.msg('发布成功', { icon: 1 });
+								table.reload('termTable');
+							} else {
+								layer.msg(res.message || '发布失败', { icon: 5 });
+							}
+						})
+						.catch(function () {
+							layer.msg('请求失败', { icon: 5 });
+						});
+					layer.close(index);
+				});
+			} else if (obj.event === 'more') {
+				// layer.open({
+				// 	title: '更多操作',
+				// 	content: '<div style="padding: 20px;"><button class="layui-btn layui-btn-warm" id="more-disable">禁用</button><button class="layui-btn layui-btn-danger" id="more-delete">删除</button></div>',
+				// 	area: ['300px', '150px'],
+				// 	success: function (layero) {
+				// 		layero.find('#more-disable').on('click', function () {
+				// 			layer.confirm('确认禁用协议「' + data.name + '」吗？', function (idx) {
+				// 				fetch('/api/terms/' + data.id + '/disable', {
+				// 					method: 'PUT',
+				// 					headers: {
+				// 						'Content-Type': 'application/json',
+				// 						'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+				// 					}
+				// 				})
+				// 					.then(function (res) { return res.json(); })
+				// 					.then(function (res) {
+				// 						if (res.message === '禁用成功') {
+				// 							layer.msg('禁用成功', { icon: 1 });
+				// 							table.reload('termTable');
+				// 						} else {
+				// 							layer.msg(res.message || '操作失败', { icon: 5 });
+				// 						}
+				// 					});
+				// 				layer.close(idx);
+				// 			});
+				// 		});
+				// 		layero.find('#more-delete').on('click', function () {
+				// 			layer.confirm('确认删除协议「' + data.name + '」吗？', function (idx) {
+				// 				fetch('/api/terms/' + data.id, {
+				// 					method: 'DELETE',
+				// 					headers: {
+				// 						'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+				// 					}
+				// 				})
+				// 					.then(function (res) { return res.json(); })
+				// 					.then(function (res) {
+				// 						if (res.message === '删除成功') {
+				// 							layer.msg('删除成功', { icon: 1 });
+				// 							table.reload('termTable');
+				// 						} else {
+				// 							layer.msg(res.message || '操作失败', { icon: 5 });
+				// 						}
+				// 					});
+				// 				layer.close(idx);
+				// 			});
+				// 		});
+				// 	}
+				// });
+
+				dropdown.render({
+					elem: this,
+					show: true,
+					data: [
+						{ title: '编辑', id: 'edit' },
+						{ title: '发布', id: 'publish', show: data.status === 1 },
+						{ title: data.is_valid === true ? '禁用' : '启用', id: data.is_valid === true ? 'disable' : 'enable', show: true },
+						{ title: '删除', id: 'delete' }
+					],
+					click: menudata=>{
+						if(menudata.id === 'edit'){
+							window.location.href = '/term/edit/' + data.id;
+						}else if(menudata.id === 'publish'){
+							layer.confirm('确认发布协议「' + data.name + '」吗？', function (index) {
+								fetch('/api/terms/' + data.id + '/publish', {
+									method: 'PUT',
+									headers: {
+										'Content-Type': 'application/json',
+										'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+									}
+								})
+									.then(function (res) { return res.json(); })
+									.then(function (res) {
+										if (res.message === '发布成功') {
+											layer.msg('发布成功', { icon: 1 });
+											table.reload('termTable');
+										} else {
+											layer.msg(res.message || '发布失败', { icon: 5 });
+										}
+									})
+									.catch(function () {
+										layer.msg('请求失败', { icon: 5 });
+									});
+								layer.close(index);
+							});
+						}
+						else if(menudata.id === 'disable' || menudata.id === 'enable'){
+							var action = menudata.id === 'disable' ? '禁用' : '启用';
+							layer.confirm('确认' + action + '协议「' + data.name + '」吗？', function (index) {
+								fetch('/api/terms/' + data.id + '/' + menudata.id, {
+									method: 'PUT',
+									headers: {
+										'Content-Type': 'application/json',
+										'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+									}
+								})
+									.then(function (res) { return res.json(); })
+									.then(function (res) {
+										if (res.message === action + '成功') {
+											layer.msg(action + '成功', { icon: 1 });
+											table.reload('termTable');
+										} else {
+											layer.msg(res.message || '操作失败', { icon: 5 });
+										}
+									})
+									.catch(function () {
+										layer.msg('请求失败', { icon: 5 });
+									});
+								layer.close(index);
+							});
+						}
+						else if(menudata.id === 'delete'){
+							layer.confirm('确认删除协议「' + data.name + '」吗？', function (index) {
+								fetch('/api/terms/' + data.id, {
+									method: 'DELETE',
+									headers: {
+										'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+									}
+								})
+									.then(function (res) { return res.json(); })
+									.then(function (res) {
+										if (res.message === '删除成功') {
+											layer.msg('删除成功', { icon: 1 });
+											table.reload('termTable');
+										} else {
+											layer.msg(res.message || '操作失败', { icon: 5 });
+										}
+									})
+									.catch(function () {
+										layer.msg('请求失败', { icon: 5 });
+									});
+								layer.close(index);
+							});
+						}
+					}
+				});
+			}
+		});
+	});
+</script>
+{% endblock %}

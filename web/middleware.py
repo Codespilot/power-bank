@@ -31,6 +31,9 @@ EXCLUDE_PATHS = [
     "/swagger",
     "/swagger/",
     "/static/",
+    "/api/terms/privacy",
+    "/api/terms/userterm",
+    "/files/",
 ]
 
 

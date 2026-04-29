@@ -404,3 +404,70 @@ class ProfitTaskRecord(models.Model):
     class Meta:
         db_table = "profit_task"
         app_label = "api"
+
+
+class Term(BaseEntity):
+    """
+    系统协议/条款管理。
+
+    Attributes:
+        id: 主键，通过SnowflakeId产生
+        type: 协议类型，1-隐私政策、2-用户协议
+        name: 协议名称
+        platform: 平台，1-全部、2-Web、3-小程序、4-App、5-其他
+        status: 状态，1-待发布、2-已发布，默认1
+        content: 协议内容，html或markdown文本
+        file_name: 发布时生成的文件名，通常为UUID.html
+        is_valid: 是否有效，默认1
+        created_at: 创建时间
+        updated_at: 修改时间
+        published_at: 发布时间
+    """
+    TYPE_PRIVACY = 1
+    TYPE_USER_AGREEMENT = 2
+    TYPE_CHOICES = (
+        (TYPE_PRIVACY, "隐私政策"),
+        (TYPE_USER_AGREEMENT, "用户协议"),
+    )
+
+    PLATFORM_ALL = 1
+    PLATFORM_WEB = 2
+    PLATFORM_MINI = 3
+    PLATFORM_APP = 4
+    PLATFORM_OTHER = 5
+    PLATFORM_CHOICES = (
+        (PLATFORM_ALL, "全部"),
+        (PLATFORM_WEB, "Web"),
+        (PLATFORM_MINI, "小程序"),
+        (PLATFORM_APP, "App"),
+        (PLATFORM_OTHER, "其他"),
+    )
+
+    STATUS_DRAFT = 1
+    STATUS_PUBLISHED = 2
+    STATUS_CHOICES = (
+        (STATUS_DRAFT, "待发布"),
+        (STATUS_PUBLISHED, "已发布"),
+    )
+
+    id = models.BigIntegerField(primary_key=True)
+    type = models.IntegerField(choices=TYPE_CHOICES, verbose_name="协议类型")
+    name = models.CharField(max_length=100, verbose_name="协议名称")
+    platform = models.IntegerField(
+        choices=PLATFORM_CHOICES, null=True, blank=True, verbose_name="平台"
+    )
+    status = models.IntegerField(
+        choices=STATUS_CHOICES, default=STATUS_DRAFT, verbose_name="状态"
+    )
+    content = models.TextField(verbose_name="协议内容")
+    file_name = models.CharField(max_length=50, null=True, blank=True, verbose_name="文件名")
+    is_valid = models.BooleanField(default=True, verbose_name="是否有效")
+    created_at = models.DateTimeField(default=timezone.now, verbose_name="创建时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="修改时间")
+    published_at = models.DateTimeField(null=True, blank=True, verbose_name="发布时间")
+
+    class Meta:
+        db_table = "term"
+        app_label = "api"
+        verbose_name = "协议管理"
+        verbose_name_plural = "协议管理"

@@ -1,7 +1,5 @@
 from django.urls import path
 
-
-
 from .profit_views import ProfitListView, ProfitTaskListView
 from .views import HealthCheckView
 from .user.user_views import TokenGrantView, TokenRefreshView

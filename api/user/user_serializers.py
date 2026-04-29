@@ -43,8 +43,7 @@ class UserRegisterSerializer(serializers.Serializer):
     phone = serializers.CharField(required=True, help_text="用户手机号")
     email = serializers.EmailField(required=False, allow_blank=True, allow_null=True, help_text="用户邮箱")
     password = serializers.CharField(required=True, write_only=True, help_text="用户密码")
-    # confirm_password = serializers.CharField(required=True, write_only=True, help_text="确认密码")
-    # captcha = serializers.CharField(required=True, help_text="验证码")
+    # captcha = serializers.CharField(required=False, allow_blank=True, help_text="验证码")
     invite_code = serializers.CharField(required=True, help_text="邀请码")
 
 

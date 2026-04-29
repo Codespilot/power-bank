@@ -22,7 +22,7 @@ USERNAME_REGEX = re.compile(r"^[A-Za-z0-9_]{1,32}$")
 MOBILE_REGEX = re.compile(r"^1(3[0-9]|4[5-9]|5[0-35-9]|6[2567]|7[0-8]|8[0-9]|9[0-35-9])\d{8}$")
 EMAIL_REGEX = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 JWT_ALGORITHM = "HS256"
-JWT_ACCESS_EXPIRES_SECONDS = int(os.getenv("JWT_ACCESS_EXPIRES_SECONDS", "7200"))
+JWT_ACCESS_EXPIRES_SECONDS = int(os.getenv("JWT_ACCESS_EXPIRES_SECONDS", str(24 * 3600)))
 JWT_REFRESH_EXPIRES_SECONDS = int(os.getenv("JWT_REFRESH_EXPIRES_SECONDS", str(7 * 24 * 3600)))
 
 

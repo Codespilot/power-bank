@@ -136,6 +136,7 @@ def _authenticate_credentials(request, use_session_captcha: bool):
 class LoginAPIView(APIView):
     """用户登录"""
 
+    authentication_classes = []
     permission_classes = [AllowAny]
     serializer_class = LoginRequestSerializer
 
@@ -163,6 +164,7 @@ class LoginAPIView(APIView):
 
 
 class TokenGrantView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
     serializer_class = TokenGrantSerializer
 
@@ -201,6 +203,7 @@ class TokenGrantView(APIView):
 class TokenRefreshView(APIView):
     """刷新Token"""
 
+    authentication_classes = []
     permission_classes = [AllowAny]
     serializer_class = TokenRefreshSerializer
 

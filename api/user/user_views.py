@@ -12,7 +12,7 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema
 from django.db import transaction
 from django.db.models import Q, OuterRef, Subquery
 from django.utils import timezone
-from ..models import AgentHistory, InviteCode, User, Wallet
+from ..models import AgentHistory, InviteCode, User, UserRole, Wallet
 from .user_serializers import (
     AgentAssignSerializer,
     IdMessageSerializer,
@@ -429,13 +429,15 @@ class UserListView(generics.ListAPIView):
         keyword = self.request.GET.get("keyword", "").strip()
         user_id = self.request.GET.get("id", "").strip()
         exclude_user_id = self.request.GET.get("exclude_id", "").strip()
-        direct_subordinates = (
-            str(self.request.GET.get("direct_subordinates", "")).strip().lower()
+        mime = (
+            str(self.request.GET.get("mime", "")).strip().lower()
         )
+        current_user_id = get_request_user_id(self.request)
+        is_admin = UserRole.objects.filter(user_id=current_user_id, role=UserRole.ROLE_ADMIN).exists()
 
-        # 代理商管理页会传入 direct_subordinates=1，此时只看当前登录用户的直属下级。
-        if direct_subordinates in {"1", "true", "yes"}:
-            current_user_id = get_request_user_id(self.request)
+        # 代理商管理页会传入 mime=1，此时只看当前登录用户的直属下级。
+        if mime in {"1", "true", "yes"} or not is_admin:
+
             if not current_user_id:
                 return User.objects.none()
             qs = qs.filter(agent_id=current_user_id)

@@ -39,7 +39,7 @@
 
         var tableIns = table.render({
             elem: '#agent-list',
-            url: '/api/users?direct_subordinates=1',
+            url: '/api/users?mime=1',
             response: { statusCode: 200 },
             parseData: function (res) {
                 return {
@@ -66,7 +66,7 @@
         form.on('submit(agent-search)', function (data) {
             table.reload('agent-list', {
                 page: { curr: 1 },
-                where: Object.assign({}, data.field, { direct_subordinates: 1 })
+                where: Object.assign({}, data.field, { mime: 1 })
             });
             return false;
         });

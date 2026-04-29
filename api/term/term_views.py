@@ -153,6 +153,7 @@ class TermListView(BaseAPIView):
 
     @extend_schema(
         tags=["terms"],
+        exclude=True,  # 暂时不在自动文档中展示此接口
         summary="新增协议",
         description="新增一条协议记录。同一类型同一平台只允许一条记录。",
         request=TermCreateRequestSerializer,
@@ -215,6 +216,7 @@ class TermDetailView(BaseAPIView):
 
     @extend_schema(
         tags=["terms"],
+        exclude=True,  # 暂时不在自动文档中展示此接口
         summary="获取协议详情",
         description="查询指定协议的详细信息。",
         responses={200: TermDetailResponseSerializer, 404: dict},
@@ -234,6 +236,7 @@ class TermDetailView(BaseAPIView):
 
     @extend_schema(
         tags=["terms"],
+        exclude=True,  # 暂时不在自动文档中展示此接口
         summary="编辑协议",
         description="修改指定协议的内容。修改后发布状态改为待发布。",
         request=TermUpdateRequestSerializer,
@@ -292,6 +295,7 @@ class TermDetailView(BaseAPIView):
 
     @extend_schema(
         tags=["terms"],
+        exclude=True,  # 暂时不在自动文档中展示此接口
         summary="删除协议",
         description="删除指定协议（软删除）。",
         responses={200: dict, 404: dict},
@@ -373,26 +377,9 @@ class TermPublishView(BaseAPIView):
             files_dir = settings.BASE_DIR / "files"
             files_dir.mkdir(exist_ok=True)
 
-            html_content = f"""<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <title>{term.name}</title>
-    <style>
-        body {{ font-family: "Microsoft YaHei", sans-serif; padding: 20px; line-height: 1.8; color: #333; }}
-        h1 {{ color: #1a1a1a; }}
-        p {{ margin: 10px 0; }}
-    </style>
-</head>
-<body>
-    <h1>{term.name}</h1>
-    <div>{term.content}</div>
-</body>
-</html>"""
-
             file_path = files_dir / file_name
             with open(file_path, "w", encoding="utf-8") as f:
-                f.write(html_content)
+                f.write(term.content)
 
             term.file_name = file_name
             term.status = Term.STATUS_PUBLISHED

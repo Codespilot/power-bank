@@ -13,14 +13,12 @@ from .merchant_serializers import (
     MerchantHistoryResponseSerializer,
     MerchantAssignAgentRequestSerializer,
     MerchantBatchAssignAgentRequestSerializer,
-    MerchantAssignMessageSerializer,
 )
 
 from utils.generate_snowflake_id import generate_snowflake_id
-from ..serializers import GenericResponseSerializer
-from ..auth import get_request_user_id
-from ..models import Merchant, MerchantHistory, User, UserRole
-
+from ..serializers import CommonResponseSerializer, GenericResponseSerializer
+from ..auth import get_current_user, get_request_user_id
+from ..models import Merchant, MerchantHistory, User
 
 FULL_PHONE_REGEX = re.compile(r"^1[3-9]\d{9}$")
 
@@ -41,7 +39,11 @@ def _format_decimal(value):
 def _format_agent_display(user):
     if not user:
         return "--"
-    display_name = (getattr(user, "fullname", "") or "").strip() or getattr(user, "username", "") or "--"
+    display_name = (
+        (getattr(user, "fullname", "") or "").strip()
+        or getattr(user, "username", "")
+        or "--"
+    )
     phone = (getattr(user, "phone", "") or "").strip()
     return f"{display_name}（{phone}）" if phone else display_name
 
@@ -52,22 +54,34 @@ class MerchantListView(APIView):
         summary="获取商户列表",
         description="分页查询商户列表，支持按商户名称和代理商关键字筛选。管理员可见所有商户，普通代理商仅可见自己名下的商户。",
         parameters=[
-            OpenApiParameter(name="merchant", description="商户名称关键字", required=False, type=str),
-            OpenApiParameter(name="agent", description="代理商关键字（手机号/姓名/用户名/邮箱）", required=False, type=str),
-            OpenApiParameter(name="page", description="页码，默认1", required=False, type=int),
-            OpenApiParameter(name="limit", description="每页数量，默认10", required=False, type=int),
+            OpenApiParameter(
+                name="merchant", description="商户名称关键字", required=False, type=str
+            ),
+            OpenApiParameter(
+                name="agent",
+                description="代理商关键字（手机号/姓名/用户名/邮箱）",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="page", description="页码，默认1", required=False, type=int
+            ),
+            OpenApiParameter(
+                name="limit", description="每页数量，默认10", required=False, type=int
+            ),
         ],
         responses={
             200: GenericResponseSerializer[MerchantListResponseSerializer],
-            401: MerchantAssignMessageSerializer,
+            401: CommonResponseSerializer,
         },
     )
     def get(self, request):
-        current_user_id = get_request_user_id(request)
+        current_user_id, is_admin = get_current_user(request)
         if not current_user_id:
-            return Response({"count": 0, "results": [], "message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
-
-        is_admin = UserRole.objects.filter(user_id=current_user_id, role=UserRole.ROLE_ADMIN).exists()
+            return Response(
+                {"count": 0, "results": [], "message": "未登录"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
         merchant = str(request.GET.get("merchant", "")).strip()
         agent = str(request.GET.get("agent", "")).strip()
@@ -178,11 +192,17 @@ class MerchantHistoryListView(APIView):
         summary="获取商户划拨历史",
         description="查询指定商户的所有划拨历史记录，包括原代理商和新代理商信息。",
         parameters=[
-            OpenApiParameter(name="id", description="商户ID", required=True, type=int, location=OpenApiParameter.PATH),
+            OpenApiParameter(
+                name="id",
+                description="商户ID",
+                required=True,
+                type=int,
+                location=OpenApiParameter.PATH,
+            ),
         ],
         responses={
             200: GenericResponseSerializer[MerchantHistoryResponseSerializer],
-            404: MerchantAssignMessageSerializer,
+            404: CommonResponseSerializer,
         },
     )
     def get(self, request, id):
@@ -204,11 +224,19 @@ class MerchantHistoryListView(APIView):
                 "merchant_id": str(history.merchant_id),
                 "merchant_name": history.merchant.name,
                 "new_agent_id": history.new_agent_id,
-                "new_agent_fullname": history.new_agent.fullname if history.new_agent else "--",
-                "new_agent_phone": history.new_agent.phone if history.new_agent else "--",
+                "new_agent_fullname": (
+                    history.new_agent.fullname if history.new_agent else "--"
+                ),
+                "new_agent_phone": (
+                    history.new_agent.phone if history.new_agent else "--"
+                ),
                 "old_agent_id": history.old_agent_id,
-                "old_agent_fullname": history.old_agent.fullname if history.old_agent else "--",
-                "old_agent_phone": history.old_agent.phone if history.old_agent else "--",
+                "old_agent_fullname": (
+                    history.old_agent.fullname if history.old_agent else "--"
+                ),
+                "old_agent_phone": (
+                    history.old_agent.phone if history.old_agent else "--"
+                ),
                 "new_agent": _format_agent_display(history.new_agent),
                 "old_agent": _format_agent_display(history.old_agent),
                 "created_at": history.created_at.strftime("%Y-%m-%d %H:%M:%S"),
@@ -216,10 +244,12 @@ class MerchantHistoryListView(APIView):
             for history in histories
         ]
 
-        return Response({"count": len(results), "results": results, "message": "查询成功"})
+        return Response(
+            {"count": len(results), "results": results, "message": "查询成功"}
+        )
 
 
-def _assign_merchants(request, merchant_ids, agent_phone=None, agent_id=None):
+def _assign_merchants(request, merchant_ids, agent_phone: str = None, agent_id: int = None):
     """
     将一个或多个商户划拨给指定代理商。管理员可划拨任意商户，普通代理商仅能划拨自己名下的商户给自己的直属下级代理商。
 
@@ -234,29 +264,16 @@ def _assign_merchants(request, merchant_ids, agent_phone=None, agent_id=None):
         PermissionError: 当普通代理商试图划拨不属于自己的商户或划拨给非直属下级代理商时
         ValueError: 当输入参数无效或缺失时
     """
-    current_user_id = get_request_user_id(request)
+    current_user_id, is_admin = get_current_user(request)
     if not current_user_id:
         return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
-
-    current_user = User.objects.filter(id=current_user_id).first()
-    if not current_user:
-        return Response({"message": "用户不存在"}, status=status.HTTP_401_UNAUTHORIZED)
-
-    is_admin = UserRole.objects.filter(user_id=current_user_id, role=UserRole.ROLE_ADMIN).exists()
-
-    # agent_phone = str(agent_phone or "").strip()
 
     try:
 
         user = None
         if agent_id:
-            agent_id = int(str(agent_id).strip())
-            if agent_id:
-                user = User.objects.filter(id=agent_id).first()
-            else:
-                raise ValueError("agent_id必须为整数")
+            user = User.objects.filter(id=agent_id).first()
         elif agent_phone:
-            agent_phone = str(agent_phone).strip()
             if not FULL_PHONE_REGEX.fullmatch(agent_phone):
                 raise ValueError("代理商手机号格式不正确")
             user = User.objects.filter(phone=agent_phone).first()
@@ -281,13 +298,19 @@ def _assign_merchants(request, merchant_ids, agent_phone=None, agent_id=None):
 
         with transaction.atomic():
             merchants = list(
-                Merchant.objects.select_for_update().filter(id__in=normalized_ids).order_by("id")
+                Merchant.objects.select_for_update()
+                .filter(id__in=normalized_ids)
+                .order_by("id")
             )
             if not merchants:
                 raise ValueError("商户不存在")
 
             if not is_admin:
-                invalid_merchants = [str(merchant.id) for merchant in merchants if int(merchant.agent_id or 0) != int(current_user_id)]
+                invalid_merchants = [
+                    str(merchant.id)
+                    for merchant in merchants
+                    if int(merchant.agent_id or 0) != int(current_user_id)
+                ]
                 if invalid_merchants:
                     raise PermissionError("普通用户仅能划拨自己名下的商户")
 
@@ -309,7 +332,9 @@ def _assign_merchants(request, merchant_ids, agent_phone=None, agent_id=None):
     except (TypeError, ValueError) as error:
         return Response({"message": str(error)}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        return Response({"message": f"划拨失败: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"message": f"划拨失败: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 class MerchantAssignAgentView(APIView):
@@ -319,14 +344,20 @@ class MerchantAssignAgentView(APIView):
         summary="划拨单个商户",
         description="将单个商户划拨给指定代理商。管理员可划拨任意商户，普通代理商仅能划拨自己名下的商户给自己的直属下级代理商。",
         parameters=[
-            OpenApiParameter(name="id", description="商户ID", required=True, type=int, location=OpenApiParameter.PATH),
+            OpenApiParameter(
+                name="id",
+                description="商户ID",
+                required=True,
+                type=int,
+                location=OpenApiParameter.PATH,
+            ),
         ],
         request=MerchantAssignAgentRequestSerializer,
         responses={
-            200: MerchantAssignMessageSerializer,
-            400: MerchantAssignMessageSerializer,
-            401: MerchantAssignMessageSerializer,
-            404: MerchantAssignMessageSerializer,
+            200: CommonResponseSerializer,
+            400: CommonResponseSerializer,
+            401: CommonResponseSerializer,
+            404: CommonResponseSerializer,
         },
     )
     def post(self, request, id):
@@ -334,7 +365,7 @@ class MerchantAssignAgentView(APIView):
             request,
             [id],
             request.data.get("agent_phone", ""),
-            agent_id=request.data.get("agent_id"),
+            agent_id=int(request.data.get("agent_id")) if request.data.get("agent_id") else None,
         )
 
 
@@ -346,10 +377,10 @@ class MerchantBatchAssignAgentView(APIView):
         description="将多个商户批量划拨给指定代理商。管理员可划拨任意商户，普通代理商仅能划拨自己名下的商户给自己的直属下级代理商。",
         request=MerchantBatchAssignAgentRequestSerializer,
         responses={
-            200: MerchantAssignMessageSerializer,
-            400: MerchantAssignMessageSerializer,
-            401: MerchantAssignMessageSerializer,
-            404: MerchantAssignMessageSerializer,
+            200: CommonResponseSerializer,
+            400: CommonResponseSerializer,
+            401: CommonResponseSerializer,
+            404: CommonResponseSerializer,
         },
     )
     def post(self, request):
@@ -358,7 +389,7 @@ class MerchantBatchAssignAgentView(APIView):
             request,
             merchant_ids,
             request.data.get("agent_phone", ""),
-            agent_id=request.data.get("agent_id"),
+            agent_id=int(request.data.get("agent_id")) if request.data.get("agent_id") else None,
         )
 
 
@@ -369,23 +400,43 @@ class MerchantHistoryInView(APIView):
         summary="查询划入记录",
         description="查询划拨到当前代理商名下的商户历史记录。",
         parameters=[
-            OpenApiParameter(name="keyword", description="搜索关键字（商户名称/代理商姓名/手机号/用户名）", required=False, type=str),
-            OpenApiParameter(name="page", description="页码，默认1", required=False, type=int),
-            OpenApiParameter(name="limit", description="每页数量，默认10", required=False, type=int),
+            OpenApiParameter(
+                name="keyword",
+                description="搜索关键字（商户名称/代理商姓名/手机号/用户名）",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="page", description="页码，默认1", required=False, type=int
+            ),
+            OpenApiParameter(
+                name="limit", description="每页数量，默认10", required=False, type=int
+            ),
         ],
         responses={
             200: GenericResponseSerializer[MerchantHistoryResponseSerializer],
-            401: MerchantAssignMessageSerializer,
+            401: CommonResponseSerializer,
         },
     )
     def get(self, request):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
-            return Response({"count": 0, "page": 1, "limit": 10, "results": [], "message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {
+                    "count": 0,
+                    "page": 1,
+                    "limit": 10,
+                    "results": [],
+                    "message": "未登录",
+                },
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
         keyword = str(request.GET.get("keyword", "")).strip()
 
-        base_qs = MerchantHistory.objects.filter(new_agent_id=current_user_id).select_related("merchant", "new_agent", "old_agent")
+        base_qs = MerchantHistory.objects.filter(
+            new_agent_id=current_user_id
+        ).select_related("merchant", "new_agent", "old_agent")
 
         if keyword:
             base_qs = base_qs.filter(
@@ -405,23 +456,43 @@ class MerchantHistoryOutView(APIView):
         summary="查询划出记录",
         description="查询从当前代理商划出的商户历史记录。",
         parameters=[
-            OpenApiParameter(name="keyword", description="搜索关键字（商户名称/代理商姓名/手机号/用户名）", required=False, type=str),
-            OpenApiParameter(name="page", description="页码，默认1", required=False, type=int),
-            OpenApiParameter(name="limit", description="每页数量，默认10", required=False, type=int),
+            OpenApiParameter(
+                name="keyword",
+                description="搜索关键字（商户名称/代理商姓名/手机号/用户名）",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="page", description="页码，默认1", required=False, type=int
+            ),
+            OpenApiParameter(
+                name="limit", description="每页数量，默认10", required=False, type=int
+            ),
         ],
         responses={
             200: GenericResponseSerializer[MerchantHistoryResponseSerializer],
-            401: MerchantAssignMessageSerializer,
+            401: CommonResponseSerializer,
         },
     )
     def get(self, request):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
-            return Response({"count": 0, "page": 1, "limit": 10, "results": [], "message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {
+                    "count": 0,
+                    "page": 1,
+                    "limit": 10,
+                    "results": [],
+                    "message": "未登录",
+                },
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
         keyword = str(request.GET.get("keyword", "")).strip()
 
-        base_qs = MerchantHistory.objects.filter(old_agent_id=current_user_id).select_related("merchant", "new_agent", "old_agent")
+        base_qs = MerchantHistory.objects.filter(
+            old_agent_id=current_user_id
+        ).select_related("merchant", "new_agent", "old_agent")
 
         if keyword:
             base_qs = base_qs.filter(
@@ -444,7 +515,7 @@ def _paginate_history(request, base_qs):
     offset = (page - 1) * limit
 
     count = base_qs.count()
-    histories = base_qs.order_by("-created_at", "-id")[offset:offset + limit]
+    histories = base_qs.order_by("-created_at", "-id")[offset : offset + limit]
 
     results = [
         {
@@ -462,4 +533,12 @@ def _paginate_history(request, base_qs):
         }
         for h in histories
     ]
-    return Response({"count": count, "page": page, "limit": limit, "results": results, "message": "查询成功"})
+    return Response(
+        {
+            "count": count,
+            "page": page,
+            "limit": limit,
+            "results": results,
+            "message": "查询成功",
+        }
+    )

@@ -15,7 +15,7 @@ from drf_spectacular.extensions import OpenApiAuthenticationExtension
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
-from .models import User
+from .models import User, UserRole
 
 # 认证与登录相关公共方法，供 Session 登录和 JWT 鉴权共同使用。
 USERNAME_REGEX = re.compile(r"^[A-Za-z0-9_]{1,32}$")
@@ -154,6 +154,11 @@ def get_request_user_id(request):
 
     return None
 
+def get_current_user(request):
+    """优先从 Session，其次从 JWT 用户对象中解析当前登录用户对象。"""
+    user_id = get_request_user_id(request)
+    is_admin = UserRole.objects.filter(user_id=user_id, role=UserRole.ROLE_ADMIN).exists()
+    return user_id, is_admin
 
 class JWTAuthentication(BaseAuthentication):
     """自定义 Bearer Token 认证，供 DRF API 自动识别。"""

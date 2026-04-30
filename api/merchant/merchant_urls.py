@@ -3,7 +3,9 @@ from django.urls import path
 from .merchant_views import (
     MerchantAssignAgentView,
     MerchantBatchAssignAgentView,
+    MerchantHistoryInView,
     MerchantHistoryListView,
+    MerchantHistoryOutView,
     MerchantListView,
 )
 
@@ -13,6 +15,16 @@ merchant_urlpatterns = [
         "merchants/allocate",
         MerchantBatchAssignAgentView.as_view(),
         name="api-merchants-batch-assign-agent",
+    ),
+    path(
+        "merchants/history/in",
+        MerchantHistoryInView.as_view(),
+        name="api-merchants-history-in",
+    ),
+    path(
+        "merchants/history/out",
+        MerchantHistoryOutView.as_view(),
+        name="api-merchants-history-out",
     ),
     path(
         "merchants/<int:id>/history",

@@ -2,13 +2,13 @@ import re
 from decimal import Decimal
 
 from django.db import connection, transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from .merchant_serializers import (
-    MerchantListRequestSerializer,
     MerchantListResponseSerializer,
     MerchantHistoryResponseSerializer,
     MerchantAssignAgentRequestSerializer,
@@ -360,3 +360,106 @@ class MerchantBatchAssignAgentView(APIView):
             request.data.get("agent_phone", ""),
             agent_id=request.data.get("agent_id"),
         )
+
+
+class MerchantHistoryInView(APIView):
+    @extend_schema(
+        tags=["merchants"],
+        operation_id="merchant_history_in",
+        summary="查询划入记录",
+        description="查询划拨到当前代理商名下的商户历史记录。",
+        parameters=[
+            OpenApiParameter(name="keyword", description="搜索关键字（商户名称/代理商姓名/手机号/用户名）", required=False, type=str),
+            OpenApiParameter(name="page", description="页码，默认1", required=False, type=int),
+            OpenApiParameter(name="limit", description="每页数量，默认10", required=False, type=int),
+        ],
+        responses={
+            200: GenericResponseSerializer[MerchantHistoryResponseSerializer],
+            401: MerchantAssignMessageSerializer,
+        },
+    )
+    def get(self, request):
+        current_user_id = get_request_user_id(request)
+        if not current_user_id:
+            return Response({"count": 0, "page": 1, "limit": 10, "results": [], "message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        keyword = str(request.GET.get("keyword", "")).strip()
+
+        base_qs = MerchantHistory.objects.filter(new_agent_id=current_user_id).select_related("merchant", "new_agent", "old_agent")
+
+        if keyword:
+            base_qs = base_qs.filter(
+                Q(merchant__name__icontains=keyword)
+                | Q(old_agent__fullname__icontains=keyword)
+                | Q(old_agent__phone__icontains=keyword)
+                | Q(old_agent__username__icontains=keyword)
+            )
+
+        return _paginate_history(request, base_qs)
+
+
+class MerchantHistoryOutView(APIView):
+    @extend_schema(
+        tags=["merchants"],
+        operation_id="merchant_history_out",
+        summary="查询划出记录",
+        description="查询从当前代理商划出的商户历史记录。",
+        parameters=[
+            OpenApiParameter(name="keyword", description="搜索关键字（商户名称/代理商姓名/手机号/用户名）", required=False, type=str),
+            OpenApiParameter(name="page", description="页码，默认1", required=False, type=int),
+            OpenApiParameter(name="limit", description="每页数量，默认10", required=False, type=int),
+        ],
+        responses={
+            200: GenericResponseSerializer[MerchantHistoryResponseSerializer],
+            401: MerchantAssignMessageSerializer,
+        },
+    )
+    def get(self, request):
+        current_user_id = get_request_user_id(request)
+        if not current_user_id:
+            return Response({"count": 0, "page": 1, "limit": 10, "results": [], "message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        keyword = str(request.GET.get("keyword", "")).strip()
+
+        base_qs = MerchantHistory.objects.filter(old_agent_id=current_user_id).select_related("merchant", "new_agent", "old_agent")
+
+        if keyword:
+            base_qs = base_qs.filter(
+                Q(merchant__name__icontains=keyword)
+                | Q(new_agent__fullname__icontains=keyword)
+                | Q(new_agent__phone__icontains=keyword)
+                | Q(new_agent__username__icontains=keyword)
+            )
+
+        return _paginate_history(request, base_qs)
+
+
+def _paginate_history(request, base_qs):
+    page = _parse_int(request.GET.get("page", 1), 1)
+    if page <= 0:
+        page = 1
+    limit = _parse_int(request.GET.get("limit", 10), 10)
+    if limit <= 0:
+        limit = 10
+    offset = (page - 1) * limit
+
+    count = base_qs.count()
+    histories = base_qs.order_by("-created_at", "-id")[offset:offset + limit]
+
+    results = [
+        {
+            "merchant_id": str(h.merchant_id),
+            "merchant_name": h.merchant.name if h.merchant else "--",
+            "new_agent_id": h.new_agent_id,
+            "new_agent_fullname": h.new_agent.fullname if h.new_agent else "--",
+            "new_agent_phone": h.new_agent.phone if h.new_agent else "--",
+            "new_agent": _format_agent_display(h.new_agent),
+            "old_agent_id": h.old_agent_id,
+            "old_agent_fullname": h.old_agent.fullname if h.old_agent else "--",
+            "old_agent_phone": h.old_agent.phone if h.old_agent else "--",
+            "old_agent": _format_agent_display(h.old_agent),
+            "created_at": h.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        for h in histories
+    ]
+    return Response({"count": count, "page": page, "limit": limit, "results": results, "message": "查询成功"})

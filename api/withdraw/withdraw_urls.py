@@ -3,24 +3,16 @@ from django.urls import path
 from .withdraw_views import (
     WithdrawApproveView,
     WithdrawCancelView,
-    WithdrawListView,
+    WithdrawView,
     WithdrawRejectView,
-    WithdrawCreateView,
 )
 
-
-def get_view(request):
-    match request.method:
-        case "POST":
-            return WithdrawCreateView.as_view()(request)
-        case "GET":
-            return WithdrawListView.as_view()(request)
-        case _:
-            return None
-
-
 withdraw_urlpatterns = [
-    path("withdraws", get_view, name="api-withdraws"),
+    path(
+        "withdraws",
+        WithdrawView.as_view(),
+        name="api-withdraws",
+    ),
     path(
         "withdraws/<int:id>/approve",
         WithdrawApproveView.as_view(),

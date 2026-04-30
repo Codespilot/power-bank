@@ -237,15 +237,15 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_HEADERS = ('*')
 
-CORS = [
-    f"https://{h}"
-    for h in ALLOWED_HOSTS
-    if h and h != "localhost" and not h.startswith("127.")
-]
+# CORS = [
+#     f"https://{h}"
+#     for h in ALLOWED_HOSTS
+#     if h and h != "localhost" and not h.startswith("127.")
+# ]
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "https://localhost:5173",
-    *CORS,
-]
+# CSRF_TRUSTED_ORIGINS = [
+#     "http://localhost:5173",
+#     "https://localhost:5173",
+#     *CORS,
+# ]
 

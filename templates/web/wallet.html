@@ -228,26 +228,17 @@
                 content: '' +
                     '<div class="layui-form" style="padding:20px 24px;">' +
                     '  <div class="layui-form-item">' +
-                    '    <label class="layui-form-label">收款方式</label>' +
-                    '    <div class="layui-input-block">' +
-                    '      <select id="withdraw-payment-method" lay-filter="withdraw-payment-method">' +
-                    '        <option value="card">银行卡</option>' +
-                    '        <option value="qr">收款码</option>' +
-                    '      </select>' +
-                    '    </div>' +
-                    '  </div>' +
-                    '  <div class="layui-form-item" id="withdraw-bankcard-row">' +
                     '    <label class="layui-form-label">收款银行卡</label>' +
                     '    <div class="layui-input-block">' +
                     '      <select id="withdraw-bankcard-select">' +
-                    '        <option value="">请选择银行卡</option>' +
+                    '        <option value="">请选择银行卡（可选）</option>' +
                     '      </select>' +
                     '    </div>' +
                     '  </div>' +
-                    '  <div class="layui-form-item" id="withdraw-qrcode-row" style="display:none;">' +
+                    '  <div class="layui-form-item">' +
                     '    <label class="layui-form-label">收款码</label>' +
                     '    <div class="layui-input-block">' +
-                    '      <button type="button" class="layui-btn layui-btn-primary" id="withdraw-upload-qrcode-btn">选择收款码图片</button>' +
+                    '      <button type="button" class="layui-btn layui-btn-primary" id="withdraw-upload-qrcode-btn">选择收款码图片（可选）</button>' +
                     '      <input type="hidden" id="withdraw-qrcode-filename" value="">' +
                     '      <div id="withdraw-qrcode-preview" style="margin-top:8px;"></div>' +
                     '    </div>' +
@@ -263,13 +254,6 @@
                 success: function () {
                     loadBankCards('withdraw-bankcard-select');
                     form.render();
-
-                    // 切换收款方式
-                    form.on('select(withdraw-payment-method)', function (data) {
-                        var isCard = data.value === 'card';
-                        document.getElementById('withdraw-bankcard-row').style.display = isCard ? '' : 'none';
-                        document.getElementById('withdraw-qrcode-row').style.display = isCard ? 'none' : '';
-                    });
 
                     // 上传收款码
                     var fileInput = document.createElement('input');
@@ -310,7 +294,6 @@
                 yes: function (index) {
                     var amountInput = document.getElementById('withdraw-amount-input');
                     var amountValue = (amountInput && amountInput.value || '').trim();
-                    var paymentMethod = document.getElementById('withdraw-payment-method').value;
                     var bankCardId = document.getElementById('withdraw-bankcard-select').value;
                     var qrCodeFile = document.getElementById('withdraw-qrcode-filename').value;
 
@@ -318,22 +301,18 @@
                         layer.msg('请输入提现金额', { icon: 5 });
                         return;
                     }
-                    if (paymentMethod === 'card' && !bankCardId) {
-                        layer.msg('请选择收款银行卡', { icon: 5 });
-                        return;
-                    }
-                    if (paymentMethod === 'qr' && !qrCodeFile) {
-                        layer.msg('请上传收款码', { icon: 5 });
+                    if (!bankCardId && !qrCodeFile) {
+                        layer.msg('请选择银行卡或上传收款码', { icon: 5 });
                         return;
                     }
 
                     var body = {
-                        amount: amountValue,
-                        payment_method: paymentMethod
+                        amount: amountValue
                     };
-                    if (paymentMethod === 'card') {
+                    if (bankCardId) {
                         body.bank_card_id = bankCardId;
-                    } else {
+                    }
+                    if (qrCodeFile) {
                         body.receiving_qr_code = qrCodeFile;
                     }
 

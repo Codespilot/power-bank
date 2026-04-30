@@ -9,6 +9,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from api.exceptions import CredentialError
 from utils.generate_snowflake_id import generate_snowflake_id
 
 from ..auth import create_file_access_token, get_request_user_id
@@ -23,7 +24,10 @@ from ..models import (
 )
 from ..serializers import GenericResponseSerializer, CommonResponseSerializer
 from ..message import ResponseMessage
-from .withdraw_serializers import WithdrawListResponseSerializer
+from .withdraw_serializers import (
+    WithdrawCreateRequestSerializer,
+    WithdrawListResponseSerializer,
+)
 
 _AMOUNT_QUANT = Decimal("0.01")
 
@@ -87,134 +91,10 @@ def _build_qr_code_url(file_name: str) -> str:
         return ""
 
 
-class WithdrawCreateView(APIView):
+class WithdrawView(APIView):
     """
-    提现申请接口。
+    提现申请视图，支持提交提现申请和查询提现申请列表。
     """
-
-    @extend_schema(
-        tags=["withdraws"],
-        summary="申请提现",
-        description="提交提现申请，冻结相应金额并生成提现申请单。",
-        request=dict,
-        responses={200: dict, 400: dict, 401: dict},
-    )
-    def post(self, request):
-        current_user_id = get_request_user_id(request)
-        if not current_user_id:
-            return Response(
-                {"message": "未登录"},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-
-        try:
-            amount = _quantize_amount(request.data.get("amount", "0"))
-        except InvalidOperation, TypeError, ValueError:
-            return Response(
-                {"message": "提现金额格式错误"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if amount < Decimal("0.01"):
-            return Response(
-                {"message": "提现金额不能低于0.01"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        payment_method = str(request.data.get("payment_method", "card")).strip()
-        if payment_method not in ("card", "qr"):
-            return Response(
-                {"message": "收款方式无效"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        bank_card_id = None
-        bank_card_no = None
-        bank_card_holder = None
-        receiving_qr_code = None
-
-        if payment_method == "card":
-            bank_card_id_str = str(request.data.get("bank_card_id", "")).strip()
-            if not bank_card_id_str or not bank_card_id_str.isdigit():
-                return Response(
-                    {"message": "请选择银行卡"}, status=status.HTTP_400_BAD_REQUEST
-                )
-            bank_card = BankCard.objects.filter(
-                id=int(bank_card_id_str), user_id=current_user_id
-            ).first()
-            if not bank_card:
-                return Response(
-                    {"message": "银行卡不存在"}, status=status.HTTP_400_BAD_REQUEST
-                )
-            bank_card_id = int(bank_card.id)
-            bank_card_no = bank_card.card_no
-            bank_card_holder = bank_card.name
-        elif payment_method == "qr":
-            receiving_qr_code = str(request.data.get("receiving_qr_code", "")).strip()
-            if not receiving_qr_code:
-                return Response(
-                    {"message": "请上传收款码"}, status=status.HTTP_400_BAD_REQUEST
-                )
-
-        with transaction.atomic():
-            if (
-                Withdraw.objects.select_for_update()
-                .filter(
-                    user_id=current_user_id,
-                    status__in=[
-                        Withdraw.STATUS_PENDING_SUBMIT,
-                        Withdraw.STATUS_PENDING_APPROVAL,
-                    ],
-                )
-                .exists()
-            ):
-                return Response(
-                    {"message": "当前有待处理的提现申请，请稍后再试"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            wallet, _ = Wallet.objects.select_for_update().get_or_create(
-                id=current_user_id, defaults=_wallet_defaults()
-            )
-            before_amount = _quantize_amount(wallet.available_amount)
-            if amount > before_amount:
-                return Response(
-                    {"message": "提现金额不能大于可用金额"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            after_amount = _quantize_amount(before_amount - amount)
-            wallet.available_amount = after_amount
-            wallet.frozen_amount = _quantize_amount(wallet.frozen_amount + amount)
-            wallet.save(update_fields=["available_amount", "frozen_amount"])
-
-            remark = str(request.data.get("remark", "")).strip() or "提现申请，资金冻结"
-            withdraw = Withdraw.objects.create(
-                id=generate_snowflake_id(),
-                user_id=current_user_id,
-                amount=amount,
-                remark=remark,
-                status=Withdraw.STATUS_PENDING_APPROVAL,
-                payment_method=payment_method,
-                bank_card_id=bank_card_id,
-                bank_card_no=bank_card_no,
-                bank_card_holder=bank_card_holder,
-                receiving_qr_code=receiving_qr_code,
-                created_at=timezone.now(),
-            )
-
-        refreshed_wallet = Wallet.objects.get(id=current_user_id)
-        return Response(
-            {
-                "total_amount": _format_amount(refreshed_wallet.total_amount),
-                "frozen_amount": _format_amount(refreshed_wallet.frozen_amount),
-                "pending_amount": _format_amount(refreshed_wallet.pending_amount),
-                "available_amount": _format_amount(refreshed_wallet.available_amount),
-                "withdraw_id": str(withdraw.id),
-                "message": "提现申请已提交",
-            }
-        )
-
-
-class WithdrawListView(APIView):
-    """提现申请列表"""
 
     @extend_schema(
         summary="提现申请列表",
@@ -385,6 +265,123 @@ class WithdrawListView(APIView):
                 "message": "查询成功",
             }
         )
+
+    @extend_schema(
+        tags=["withdraws"],
+        summary="申请提现",
+        description="提交提现申请，冻结相应金额并生成提现申请单。",
+        request=WithdrawCreateRequestSerializer,
+        responses={
+            200: CommonResponseSerializer,
+            400: CommonResponseSerializer,
+            401: CommonResponseSerializer,
+        },
+    )
+    def post(self, request):
+        try:
+            current_user_id = get_request_user_id(request)
+            if not current_user_id:
+                raise CredentialError("未登录")
+
+            amount = _quantize_amount(request.data.get("amount", "0"))
+
+            if amount < Decimal("0.01"):
+                return Response(
+                    {"message": "提现金额不能低于0.01"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            bank_card_id = None
+            bank_card_no = None
+            bank_card_holder = None
+            receiving_qr_code = None
+
+            bank_card_id_str = str(request.data.get("bank_card_id", "")).strip()
+            qr_code_value = str(request.data.get("receiving_qr_code", "")).strip()
+
+            if not bank_card_id_str and not qr_code_value:
+                raise ValueError("请选择银行卡或上传收款码照片")
+
+            if bank_card_id_str:
+                if not bank_card_id_str.isdigit():
+                    raise ValueError("银行卡参数错误")
+                bank_card = BankCard.objects.filter(
+                    id=int(bank_card_id_str), user_id=current_user_id
+                ).first()
+                if not bank_card:
+                    raise ValueError("银行卡不存在")
+                bank_card_id = int(bank_card.id)
+                bank_card_no = bank_card.card_no
+                bank_card_holder = bank_card.name
+
+            if qr_code_value:
+                attachment = Attachment.objects.filter(file_name=qr_code_value).first()  # 验证文件存在
+                if not attachment:
+                    raise ValueError("收款码文件不存在")
+                receiving_qr_code = attachment.file_name
+
+            with transaction.atomic():
+                if (
+                    Withdraw.objects.select_for_update()
+                    .filter(
+                        user_id=current_user_id,
+                        status__in=[
+                            Withdraw.STATUS_PENDING_SUBMIT,
+                            Withdraw.STATUS_PENDING_APPROVAL,
+                        ],
+                    )
+                    .exists()
+                ):
+                    raise ValueError("当前有待处理的提现申请，请稍后再试")
+
+                wallet, _ = Wallet.objects.select_for_update().get_or_create(
+                    id=current_user_id, defaults=_wallet_defaults()
+                )
+                before_amount = _quantize_amount(wallet.available_amount)
+                if amount > before_amount:
+                    raise ValueError("提现金额不能大于可用金额")
+
+                after_amount = _quantize_amount(before_amount - amount)
+                wallet.available_amount = after_amount
+                wallet.frozen_amount = _quantize_amount(wallet.frozen_amount + amount)
+                wallet.save(update_fields=["available_amount", "frozen_amount"])
+
+                remark = (
+                    str(request.data.get("remark", "")).strip() or "提现申请，资金冻结"
+                )
+                withdraw = Withdraw.objects.create(
+                    id=generate_snowflake_id(),
+                    user_id=current_user_id,
+                    amount=amount,
+                    remark=remark,
+                    status=Withdraw.STATUS_PENDING_APPROVAL,
+                    payment_method=None,
+                    bank_card_id=bank_card_id,
+                    bank_card_no=bank_card_no,
+                    bank_card_holder=bank_card_holder,
+                    receiving_qr_code=receiving_qr_code,
+                    created_at=timezone.now(),
+                )
+
+            refreshed_wallet = Wallet.objects.get(id=current_user_id)
+            return Response(
+                {
+                    "total_amount": _format_amount(refreshed_wallet.total_amount),
+                    "frozen_amount": _format_amount(refreshed_wallet.frozen_amount),
+                    "pending_amount": _format_amount(refreshed_wallet.pending_amount),
+                    "available_amount": _format_amount(
+                        refreshed_wallet.available_amount
+                    ),
+                    "withdraw_id": str(withdraw.id),
+                    "message": "提现申请已提交",
+                }
+            )
+        except CredentialError:
+            return Response(ResponseMessage("未登录", 401).to_dict(), status=status.HTTP_401_UNAUTHORIZED)
+        except (TypeError, ValueError, InvalidOperation) as e:
+            return Response((ResponseMessage(f"参数错误: {str(e)}", 400).to_dict()), status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response(ResponseMessage(f"提现申请失败: {str(e)}", 500).to_dict(), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class WithdrawApproveView(APIView):

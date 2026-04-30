@@ -25,3 +25,8 @@ class WithdrawListResponseSerializer(serializers.Serializer):
     can_approve = serializers.BooleanField(help_text="是否可审批")
     can_reject = serializers.BooleanField(help_text="是否可驳回")
     can_cancel = serializers.BooleanField(help_text="是否可作废")
+
+class WithdrawCreateRequestSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=True, help_text="提现金额")
+    bank_card_id = serializers.IntegerField(required=False, allow_null=True, help_text="银行卡ID")
+    receiving_qr_code = serializers.CharField(required=False, allow_blank=True, help_text="收款码照片文件名")

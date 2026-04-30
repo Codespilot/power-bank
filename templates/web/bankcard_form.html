@@ -112,7 +112,7 @@
 				done: function (res) {
 					if (res.file_name) {
 						$('#' + fieldId).val(res.file_name);
-						var previewHtml = '<img src="/files/attachments/' + res.file_name + '" style="max-width:150px;max-height:150px;border:1px solid #ddd;border-radius:4px;">';
+						var previewHtml = '<img src="' + res.file_url + '" style="max-width:150px;max-height:150px;border:1px solid #ddd;border-radius:4px;">';
 						$('#' + previewId).html(previewHtml);
 						layer.msg('上传成功', { icon: 1 });
 					} else {

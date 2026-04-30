@@ -135,10 +135,17 @@ class AttachmentUploadFormView(BaseAPIView):
                 upload_by_id=user_id,
             )
 
+            token = create_file_access_token(
+                file_name=attachment.file_name,
+                file_ext=attachment.file_ext,
+                signature_key=attachment.signature_key,
+            )
+
             return Response({
                 "file_name": attachment.file_name,
                 "file_size": attachment.file_size,
                 "file_ext": attachment.file_ext,
+                "file_url": f"/files/attachments/{attachment.file_name}?token={token}",
             })
 
         return self.invoke(_handle)
@@ -201,10 +208,17 @@ class AttachmentUploadBase64View(BaseAPIView):
                 upload_by_id=user_id,
             )
 
+            token = create_file_access_token(
+                file_name=attachment.file_name,
+                file_ext=attachment.file_ext,
+                signature_key=attachment.signature_key,
+            )
+
             return Response({
                 "file_name": attachment.file_name,
                 "file_size": attachment.file_size,
                 "file_ext": attachment.file_ext,
+                "file_url": f"/files/attachments/{attachment.file_name}?token={token}",
             })
 
         return self.invoke(_handle)

@@ -1,5 +1,5 @@
 from datetime import datetime, time as dt_time, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 
 from django.db import transaction
 from django.db.models import Q, Sum
@@ -11,11 +11,31 @@ from rest_framework.views import APIView
 
 from utils.generate_snowflake_id import generate_snowflake_id
 
-from ..auth import get_request_user_id
-from ..models import User, UserRole, Wallet, WalletRecord, Withdraw
+from ..auth import create_file_access_token, get_request_user_id
+from ..models import (
+    Attachment,
+    BankCard,
+    User,
+    UserRole,
+    Wallet,
+    WalletRecord,
+    Withdraw,
+)
 from ..serializers import GenericResponseSerializer, CommonResponseSerializer
 from ..message import ResponseMessage
 from .withdraw_serializers import WithdrawListResponseSerializer
+
+_AMOUNT_QUANT = Decimal("0.01")
+
+
+def _wallet_defaults() -> dict:
+    return {
+        "total_amount": Decimal("0.00"),
+        "frozen_amount": Decimal("0.00"),
+        "pending_amount": Decimal("0.00"),
+        "available_amount": Decimal("0.00"),
+    }
+
 
 _AMOUNT_QUANT = Decimal("0.01")
 
@@ -48,8 +68,153 @@ def _is_admin(user_id: int) -> bool:
     return UserRole.objects.filter(user_id=user_id, role=UserRole.ROLE_ADMIN).exists()
 
 
+def _build_qr_code_url(file_name: str) -> str:
+    """根据receiving_qr_code构建完整的可访问文件URL。"""
+    if not file_name:
+        return ""
+    try:
+        attachment = Attachment.objects.get(file_name=file_name)
+        token = create_file_access_token(
+            file_name=attachment.file_name,
+            file_ext=attachment.file_ext,
+            signature_key=attachment.signature_key,
+        )
+        from django.conf import settings
+
+        base_url = getattr(settings, "BASE_URL", "")
+        return f"{base_url}/files/attachments/{attachment.file_name}?token={token}"
+    except Attachment.DoesNotExist:
+        return ""
+
+
+class WithdrawCreateView(APIView):
+    """
+    提现申请接口。
+    """
+
+    @extend_schema(
+        tags=["withdraws"],
+        summary="申请提现",
+        description="提交提现申请，冻结相应金额并生成提现申请单。",
+        request=dict,
+        responses={200: dict, 400: dict, 401: dict},
+    )
+    def post(self, request):
+        current_user_id = get_request_user_id(request)
+        if not current_user_id:
+            return Response(
+                {"message": "未登录"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        try:
+            amount = _quantize_amount(request.data.get("amount", "0"))
+        except InvalidOperation, TypeError, ValueError:
+            return Response(
+                {"message": "提现金额格式错误"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if amount < Decimal("0.01"):
+            return Response(
+                {"message": "提现金额不能低于0.01"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        payment_method = str(request.data.get("payment_method", "card")).strip()
+        if payment_method not in ("card", "qr"):
+            return Response(
+                {"message": "收款方式无效"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        bank_card_id = None
+        bank_card_no = None
+        bank_card_holder = None
+        receiving_qr_code = None
+
+        if payment_method == "card":
+            bank_card_id_str = str(request.data.get("bank_card_id", "")).strip()
+            if not bank_card_id_str or not bank_card_id_str.isdigit():
+                return Response(
+                    {"message": "请选择银行卡"}, status=status.HTTP_400_BAD_REQUEST
+                )
+            bank_card = BankCard.objects.filter(
+                id=int(bank_card_id_str), user_id=current_user_id
+            ).first()
+            if not bank_card:
+                return Response(
+                    {"message": "银行卡不存在"}, status=status.HTTP_400_BAD_REQUEST
+                )
+            bank_card_id = int(bank_card.id)
+            bank_card_no = bank_card.card_no
+            bank_card_holder = bank_card.name
+        elif payment_method == "qr":
+            receiving_qr_code = str(request.data.get("receiving_qr_code", "")).strip()
+            if not receiving_qr_code:
+                return Response(
+                    {"message": "请上传收款码"}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+        with transaction.atomic():
+            if (
+                Withdraw.objects.select_for_update()
+                .filter(
+                    user_id=current_user_id,
+                    status__in=[
+                        Withdraw.STATUS_PENDING_SUBMIT,
+                        Withdraw.STATUS_PENDING_APPROVAL,
+                    ],
+                )
+                .exists()
+            ):
+                return Response(
+                    {"message": "当前有待处理的提现申请，请稍后再试"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            wallet, _ = Wallet.objects.select_for_update().get_or_create(
+                id=current_user_id, defaults=_wallet_defaults()
+            )
+            before_amount = _quantize_amount(wallet.available_amount)
+            if amount > before_amount:
+                return Response(
+                    {"message": "提现金额不能大于可用金额"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            after_amount = _quantize_amount(before_amount - amount)
+            wallet.available_amount = after_amount
+            wallet.frozen_amount = _quantize_amount(wallet.frozen_amount + amount)
+            wallet.save(update_fields=["available_amount", "frozen_amount"])
+
+            remark = str(request.data.get("remark", "")).strip() or "提现申请，资金冻结"
+            withdraw = Withdraw.objects.create(
+                id=generate_snowflake_id(),
+                user_id=current_user_id,
+                amount=amount,
+                remark=remark,
+                status=Withdraw.STATUS_PENDING_APPROVAL,
+                payment_method=payment_method,
+                bank_card_id=bank_card_id,
+                bank_card_no=bank_card_no,
+                bank_card_holder=bank_card_holder,
+                receiving_qr_code=receiving_qr_code,
+                created_at=timezone.now(),
+            )
+
+        refreshed_wallet = Wallet.objects.get(id=current_user_id)
+        return Response(
+            {
+                "total_amount": _format_amount(refreshed_wallet.total_amount),
+                "frozen_amount": _format_amount(refreshed_wallet.frozen_amount),
+                "pending_amount": _format_amount(refreshed_wallet.pending_amount),
+                "available_amount": _format_amount(refreshed_wallet.available_amount),
+                "withdraw_id": str(withdraw.id),
+                "message": "提现申请已提交",
+            }
+        )
+
+
 class WithdrawListView(APIView):
-    """提现申请列表接口。"""
+    """提现申请列表"""
 
     @extend_schema(
         summary="提现申请列表",
@@ -150,20 +315,27 @@ class WithdrawListView(APIView):
         results = []
         for row in page_rows:
             wallet = wallets.get(row.user_id)
+            payment_method_text = dict(Withdraw.PAYMENT_METHOD_CHOICES).get(
+                row.payment_method, "--"
+            )
             results.append(
                 {
                     "id": str(row.id),
                     "created_at": _format_datetime(row.created_at),
                     "applicant_display": _display_user(row.user),
                     "amount": _format_amount(row.amount),
-                    "available_amount": _format_amount(
-                        wallet.available_amount if wallet else 0
-                    ),
                     "frozen_amount": _format_amount(
                         wallet.frozen_amount if wallet else 0
                     ),
-                    "total_amount": _format_amount(
-                        wallet.total_amount if wallet else 0
+                    "payment_method": row.payment_method or "",
+                    "payment_method_text": payment_method_text,
+                    "bank_card_no": row.bank_card_no or "--",
+                    "bank_card_holder": row.bank_card_holder or "--",
+                    "receiving_qr_code": row.receiving_qr_code or "",
+                    "receiving_qr_code_url": (
+                        _build_qr_code_url(row.receiving_qr_code)
+                        if row.receiving_qr_code
+                        else ""
                     ),
                     "status": row.status,
                     "status_text": dict(Withdraw.STATUS_CHOICES).get(row.status, "--"),
@@ -223,7 +395,11 @@ class WithdrawApproveView(APIView):
         tags=["withdraws"],
         parameters=[
             OpenApiParameter(
-                name="id", description="提现申请ID", required=True, type=int, location=OpenApiParameter.PATH
+                name="id",
+                description="提现申请ID",
+                required=True,
+                type=int,
+                location=OpenApiParameter.PATH,
             ),
         ],
         request=None,
@@ -302,34 +478,53 @@ class WithdrawRejectView(APIView):
         tags=["withdraws"],
         parameters=[
             OpenApiParameter(
-                name="id", description="提现申请ID", required=True, type=int, location=OpenApiParameter.PATH
+                name="id",
+                description="提现申请ID",
+                required=True,
+                type=int,
+                location=OpenApiParameter.PATH,
             ),
         ],
         request=None,
-        responses={200: CommonResponseSerializer, 400: CommonResponseSerializer, 401: CommonResponseSerializer, 403: CommonResponseSerializer, 404: CommonResponseSerializer},
+        responses={
+            200: CommonResponseSerializer,
+            400: CommonResponseSerializer,
+            401: CommonResponseSerializer,
+            403: CommonResponseSerializer,
+            404: CommonResponseSerializer,
+        },
     )
     def post(self, request, id: int):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
-            return Response(ResponseMessage("未登录", 401).to_dict(), status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                ResponseMessage("未登录", 401).to_dict(),
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         if not _is_admin(current_user_id):
-            return Response(ResponseMessage("无权限操作", 403).to_dict(), status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                ResponseMessage("无权限操作", 403).to_dict(),
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         audit_remark = str(request.data.get("audit_remark", "")).strip()
         if not audit_remark:
             return Response(
-                ResponseMessage("请填写审批意见", 400).to_dict(), status=status.HTTP_400_BAD_REQUEST
+                ResponseMessage("请填写审批意见", 400).to_dict(),
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         with transaction.atomic():
             withdraw = Withdraw.objects.select_for_update().filter(id=id).first()
             if not withdraw:
                 return Response(
-                    ResponseMessage("提现申请不存在", 404).to_dict(), status=status.HTTP_404_NOT_FOUND
+                    ResponseMessage("提现申请不存在", 404).to_dict(),
+                    status=status.HTTP_404_NOT_FOUND,
                 )
             if withdraw.status != Withdraw.STATUS_PENDING_APPROVAL:
                 return Response(
-                    ResponseMessage("当前状态不可审批", 400).to_dict(), status=status.HTTP_400_BAD_REQUEST
+                    ResponseMessage("当前状态不可审批", 400).to_dict(),
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             wallet, _ = Wallet.objects.select_for_update().get_or_create(
@@ -376,27 +571,47 @@ class WithdrawCancelView(APIView):
         tags=["withdraws"],
         parameters=[
             OpenApiParameter(
-                name="id", description="提现申请ID", required=True, type=int, location=OpenApiParameter.PATH
+                name="id",
+                description="提现申请ID",
+                required=True,
+                type=int,
+                location=OpenApiParameter.PATH,
             ),
         ],
         request=None,
-        responses={200: CommonResponseSerializer, 400: CommonResponseSerializer, 401: CommonResponseSerializer, 403: CommonResponseSerializer, 404: CommonResponseSerializer},
+        responses={
+            200: CommonResponseSerializer,
+            400: CommonResponseSerializer,
+            401: CommonResponseSerializer,
+            403: CommonResponseSerializer,
+            404: CommonResponseSerializer,
+        },
     )
     def post(self, request, id: int):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
-            return Response(ResponseMessage("未登录", 401).to_dict(), status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                ResponseMessage("未登录", 401).to_dict(),
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
         with transaction.atomic():
             withdraw = Withdraw.objects.select_for_update().filter(id=id).first()
             if not withdraw:
                 return Response(
-                    ResponseMessage("提现申请不存在", 404).to_dict(), status=status.HTTP_404_NOT_FOUND
+                    ResponseMessage("提现申请不存在", 404).to_dict(),
+                    status=status.HTTP_404_NOT_FOUND,
                 )
             if int(withdraw.user_id) != int(current_user_id):
-                return Response(ResponseMessage("仅能作废自己的提现申请", 403).to_dict(), status=status.HTTP_403_FORBIDDEN)
+                return Response(
+                    ResponseMessage("仅能作废自己的提现申请", 403).to_dict(),
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             if withdraw.status != Withdraw.STATUS_PENDING_APPROVAL:
-                return Response(ResponseMessage("当前状态不可作废", 400).to_dict(), status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    ResponseMessage("当前状态不可作废", 400).to_dict(),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             wallet, _ = Wallet.objects.select_for_update().get_or_create(
                 id=withdraw.user_id,

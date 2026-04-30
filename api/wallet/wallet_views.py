@@ -13,15 +13,11 @@ from ..views import BaseAPIView
 
 from .wallet_serializers import (
     WalletInfoSerializer,
-    WalletWithdrawRequestSerializer,
-    WalletWithdrawResponseSerializer,
     WalletRecordListRequestSerializer,
     WalletRecordListResponseSerializer,
 )
 
-from utils.generate_snowflake_id import generate_snowflake_id
-
-from ..models import Wallet, WalletRecord, Withdraw
+from ..models import Wallet, WalletRecord
 
 
 def _parse_int(value, default: int) -> int:
@@ -77,76 +73,6 @@ class WalletView(BaseAPIView):
             return Response({**_serialize_wallet(wallet), "message": "查询成功"})
 
         return self.invoke(_handle)
-
-    @extend_schema(
-        tags=["wallet"],
-        summary="申请提现",
-        description="提交提现申请，冻结相应金额并生成提现申请单。",
-        request=WalletWithdrawRequestSerializer,
-        responses={200: WalletWithdrawResponseSerializer, 400: dict, 401: dict},
-    )
-    def post(self, request):
-        user_id = self.get_current_user_id(request)
-        if not user_id:
-            raise CredentialError("未登录")
-
-        try:
-            amount = self.quantize_amount(request.data.get("amount", "0"))
-        except (InvalidOperation, TypeError, ValueError):
-            return Response(
-                {"message": "提现金额格式错误"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if amount < Decimal("0.01"):
-            raise ValueError("提现金额不能低于0.01")
-
-        with transaction.atomic():
-            if (
-                Withdraw.objects.select_for_update()
-                .filter(
-                    user_id=user_id,
-                    status__in=[
-                        Withdraw.STATUS_PENDING_SUBMIT,
-                        Withdraw.STATUS_PENDING_APPROVAL,
-                    ],
-                )
-                .exists()
-            ):
-                raise InvalidOperation("当前有待处理的提现申请，请稍后再试")
-
-            wallet, _ = Wallet.objects.select_for_update().get_or_create(
-                id=user_id, defaults=_wallet_defaults()
-            )
-            before_amount = self.quantize_amount(wallet.available_amount)
-            if amount > before_amount:
-                raise ValueError("提现金额不能大于可用金额")
-
-            after_amount = self.quantize_amount(before_amount - amount)
-            wallet.available_amount = after_amount
-            wallet.frozen_amount = self.quantize_amount(wallet.frozen_amount + amount)
-            wallet.save(update_fields=["available_amount", "frozen_amount"])
-
-            remark = str(request.data.get("remark", "")).strip() or "提现申请，资金冻结"
-            withdraw = Withdraw.objects.create(
-                id=generate_snowflake_id(),
-                user_id=user_id,
-                amount=amount,
-                remark=remark,
-                status=Withdraw.STATUS_PENDING_APPROVAL,
-                created_at=timezone.now(),
-            )
-
-            # 提交申请时仅冻结余额并生成申请单，不立即写入钱包流水；
-            # 后续审核通过/拒绝时再记录最终资金变动。
-
-        refreshed_wallet = Wallet.objects.get(id=user_id)
-        return Response(
-            {
-                **_serialize_wallet(refreshed_wallet),
-                "withdraw_id": str(withdraw.id),
-                "message": "提现申请已提交",
-            }
-        )
 
 
 class WalletRecordListView(BaseAPIView):

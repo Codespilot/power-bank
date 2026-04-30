@@ -164,9 +164,24 @@
 				{ field: 'created_at', title: '申请时间', width: 180 },
 				{ field: 'applicant_display', title: '申请人', minWidth: 180 },
 				{ field: 'amount', title: '申请金额', width: 110 },
-				{ field: 'available_amount', title: '当前可用', width: 110 },
-				{ field: 'frozen_amount', title: '冻结金额', width: 110 },
-				{ field: 'total_amount', title: '总金额', width: 110 },
+				{
+					field: 'bank_card_no', title: '收款卡', minWidth: 180,
+					templet: function (d) {
+						if (d.payment_method === 'card') {
+							return (d.bank_card_holder || '--') + ' ' + (d.bank_card_no || '--');
+						}
+						return '--';
+					}
+				},
+				{
+					field: 'receiving_qr_code', title: '收款码', width: 100,
+					templet: function (d) {
+						if (d.payment_method === 'qr' && d.receiving_qr_code_url) {
+							return '<a class="layui-btn layui-btn-primary layui-btn-xs" onclick="previewQrCode(\'' + d.receiving_qr_code_url + '\')">查看</a>';
+						}
+						return '--';
+					}
+				},
 				{ field: 'status_text', title: '审批状态', width: 100 },
 				{ field: 'audit_user_name', title: '审批人', width: 110 },
 				{ field: 'audit_remark', title: '审批意见', minWidth: 160 },
@@ -242,5 +257,17 @@
 			}
 		});
 	});
+</script>
+<script>
+	function previewQrCode(url) {
+		layui.use(function () {
+			var layer = layui.layer;
+			layer.photos({
+				photos: { data: [{ src: url }] },
+				shade: 0.8,
+				shadeClose: true,
+			});
+		});
+	}
 </script>
 {% endblock %}

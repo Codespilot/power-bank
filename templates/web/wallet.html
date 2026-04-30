@@ -195,6 +195,25 @@
             });
         });
 
+        function loadBankCards(selectId) {
+            fetch('/api/bankcards/lookup')
+                .then(function (response) { return response.json(); })
+                .then(function (res) {
+                    var select = document.getElementById(selectId);
+                    if (!select) return;
+                    select.innerHTML = '<option value="">请选择银行卡</option>';
+                    if (res.results) {
+                        res.results.forEach(function (card) {
+                            var opt = document.createElement('option');
+                            opt.value = card.id;
+                            opt.textContent = card.name + '（' + card.card_no + '）';
+                            select.appendChild(opt);
+                        });
+                    }
+                    form.render('select');
+                });
+        }
+
         document.getElementById('wallet-withdraw-btn').addEventListener('click', function () {
             var maxAmount = Number(currentWallet.available_amount || 0);
             if (maxAmount < 0.01) {
@@ -205,26 +224,123 @@
             layer.open({
                 type: 1,
                 title: '提现申请',
-                area: ['420px', 'auto'],
+                area: ['480px', 'auto'],
                 content: '' +
                     '<div class="layui-form" style="padding:20px 24px;">' +
-                    '  <label style="margin-bottom:10px; display:block;">提现金额（元）</label>' +
                     '  <div class="layui-form-item">' +
-                    '      <input id="withdraw-amount-input" type="text" lay-affix="number" min="1" max="' + maxAmount.toFixed(2) + '" autocomplete="off" class="layui-input" placeholder="请输入提现金额，例如12.34" value="">' +
-                    '      <label>最小1，当前可提现金额：' + maxAmount.toFixed(2) + '</label>' +
+                    '    <label class="layui-form-label">收款方式</label>' +
+                    '    <div class="layui-input-block">' +
+                    '      <select id="withdraw-payment-method" lay-filter="withdraw-payment-method">' +
+                    '        <option value="card">银行卡</option>' +
+                    '        <option value="qr">收款码</option>' +
+                    '      </select>' +
+                    '    </div>' +
+                    '  </div>' +
+                    '  <div class="layui-form-item" id="withdraw-bankcard-row">' +
+                    '    <label class="layui-form-label">收款银行卡</label>' +
+                    '    <div class="layui-input-block">' +
+                    '      <select id="withdraw-bankcard-select">' +
+                    '        <option value="">请选择银行卡</option>' +
+                    '      </select>' +
+                    '    </div>' +
+                    '  </div>' +
+                    '  <div class="layui-form-item" id="withdraw-qrcode-row" style="display:none;">' +
+                    '    <label class="layui-form-label">收款码</label>' +
+                    '    <div class="layui-input-block">' +
+                    '      <button type="button" class="layui-btn layui-btn-primary" id="withdraw-upload-qrcode-btn">选择收款码图片</button>' +
+                    '      <input type="hidden" id="withdraw-qrcode-filename" value="">' +
+                    '      <div id="withdraw-qrcode-preview" style="margin-top:8px;"></div>' +
+                    '    </div>' +
+                    '  </div>' +
+                    '  <div class="layui-form-item">' +
+                    '    <label class="layui-form-label">提现金额</label>' +
+                    '    <div class="layui-input-block">' +
+                    '      <input id="withdraw-amount-input" type="text" lay-affix="number" min="1" max="' + maxAmount.toFixed(2) + '" autocomplete="off" class="layui-input" placeholder="请输入提现金额，例如12.34">' +
+                    '      <div style="color:#999;margin-top:4px;font-size:12px;">最小1元，当前可提现：' + maxAmount.toFixed(2) + '元</div>' +
+                    '    </div>' +
                     '  </div>' +
                     '</div>',
                 success: function () {
+                    loadBankCards('withdraw-bankcard-select');
                     form.render();
+
+                    // 切换收款方式
+                    form.on('select(withdraw-payment-method)', function (data) {
+                        var isCard = data.value === 'card';
+                        document.getElementById('withdraw-bankcard-row').style.display = isCard ? '' : 'none';
+                        document.getElementById('withdraw-qrcode-row').style.display = isCard ? 'none' : '';
+                    });
+
+                    // 上传收款码
+                    var fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.accept = 'image/*';
+                    fileInput.style.display = 'none';
+                    document.body.appendChild(fileInput);
+
+                    document.getElementById('withdraw-upload-qrcode-btn').addEventListener('click', function () {
+                        fileInput.click();
+                    });
+
+                    fileInput.addEventListener('change', function () {
+                        var file = fileInput.files[0];
+                        if (!file) return;
+
+                        var formData = new FormData();
+                        formData.append('file', file);
+
+                        fetch('/api/attachments/upload/form', {
+                            method: 'POST',
+                            body: formData
+                        }).then(function (r) { return r.json(); })
+                            .then(function (res) {
+                                if (res.file_name) {
+                                    document.getElementById('withdraw-qrcode-filename').value = res.file_name;
+                                    var imgUrl = res.file_url || '/files/attachments/' + res.file_name;
+                                    document.getElementById('withdraw-qrcode-preview').innerHTML =
+                                        '<img src="' + imgUrl + '" style="max-width:120px;max-height:120px;border:1px solid #eee;border-radius:4px;" onerror="this.style.display=\'none\'">' +
+                                        '<div style="color:#16a34a;font-size:12px;margin-top:4px;">已上传</div>';
+                                } else {
+                                    layer.msg(res.message || '上传失败', { icon: 5 });
+                                }
+                            });
+                    });
                 },
                 btn: ['提交', '取消'],
                 yes: function (index) {
-                    var input = document.getElementById('withdraw-amount-input');
-                    var amountValue = (input && input.value || '').trim();
-                    fetch('/api/wallet', {
+                    var amountInput = document.getElementById('withdraw-amount-input');
+                    var amountValue = (amountInput && amountInput.value || '').trim();
+                    var paymentMethod = document.getElementById('withdraw-payment-method').value;
+                    var bankCardId = document.getElementById('withdraw-bankcard-select').value;
+                    var qrCodeFile = document.getElementById('withdraw-qrcode-filename').value;
+
+                    if (!amountValue) {
+                        layer.msg('请输入提现金额', { icon: 5 });
+                        return;
+                    }
+                    if (paymentMethod === 'card' && !bankCardId) {
+                        layer.msg('请选择收款银行卡', { icon: 5 });
+                        return;
+                    }
+                    if (paymentMethod === 'qr' && !qrCodeFile) {
+                        layer.msg('请上传收款码', { icon: 5 });
+                        return;
+                    }
+
+                    var body = {
+                        amount: amountValue,
+                        payment_method: paymentMethod
+                    };
+                    if (paymentMethod === 'card') {
+                        body.bank_card_id = bankCardId;
+                    } else {
+                        body.receiving_qr_code = qrCodeFile;
+                    }
+
+                    fetch('/api/withdraws', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ amount: amountValue })
+                        body: JSON.stringify(body)
                     }).then(function (response) {
                         return response.json().then(function (data) {
                             return { ok: response.ok, data: data };
@@ -239,6 +355,11 @@
                             layer.msg(result.data.message || '提现申请提交失败', { icon: 5 });
                         }
                     });
+                },
+                end: function () {
+                    if (fileInput && fileInput.parentNode) {
+                        fileInput.parentNode.removeChild(fileInput);
+                    }
                 }
             });
         });

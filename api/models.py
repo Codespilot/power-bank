@@ -350,11 +350,29 @@ class Withdraw(BaseEntity):
         (STATUS_CANCELLED, "作废"),
     )
 
+    PAYMENT_METHOD_CARD = "card"
+    PAYMENT_METHOD_QR = "qr"
+    PAYMENT_METHOD_CHOICES = (
+        (PAYMENT_METHOD_CARD, "银行卡"),
+        (PAYMENT_METHOD_QR, "收款码"),
+    )
+
     id = models.BigIntegerField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="withdraws")
     amount = models.DecimalField(max_digits=18, decimal_places=2)
     remark = models.CharField(max_length=500, null=True, blank=True)
     status = models.IntegerField(choices=STATUS_CHOICES)
+    payment_method = models.CharField(
+        max_length=10,
+        choices=PAYMENT_METHOD_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="收款方式",
+    )
+    bank_card_id = models.BigIntegerField(null=True, blank=True, verbose_name="银行卡ID")
+    bank_card_no = models.CharField(max_length=32, null=True, blank=True, verbose_name="银行卡号")
+    bank_card_holder = models.CharField(max_length=50, null=True, blank=True, verbose_name="持卡人姓名")
+    receiving_qr_code = models.CharField(max_length=50, null=True, blank=True, verbose_name="收款码照片")
     audit_user = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,

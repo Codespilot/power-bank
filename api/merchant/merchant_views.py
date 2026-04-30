@@ -181,7 +181,7 @@ class MerchantHistoryListView(APIView):
             OpenApiParameter(name="id", description="商户ID", required=True, type=int, location=OpenApiParameter.PATH),
         ],
         responses={
-            200: MerchantHistoryResponseSerializer,
+            200: GenericResponseSerializer[MerchantHistoryResponseSerializer],
             404: MerchantAssignMessageSerializer,
         },
     )
@@ -203,6 +203,12 @@ class MerchantHistoryListView(APIView):
             {
                 "merchant_id": str(history.merchant_id),
                 "merchant_name": history.merchant.name,
+                "new_agent_id": history.new_agent_id,
+                "new_agent_fullname": history.new_agent.fullname if history.new_agent else "--",
+                "new_agent_phone": history.new_agent.phone if history.new_agent else "--",
+                "old_agent_id": history.old_agent_id,
+                "old_agent_fullname": history.old_agent.fullname if history.old_agent else "--",
+                "old_agent_phone": history.old_agent.phone if history.old_agent else "--",
                 "new_agent": _format_agent_display(history.new_agent),
                 "old_agent": _format_agent_display(history.old_agent),
                 "created_at": history.created_at.strftime("%Y-%m-%d %H:%M:%S"),
@@ -213,14 +219,24 @@ class MerchantHistoryListView(APIView):
         return Response({"count": len(results), "results": results, "message": "查询成功"})
 
 
-def _assign_merchants(request, merchant_ids, agent_phone):
+def _assign_merchants(request, merchant_ids, agent_phone=None, agent_id=None):
+    """
+    将一个或多个商户划拨给指定代理商。管理员可划拨任意商户，普通代理商仅能划拨自己名下的商户给自己的直属下级代理商。
+
+    args:
+        request: 当前请求对象
+        merchant_ids: 商户ID列表
+        agent_phone: 目标代理商手机号（可选）
+        agent_id: 目标代理商用户ID（可选）
+    returns:
+        Response对象，包含操作结果信息
+    raises:
+        PermissionError: 当普通代理商试图划拨不属于自己的商户或划拨给非直属下级代理商时
+        ValueError: 当输入参数无效或缺失时
+    """
     current_user_id = get_request_user_id(request)
     if not current_user_id:
         return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
-
-    agent_phone = str(agent_phone or "").strip()
-    if not agent_phone:
-        return Response({"message": "请输入代理商手机号"}, status=status.HTTP_400_BAD_REQUEST)
 
     current_user = User.objects.filter(id=current_user_id).first()
     if not current_user:
@@ -228,48 +244,72 @@ def _assign_merchants(request, merchant_ids, agent_phone):
 
     is_admin = UserRole.objects.filter(user_id=current_user_id, role=UserRole.ROLE_ADMIN).exists()
 
-    user = User.objects.filter(phone=agent_phone).first()
-    if not user:
-        return Response({"message": "未找到对应代理商"}, status=status.HTTP_400_BAD_REQUEST)
+    # agent_phone = str(agent_phone or "").strip()
 
-    if not is_admin and int(user.agent_id or 0) != int(current_user_id):
-        return Response({"message": "普通用户仅能划拨给自己的直属下级代理商"}, status=status.HTTP_400_BAD_REQUEST)
+    try:
 
-    normalized_ids = []
-    for merchant_id in merchant_ids:
-        try:
-            normalized_ids.append(int(str(merchant_id).strip()))
-        except (TypeError, ValueError, AttributeError):
-            continue
+        user = None
+        if agent_id:
+            agent_id = int(str(agent_id).strip())
+            if agent_id:
+                user = User.objects.filter(id=agent_id).first()
+            else:
+                raise ValueError("agent_id必须为整数")
+        elif agent_phone:
+            agent_phone = str(agent_phone).strip()
+            if not FULL_PHONE_REGEX.fullmatch(agent_phone):
+                raise ValueError("代理商手机号格式不正确")
+            user = User.objects.filter(phone=agent_phone).first()
+        else:
+            raise ValueError("参数错误")
 
-    if not normalized_ids:
-        return Response({"message": "请选择要划拨的商户"}, status=status.HTTP_400_BAD_REQUEST)
+        if not user:
+            raise ValueError("未找到对应代理商")
 
-    with transaction.atomic():
-        merchants = list(
-            Merchant.objects.select_for_update().filter(id__in=normalized_ids).order_by("id")
-        )
-        if not merchants:
-            return Response({"message": "商户不存在"}, status=status.HTTP_404_NOT_FOUND)
+        if not is_admin and int(user.agent_id or 0) != int(current_user_id):
+            raise PermissionError("普通用户仅能划拨给自己的直属下级代理商")
 
-        if not is_admin:
-            invalid_merchants = [str(merchant.id) for merchant in merchants if int(merchant.agent_id or 0) != int(current_user_id)]
-            if invalid_merchants:
-                return Response({"message": "普通用户仅能划拨自己名下的商户"}, status=status.HTTP_400_BAD_REQUEST)
+        normalized_ids = []
+        for merchant_id in merchant_ids:
+            try:
+                normalized_ids.append(int(str(merchant_id).strip()))
+            except (TypeError, ValueError, AttributeError):
+                continue
 
-        for merchant in merchants:
-            old_agent_id = merchant.agent_id
-            merchant.agent = user
-            merchant.save(update_fields=["agent"])
-            MerchantHistory.objects.create(
-                id=generate_snowflake_id(),
-                merchant=merchant,
-                old_agent_id=old_agent_id,
-                new_agent=user,
-                created_at=timezone.now(),
+        if not normalized_ids:
+            raise ValueError("请选择要划拨的商户")
+
+        with transaction.atomic():
+            merchants = list(
+                Merchant.objects.select_for_update().filter(id__in=normalized_ids).order_by("id")
             )
+            if not merchants:
+                raise ValueError("商户不存在")
 
-    return Response({"message": "划拨成功"})
+            if not is_admin:
+                invalid_merchants = [str(merchant.id) for merchant in merchants if int(merchant.agent_id or 0) != int(current_user_id)]
+                if invalid_merchants:
+                    raise PermissionError("普通用户仅能划拨自己名下的商户")
+
+            for merchant in merchants:
+                old_agent_id = merchant.agent_id
+                merchant.agent = user
+                merchant.save(update_fields=["agent"])
+                MerchantHistory.objects.create(
+                    id=generate_snowflake_id(),
+                    merchant=merchant,
+                    old_agent_id=old_agent_id,
+                    new_agent=user,
+                    created_at=timezone.now(),
+                )
+
+        return Response({"message": "划拨成功"})
+    except PermissionError as error:
+        return Response({"message": str(error)}, status=status.HTTP_403_FORBIDDEN)
+    except (TypeError, ValueError) as error:
+        return Response({"message": str(error)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"message": f"划拨失败: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class MerchantAssignAgentView(APIView):
@@ -290,7 +330,12 @@ class MerchantAssignAgentView(APIView):
         },
     )
     def post(self, request, id):
-        return _assign_merchants(request, [id], request.data.get("agent_phone", ""))
+        return _assign_merchants(
+            request,
+            [id],
+            request.data.get("agent_phone", ""),
+            agent_id=request.data.get("agent_id"),
+        )
 
 
 class MerchantBatchAssignAgentView(APIView):
@@ -309,4 +354,9 @@ class MerchantBatchAssignAgentView(APIView):
     )
     def post(self, request):
         merchant_ids = request.data.get("merchant_ids", [])
-        return _assign_merchants(request, merchant_ids, request.data.get("agent_phone", ""))
+        return _assign_merchants(
+            request,
+            merchant_ids,
+            request.data.get("agent_phone", ""),
+            agent_id=request.data.get("agent_id"),
+        )

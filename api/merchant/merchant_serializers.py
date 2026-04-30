@@ -20,18 +20,29 @@ class MerchantListResponseSerializer(serializers.Serializer):
 
 
 class MerchantHistoryResponseSerializer(serializers.Serializer):
-    count = serializers.IntegerField(help_text="总数")
-    message = serializers.CharField()
-    results = serializers.ListField(child=serializers.DictField())
+    id = serializers.CharField(help_text="历史记录ID")
+    merchant_id = serializers.IntegerField(help_text="商户ID")
+    merchant_name = serializers.CharField(help_text="商户名称")
+    new_agent = serializers.CharField(help_text="新代理商信息（姓名-手机号）")
+    new_agent_id = serializers.IntegerField(help_text="新代理商ID")
+    new_agent_fullname = serializers.CharField(help_text="新代理商姓名")
+    new_agent_phone = serializers.CharField(help_text="新代理商手机号")
+    old_agent = serializers.CharField(help_text="旧代理商信息（姓名-手机号）")
+    old_agent_id = serializers.IntegerField(help_text="旧代理商ID")
+    old_agent_fullname = serializers.CharField(help_text="旧代理商姓名")
+    old_agent_phone = serializers.CharField(help_text="旧代理商手机号")
+    created_at = serializers.DateTimeField(help_text="变更时间")
 
 
 class MerchantAssignAgentRequestSerializer(serializers.Serializer):
-    agent_phone = serializers.CharField(required=True, help_text="代理商手机号")
+    agent_id = serializers.IntegerField(required=False, allow_null=True, help_text="代理商用户ID，与agent_phone二选一")
+    agent_phone = serializers.CharField(required=False, allow_blank=True, help_text="代理商手机号，与agent_id二选一")
 
 
 class MerchantBatchAssignAgentRequestSerializer(serializers.Serializer):
     merchant_ids = serializers.ListField(child=serializers.IntegerField(), required=True, help_text="商户ID列表")
-    agent_phone = serializers.CharField(required=True, help_text="代理商手机号")
+    agent_id = serializers.IntegerField(required=False, allow_null=True, help_text="代理商用户ID，与agent_phone二选一")
+    agent_phone = serializers.CharField(required=False, allow_blank=True, help_text="代理商手机号，与agent_id二选一")
 
 
 class MerchantAssignMessageSerializer(serializers.Serializer):

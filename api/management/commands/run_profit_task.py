@@ -1,7 +1,7 @@
+from blinker import signal
 from django.core.management.base import BaseCommand, CommandError
 
 from api.models import OrderImport
-from api.profit.profit_tasks import run_profit_allocation_with_tracking
 
 
 class Command(BaseCommand):
@@ -41,5 +41,7 @@ class Command(BaseCommand):
                 raise CommandError("No eligible order import record found")
             order_import_id = int(latest.id)
 
-        result = run_profit_allocation_with_tracking(order_import_id=order_import_id)
-        self.stdout.write(self.style.SUCCESS(f"Profit task completed: {result}"))
+        order_import_completed = signal("order_import_completed")
+        order_import_completed.send(None, order_import_id=order_import_id)
+        # result = run_profit_allocation_with_tracking(order_import_id=order_import_id)
+        self.stdout.write(self.style.SUCCESS(f"Profit task completed: {order_import_id}"))

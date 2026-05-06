@@ -1,6 +1,6 @@
 from blinker import signal
-from .models import OrderImport, ProfitTaskRecord
 import logging
+import threading
 
 from api.profit.profit_tasks import run_profit_allocation_with_tracking
 
@@ -12,7 +12,10 @@ def handle_order_import_completed(sender, **kwargs):
     try:
         order_import_id = kwargs.get("order_import_id")
         logger.info(f"订单导入完成，触发利润分配，order_import_id={order_import_id}")
-        result = run_profit_allocation_with_tracking(int(order_import_id))
+        semaphore = threading.Semaphore(1)
+        with semaphore:
+            result = run_profit_allocation_with_tracking(int(order_import_id))
+            logger.info(f"利润分配完成，order_import_id={order_import_id}, result={result}")
     except Exception as exc:
         logger.error(f"Error in order_import_completed handler: {exc}", exc_info=True)
 

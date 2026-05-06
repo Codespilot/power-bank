@@ -1,5 +1,6 @@
 import logging
 
+from blinker import signal
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -107,10 +108,7 @@ class OrderListView(ListAPIView):
 from rest_framework.permissions import AllowAny
 from utils.generate_snowflake_id import generate_snowflake_id
 from api.import_tasks import start_import_task
-from api.profit.profit_tasks import (
-    rollback_profit_allocation_for_import,
-    run_profit_allocation_with_tracking,
-)
+from api.profit.profit_tasks import rollback_profit_allocation_for_import
 
 
 class OrderImportListCreateView(APIView):
@@ -177,7 +175,8 @@ class OrderImportRunProfitView(APIView):
         if order_import.profit_task_status == OrderImport.PROFIT_STATUS_RUNNING:
             return Response({"message": "分润任务正在运行"}, status=400)
 
-        result = run_profit_allocation_with_tracking(order_import_id=order_import.id)
+        order_import_completed = signal("order_import_completed")
+        order_import_completed.send(self, order_import_id=order_import.id)
         latest = OrderImport.objects.filter(id=order_import.id).first()
         if latest and latest.profit_task_status == OrderImport.PROFIT_STATUS_FAILED:
             return Response(
@@ -185,7 +184,7 @@ class OrderImportRunProfitView(APIView):
                 status=500,
             )
 
-        return Response({"message": "分润任务执行完成", "result": result})
+        return Response({"message": "分润任务执行完成", "result": True})
 
 
 class OrderImportDetailView(APIView):

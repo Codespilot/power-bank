@@ -5,8 +5,8 @@ from django.utils import timezone
 from .models import OrderImport, Order, Merchant
 from config.import_map import get_import_column_mapping
 from utils.generate_snowflake_id import generate_snowflake_id
-from .profit.profit_tasks import run_profit_allocation_with_tracking
 import warnings
+from blinker import signal
 
 warnings.filterwarnings("ignore", message="DateTimeField .* received a naive datetime.*while time zone support is active.", category=RuntimeWarning)
 
@@ -151,7 +151,8 @@ def process_imported_excel(order_import_id, file_path):
 
         if failed == 0:
             try:
-                run_profit_allocation_with_tracking(order_import_id=order_import_id)
+                order_import_completed = signal("order_import_completed")
+                order_import_completed.send(None, order_import_id=order_import_id)
             except Exception as profit_exc:
                 log(f"Profit task failed for import_id={order_import_id}: {profit_exc}")
     except Exception as e:

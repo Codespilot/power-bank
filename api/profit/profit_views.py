@@ -2,6 +2,7 @@ import re
 from datetime import date, datetime, time as dt_time, timedelta, timezone as dt_timezone
 from decimal import Decimal
 
+from blinker import signal
 from django.db import connection
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -13,8 +14,7 @@ from api.profit.profit_serializers import ProfitRecordSerializer
 from api.serializers import CommonResponseSerializer, GenericResponseSerializer
 
 from ..auth import get_current_user, get_request_user_id
-from ..models import ProfitTaskRecord, User, UserRole
-from .profit_tasks import run_profit_allocation_with_tracking
+from ..models import ProfitTaskRecord, UserRole
 
 FULL_PHONE_REGEX = re.compile(r"^1[3-9]\d{9}$")
 
@@ -326,37 +326,5 @@ class ProfitTaskListView(APIView):
                 "limit": limit,
                 "results": results,
                 "message": "查询成功",
-            }
-        )
-
-    @extend_schema(exclude=True)  # 该接口不在自动文档中展示
-    def post(self, request):
-        _, error_response = self._check_admin(request)
-        if error_response is not None:
-            return error_response
-
-        order_import_id = request.data.get("order_import_id")
-        if order_import_id in (None, ""):
-            return Response(
-                {"message": "请传入 order_import_id，在导入记录页面执行分润"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            order_import_id = int(order_import_id)
-        except TypeError, ValueError:
-            return Response(
-                {"message": "order_import_id 格式错误"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        result = run_profit_allocation_with_tracking(order_import_id=order_import_id)
-        latest_record = ProfitTaskRecord.objects.order_by("-created_at", "-id").first()
-
-        return Response(
-            {
-                "message": "任务执行完成",
-                "result": result,
-                "record_id": str(latest_record.id) if latest_record else "",
             }
         )

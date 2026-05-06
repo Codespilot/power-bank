@@ -364,6 +364,9 @@ def run_profit_allocation_with_tracking(
     if not order_import:
         raise ValueError("订单导入记录不存在")
 
+    if order_import.profit_task_status != OrderImport.PROFIT_STATUS_NOT_STARTED:
+        raise ValueError("订单导入记录的分润任务已启动或已完成")
+
     order_import.profit_task_status = OrderImport.PROFIT_STATUS_RUNNING
     order_import.profit_run_time = timezone.now()
     order_import.profit_error_message = ""

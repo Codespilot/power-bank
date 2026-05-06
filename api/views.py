@@ -1,6 +1,7 @@
 from datetime import datetime, time as dt_time, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
+from blinker import signal
 from django.db import transaction
 from django.utils import timezone
 
@@ -23,7 +24,6 @@ class HealthCheckView(APIView):
 
     def get(self, request):
         return Response({"status": "ok", "service": "power-bank-api"})
-
 
 class BaseAPIView(APIView):
     """API 基类，提供一些通用方法和属性，供其他 API 视图继承使用。"""

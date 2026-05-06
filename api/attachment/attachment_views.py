@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 
 from api.exceptions import CredentialError
+from api.serializers import CommonResponseSerializer
 from api.views import BaseAPIView
 from api.models import Attachment, UserRole
 from api.auth import (
@@ -96,7 +97,7 @@ class AttachmentUploadFormView(BaseAPIView):
         tags=["attachments"],
         summary="上传附件（表单）",
         description="通过 multipart/form-data 上传文件。",
-        responses={200: AttachmentUploadResponseSerializer, 400: dict},
+        responses={200: AttachmentUploadResponseSerializer, 400: CommonResponseSerializer},
     )
     def post(self, request):
         def _handle():
@@ -159,7 +160,7 @@ class AttachmentUploadBase64View(BaseAPIView):
         summary="上传附件（Base64）",
         description="通过JSON body中的base64内容上传文件。",
         request=AttachmentBase64UploadSerializer,
-        responses={200: AttachmentUploadResponseSerializer, 400: dict},
+        responses={200: AttachmentUploadResponseSerializer, 400: CommonResponseSerializer},
     )
     def post(self, request):
         def _handle():

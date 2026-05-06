@@ -181,6 +181,7 @@ class Order(BaseEntity):
     merchant_id = models.BigIntegerField(db_index=True)
     merchant_profit = models.DecimalField(max_digits=18, decimal_places=2)
     agent_profit = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    agent_id = models.BigIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:

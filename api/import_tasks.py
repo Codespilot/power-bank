@@ -109,11 +109,7 @@ def process_imported_excel(order_import_id, file_path):
                 failed += 1
                 log(f"Row {idx+1} failed: {row_exc}\n{traceback.format_exc()}")
 
-        # 批量插入订单（一次写入，避免逐行 INSERT）
-        if orders_to_create:
-            Order.objects.bulk_create(orders_to_create, ignore_conflicts=False)
-
-        # 批量检查并创建缺失的商户
+        # 先确保商户存在，才能通过商户匹配 agent
         if merchant_ids:
             existing_merchant_ids = set(
                 Merchant.objects.filter(id__in=list(merchant_ids))
@@ -130,6 +126,22 @@ def process_imported_excel(order_import_id, file_path):
             ]
             if merchants_to_create:
                 Merchant.objects.bulk_create(merchants_to_create, ignore_conflicts=False)
+
+        # 通过商户匹配 agent_id
+        merchant_agent_map: dict[int, int] = {}
+        if merchant_ids:
+            merchants = Merchant.objects.filter(id__in=list(merchant_ids)).exclude(
+                agent_id__isnull=True
+            ).values_list("id", "agent_id")
+            for mid, aid in merchants:
+                merchant_agent_map[mid] = aid
+
+        for order in orders_to_create:
+            order.agent_id = merchant_agent_map.get(order.merchant_id)
+
+        # 批量插入订单（一次写入，避免逐行 INSERT）
+        if orders_to_create:
+            Order.objects.bulk_create(orders_to_create, ignore_conflicts=False)
         order_import.succeed_rows = succeed
         order_import.failed_rows = failed
         order_import.status = (

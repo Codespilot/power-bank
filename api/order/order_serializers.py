@@ -11,7 +11,7 @@ class OrderSerializer(SafeBigIntModelSerializer):
         model = Order
         fields = [
             'id', 'order_no', 'order_date', 'bill_month', 'bill_date', 'order_type', 'order_amount',
-            'merchant_name', 'merchant_profit', 'agent_profit', 'is_capped', 'created_at'
+            'merchant_name', 'merchant_profit', 'agent_profit', 'agent_id', 'is_capped', 'created_at'
         ]
     def get_is_capped(self, obj):
         # 假设有字段或逻辑判断是否封顶计费

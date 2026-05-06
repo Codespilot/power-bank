@@ -6,6 +6,6 @@ class ApiConfig(AppConfig):
     name = "api"
 
     def ready(self):
-        from .profit_tasks import start_profit_scheduler
+        from .profit.profit_tasks import start_profit_scheduler
 
         start_profit_scheduler()

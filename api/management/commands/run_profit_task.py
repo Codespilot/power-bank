@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from api.models import OrderImport
-from api.profit_tasks import run_profit_allocation_with_tracking
+from api.profit.profit_tasks import run_profit_allocation_with_tracking
 
 
 class Command(BaseCommand):

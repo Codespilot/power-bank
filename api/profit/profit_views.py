@@ -4,15 +4,17 @@ from decimal import Decimal
 
 from django.db import connection
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .auth import get_request_user_id
-from .models import ProfitTaskRecord, User, UserRole
-from .profit_tasks import run_profit_allocation_with_tracking
+from api.profit.profit_serializers import ProfitRecordSerializer
+from api.serializers import CommonResponseSerializer, GenericResponseSerializer
 
+from ..auth import get_current_user, get_request_user_id
+from ..models import ProfitTaskRecord, User, UserRole
+from .profit_tasks import run_profit_allocation_with_tracking
 
 FULL_PHONE_REGEX = re.compile(r"^1[3-9]\d{9}$")
 
@@ -20,7 +22,7 @@ FULL_PHONE_REGEX = re.compile(r"^1[3-9]\d{9}$")
 def _parse_int(value, default):
     try:
         parsed = int(str(value).strip())
-    except (TypeError, ValueError, AttributeError):
+    except TypeError, ValueError, AttributeError:
         return default
     return parsed
 
@@ -58,22 +60,39 @@ def _format_datetime(value):
 
 
 def _to_utc_string(value):
-    return value.astimezone(dt_timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%S")
+    return (
+        value.astimezone(dt_timezone.utc)
+        .replace(tzinfo=None)
+        .strftime("%Y-%m-%d %H:%M:%S")
+    )
 
 
 class ProfitListView(APIView):
     """分润记录分页查询接口，支持多维度筛选。"""
-    @extend_schema(exclude=True)  # 该接口不在自动文档中展示
+
+    @extend_schema(
+        tags=["profit"],
+        summary="分润记录查询",
+        description="分润记录分页查询接口，支持多维度筛选。",
+        parameters=[
+            OpenApiParameter("keyword", str, "query", False, "搜索关键词，匹配代理商的用户名、姓名、手机号、邮箱"),
+            OpenApiParameter("date_start", str, "query", False, "结算开始日期，格式 YYYY-MM-DD"),
+            OpenApiParameter("date_end", str, "query", False, "结算结束日期，格式 YYYY-MM-DD"),
+            OpenApiParameter("page", int, "query", False, "页码，默认 1"),
+            OpenApiParameter("limit", int, "query", False, "每页记录数，默认 10"),
+        ],
+        responses={
+            200: GenericResponseSerializer[ProfitRecordSerializer],
+            400: CommonResponseSerializer,
+        }
+    )  # 该接口不在自动文档中展示
     def get(self, request):
-        current_user_id = get_request_user_id(request)
+        current_user_id, is_admin = get_current_user(request)
         if not current_user_id:
-            return Response({"count": 0, "results": [], "message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
-
-        current_user = User.objects.filter(id=current_user_id).first()
-        if not current_user:
-            return Response({"count": 0, "results": [], "message": "用户不存在"}, status=status.HTTP_401_UNAUTHORIZED)
-
-        is_admin = UserRole.objects.filter(user_id=current_user_id, role=UserRole.ROLE_ADMIN).exists()
+            return Response(
+                {"count": 0, "results": [], "message": "未登录"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
         keyword = str(request.GET.get("keyword", "")).strip()
         date_start = str(request.GET.get("date_start", "")).strip()
@@ -109,15 +128,26 @@ class ProfitListView(APIView):
 
         try:
             if date_start:
-                start_dt = timezone.make_aware(datetime.combine(datetime.strptime(date_start, "%Y-%m-%d").date(), dt_time.min))
+                start_dt = timezone.make_aware(
+                    datetime.combine(
+                        datetime.strptime(date_start, "%Y-%m-%d").date(), dt_time.min
+                    )
+                )
                 where_clauses.append("pa.settle_date >= %s")
                 params.append(_to_utc_string(start_dt))
             if date_end:
-                end_dt = timezone.make_aware(datetime.combine(datetime.strptime(date_end, "%Y-%m-%d").date(), dt_time.min)) + timedelta(days=1)
+                end_dt = timezone.make_aware(
+                    datetime.combine(
+                        datetime.strptime(date_end, "%Y-%m-%d").date(), dt_time.min
+                    )
+                ) + timedelta(days=1)
                 where_clauses.append("pa.settle_date < %s")
                 params.append(_to_utc_string(end_dt))
         except ValueError:
-            return Response({"count": 0, "results": [], "message": "日期格式错误"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"count": 0, "results": [], "message": "日期格式错误"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
 
@@ -139,6 +169,7 @@ class ProfitListView(APIView):
                 pa.settle_source,
                 pa.rate,
                 pa.created_at,
+                usr.id AS agent_id,
                 usr.username AS agent_username,
                 usr.fullname AS agent_fullname,
                 usr.phone AS agent_phone,
@@ -169,12 +200,24 @@ class ProfitListView(APIView):
                     "id": str(row["id"]),
                     "order_import_id": str(row.get("order_import_id") or ""),
                     "settle_date": _format_datetime(row.get("settle_date")),
-                    "agent_display": _user_display(row.get("agent_fullname"), row.get("agent_username"), row.get("agent_phone")),
+                    "agent_display": _user_display(
+                        row.get("agent_fullname"),
+                        row.get("agent_username"),
+                        row.get("agent_phone"),
+                    ),
+                    "agent_id": row.get("agent_id"),
+                    "agent_fullname": row.get("agent_fullname"),
+                    "agent_username": row.get("agent_username"),
+                    "agent_phone": row.get("agent_phone"),
                     "order_amount": _format_decimal(row.get("order_amount")),
                     "profit_amount": _format_decimal(row.get("profit_amount")),
                     "settle_amount": _format_decimal(row.get("settle_amount")),
                     "settle_source": settle_source,
-                    "settle_source_text": "直接分润" if settle_source == "direct" else "下级代理商" if settle_source == "subagent" else "--",
+                    "settle_source_text": (
+                        "直接分润"
+                        if settle_source == "direct"
+                        else "下级代理商" if settle_source == "subagent" else "--"
+                    ),
                     "source_agent_display": _source_display(
                         row.get("source_fullname"),
                         row.get("source_username"),
@@ -301,7 +344,7 @@ class ProfitTaskListView(APIView):
 
         try:
             order_import_id = int(order_import_id)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return Response(
                 {"message": "order_import_id 格式错误"},
                 status=status.HTTP_400_BAD_REQUEST,

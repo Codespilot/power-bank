@@ -7,7 +7,7 @@ from django.db import connection, transaction
 from django.db.models import Sum
 from django.utils import timezone
 
-from .models import (
+from ..models import (
     Order,
     OrderImport,
     ProfitAllocation,

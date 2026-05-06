@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .profit_views import ProfitListView, ProfitTaskListView
+
 from .views import HealthCheckView
 from .user.user_views import TokenGrantView, TokenRefreshView
 
@@ -14,6 +14,7 @@ from .invite.invite_urls import invite_urlpatterns
 from .term.term_urls import term_urlpatterns
 from .attachment.attachment_urls import attachment_urlpatterns
 from .bankcard.bankcard_urls import bankcard_urlpatterns
+from .profit.profit_urls import profit_urlpatterns
 
 urlpatterns = [
     path("health", HealthCheckView.as_view(), name="api-health-check"),
@@ -34,8 +35,7 @@ urlpatterns = [
     *merchant_urlpatterns,
 
     # 分润管理
-    path("profits", ProfitListView.as_view(), name="api-profits-list"),
-    path("profit-tasks", ProfitTaskListView.as_view(), name="api-profit-tasks-list"),
+    *profit_urlpatterns,
 
     # 邀请码管理
     *invite_urlpatterns,

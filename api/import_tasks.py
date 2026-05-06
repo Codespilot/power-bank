@@ -5,7 +5,7 @@ from django.utils import timezone
 from .models import OrderImport, Order, Merchant
 from config.import_map import get_import_column_mapping
 from utils.generate_snowflake_id import generate_snowflake_id
-from .profit_tasks import run_profit_allocation_with_tracking
+from .profit.profit_tasks import run_profit_allocation_with_tracking
 import warnings
 
 warnings.filterwarnings("ignore", message="DateTimeField .* received a naive datetime.*while time zone support is active.", category=RuntimeWarning)

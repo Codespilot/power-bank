@@ -107,7 +107,7 @@ class OrderListView(ListAPIView):
 from rest_framework.permissions import AllowAny
 from utils.generate_snowflake_id import generate_snowflake_id
 from api.import_tasks import start_import_task
-from api.profit_tasks import (
+from api.profit.profit_tasks import (
     rollback_profit_allocation_for_import,
     run_profit_allocation_with_tracking,
 )

@@ -28,7 +28,7 @@ class OrderListView(ListAPIView):
         description="订单查询接口，支持分页、关键字搜索（订单号或商户名称）和日期范围筛选。",
         parameters=[
             OpenApiParameter(
-                name="kw",
+                name="keyword",
                 description="关键字搜索，匹配订单号或商户名称",
                 required=False,
                 type=str,

@@ -5,14 +5,16 @@ import threading
 from api.profit.profit_tasks import run_profit_allocation_with_tracking
 
 logger = logging.getLogger(__name__)
+semaphore = threading.Semaphore(1)
 
 order_import_completed = signal("order_import_completed")
 @order_import_completed.connect
 def handle_order_import_completed(sender, **kwargs):
+    """处理订单导入完成的信号，触发利润分配任务"""
     try:
         order_import_id = kwargs.get("order_import_id")
         logger.info(f"订单导入完成，触发利润分配，order_import_id={order_import_id}")
-        semaphore = threading.Semaphore(1)
+
         with semaphore:
             result = run_profit_allocation_with_tracking(int(order_import_id))
             logger.info(f"利润分配完成，order_import_id={order_import_id}, result={result}")

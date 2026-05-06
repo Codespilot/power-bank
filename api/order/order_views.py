@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
 from rest_framework import status
 from rest_framework.generics import ListAPIView
+from rest_framework.pagination import PageNumberPagination
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q
@@ -18,10 +19,16 @@ from .order_serializers import OrderSerializer, OrderImportSerializer
 logger = logging.getLogger(__name__)
 
 
+class OrderPageNumberPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "limit"
+
+
 class OrderListView(ListAPIView):
     """商户订单分页查询接口，支持关键字与日期范围筛选。"""
 
     serializer_class = OrderSerializer
+    pagination_class = OrderPageNumberPagination
 
     @extend_schema(
         summary="订单列表查询",
@@ -57,7 +64,7 @@ class OrderListView(ListAPIView):
             ),
             OpenApiParameter(
                 name="limit",
-                description="每页记录数，整数，默认20",
+                description="每页记录数，整数，默认10",
                 required=False,
                 type=int,
             ),

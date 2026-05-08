@@ -9,7 +9,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from api.exceptions import CredentialError
 from api.serializers import GenericResponseSerializer
-from ..views import BaseAPIView
+from ..views import BaseAPIView, handle_request
 
 from .wallet_serializers import (
     WalletInfoSerializer,
@@ -24,7 +24,7 @@ def _parse_int(value, default: int) -> int:
     try:
         parsed = int(str(value).strip())
         return parsed if parsed > 0 else default
-    except (TypeError, ValueError, AttributeError):
+    except TypeError, ValueError, AttributeError:
         return default
 
 
@@ -72,7 +72,7 @@ class WalletView(BaseAPIView):
             )
             return Response({**_serialize_wallet(wallet), "message": "查询成功"})
 
-        return self.invoke(_handle)
+        return handle_request(_handle)
 
 
 class WalletRecordListView(BaseAPIView):
@@ -98,6 +98,9 @@ class WalletRecordListView(BaseAPIView):
             OpenApiParameter(
                 name="to", description="结束日期 (YYYY-MM-DD)", required=False, type=str
             ),
+            OpenApiParameter(
+                name="type", description="流水类型（income、i、1: 收入, outgo、o、-1: 支出）", required=False, type=str
+            ),
         ],
         responses={
             200: GenericResponseSerializer[WalletRecordListResponseSerializer],
@@ -114,10 +117,26 @@ class WalletRecordListView(BaseAPIView):
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
 
-            qs = WalletRecord.objects.filter(user_id=user_id).order_by("-created_at", "-id")
+            qs = WalletRecord.objects.filter(user_id=user_id).order_by(
+                "-created_at", "-id"
+            )
 
             date_from = str(request.GET.get("from", "")).strip()
             date_to = str(request.GET.get("to", "")).strip()
+            type_str = request.GET.get("type").strip().lower() if request.GET.get("type") else None
+            match type_str:
+                case None | "":
+                    pass
+                case "i" | "1" | "income":
+                    qs = qs.filter(amount__gt=0)
+                case "-1" | "o" | "outgo":
+                    qs = qs.filter(amount__lt=0)
+                case _:
+                    return Response(
+                        {"count": 0, "results": [], "message": "无效的type参数"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
             try:
                 if date_from:
                     start_dt = timezone.make_aware(
@@ -166,4 +185,5 @@ class WalletRecordListView(BaseAPIView):
                     "message": "查询成功",
                 }
             )
-        return self.invoke(_handle)
+
+        return handle_request(_handle)

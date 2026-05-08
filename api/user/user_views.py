@@ -2,6 +2,7 @@ from decimal import Decimal
 import re
 from urllib.parse import urlparse
 
+from blinker import signal
 from rest_framework import generics, status
 from rest_framework.exceptions import NotFound
 from rest_framework.pagination import PageNumberPagination
@@ -12,6 +13,9 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema
 from django.db import transaction
 from django.db.models import Q, OuterRef, Subquery
 from django.utils import timezone
+
+from api.message import ResponseMessage
+from api.views import handle_request
 from ..models import AgentHistory, InviteCode, User, UserRole, Wallet
 from .user_serializers import (
     AgentAssignSerializer,
@@ -359,6 +363,9 @@ def _create_user_account(data, *, invite_code: str = ""):
                 int(locked_invite_record.register_count or 0) + 1
             )
             locked_invite_record.save(update_fields=["register_count"])
+
+        user_registered = signal("user_registered")
+        user_registered.send(None, user_id=user.id)
     return user
 
 
@@ -569,6 +576,7 @@ class RegisterAPIView(APIView):
         try:
             user = _create_user_account(request.data, invite_code=invite_code)
         except Exception as exc:
+
             return Response(
                 {"message": str(exc) or "注册失败"}, status=status.HTTP_400_BAD_REQUEST
             )
@@ -651,20 +659,17 @@ class UserAgentAssignView(APIView):
             )
 
         if superior_id == subordinate_id:
-            return Response(
-                {"message": "不能将自己设置为上级代理商"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response(ResponseMessage("不能将自己设置为上级代理商", 400).to_dict(), status=status.HTTP_400_BAD_REQUEST)
 
         if superior is None:
             superior = User.objects.filter(id=superior_id).first()
         subordinate = User.objects.filter(id=subordinate_id).first()
         if not superior or not subordinate:
-            return Response({"message": "用户不存在"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(ResponseMessage("用户不存在", 404).to_dict(), status=status.HTTP_404_NOT_FOUND)
 
         if _is_descendant_user(superior_id, subordinate_id):
             return Response(
-                {"message": "所选上级代理商不能是当前用户的下级代理商"},
+                ResponseMessage("所选上级代理商不能是当前用户的下级代理商", 400).to_dict(),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

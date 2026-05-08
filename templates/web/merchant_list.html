@@ -168,7 +168,7 @@
 			var data = obj.data;
 
 			if (obj.event === 'show-history') {
-				window.location.href = `/merchant/history/?merchant_id=${encodeURIComponent(data.id)}`;
+				window.location.href = `/merchant/history?merchant_id=${encodeURIComponent(data.id)}`;
 				return;
 			}
 

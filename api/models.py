@@ -558,9 +558,9 @@ class BankCard(BaseEntity):
     name = models.CharField(max_length=50, verbose_name="持卡人姓名")
     id_no = models.CharField(max_length=18, verbose_name="身份证号")
     mobile = models.CharField(max_length=20, null=True, blank=True, verbose_name="预留手机号")
-    card_photo = models.CharField(max_length=50, verbose_name="银行卡照片")
-    id_photo_badge = models.CharField(max_length=50, verbose_name="身份证国徽照片")
-    id_photo_face = models.CharField(max_length=50, verbose_name="身份证人像照片")
+    card_photo = models.CharField(max_length=50, null=True, blank=True, verbose_name="银行卡照片")
+    id_photo_badge = models.CharField(max_length=50, null=True, blank=True, verbose_name="身份证国徽照片")
+    id_photo_face = models.CharField(max_length=50, null=True, blank=True, verbose_name="身份证人像照片")
     is_default = models.BooleanField(default=False, verbose_name="是否默认")
     created_at = models.DateTimeField(default=timezone.now, verbose_name="创建时间")
 

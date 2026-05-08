@@ -9,10 +9,11 @@ from rest_framework import status
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 
+from api.message import ResponseMessage
 from utils.generate_snowflake_id import generate_snowflake_id
 
 from ..exceptions import CredentialError
-from ..serializers import GenericResponseSerializer
+from ..serializers import CommonResponseSerializer, GenericResponseSerializer
 from ..views import BaseAPIView
 from ..models import BankCard, Attachment, UserRole
 from ..auth import create_file_access_token
@@ -86,9 +87,9 @@ def _serialize_bankcard(card, include_file_names: bool = False) -> dict:
         "created_at": BaseAPIView.format_datetime(card.created_at),
     }
     if include_file_names:
-        data["card_photo"] = card.card_photo
-        data["id_photo_badge"] = card.id_photo_badge
-        data["id_photo_face"] = card.id_photo_face
+        data["card_photo"] = card.card_photo or ""
+        data["id_photo_badge"] = card.id_photo_badge or ""
+        data["id_photo_face"] = card.id_photo_face or ""
     return data
 
 
@@ -150,7 +151,7 @@ class BankCardListView(BaseAPIView):
         summary="新增银行卡",
         description="新增银行卡信息。银行卡号不能重复。",
         request=BankCardCreateRequestSerializer,
-        responses={200: dict, 400: dict},
+        responses={200: CommonResponseSerializer, 400: CommonResponseSerializer},
     )
     def post(self, request):
         def _handle():
@@ -178,21 +179,24 @@ class BankCardListView(BaseAPIView):
                 raise ValueError("持卡人姓名不能为空")
             if not id_no:
                 raise ValueError("身份证号不能为空")
-            if not card_photo:
-                raise ValueError("银行卡照片不能为空")
-            if not id_photo_badge:
-                raise ValueError("身份证国徽照片不能为空")
-            if not id_photo_face:
-                raise ValueError("身份证人像照片不能为空")
 
             # 校验银行卡号唯一
             if BankCard.objects.filter(card_no=card_no).exists():
                 raise ValueError("银行卡号已存在")
 
-            # 校验附件是否存在
-            for fname in [card_photo, id_photo_badge, id_photo_face]:
-                if not Attachment.objects.filter(file_name=fname).exists():
+            # 校验附件是否存在（仅当提供了值）
+            photo_fields = {
+                "card_photo": card_photo,
+                "id_photo_badge": id_photo_badge,
+                "id_photo_face": id_photo_face,
+            }
+            for fname in photo_fields.values():
+                if fname and not Attachment.objects.filter(file_name=fname).exists():
                     raise ValueError(f"附件「{fname}」不存在")
+
+            # 空字符串转为None，以便数据库存储NULL
+            def _blank_to_none(v):
+                return v if v else None
 
             with transaction.atomic():
                 card = BankCard.objects.create(
@@ -202,9 +206,9 @@ class BankCardListView(BaseAPIView):
                     name=name,
                     id_no=id_no,
                     mobile=mobile,
-                    card_photo=card_photo,
-                    id_photo_badge=id_photo_badge,
-                    id_photo_face=id_photo_face,
+                    card_photo=_blank_to_none(card_photo),
+                    id_photo_badge=_blank_to_none(id_photo_badge),
+                    id_photo_face=_blank_to_none(id_photo_face),
                     is_default=is_default,
                 )
 
@@ -232,10 +236,10 @@ class BankCardDetailView(BaseAPIView):
             try:
                 card = BankCard.objects.get(id=id)
             except BankCard.DoesNotExist:
-                return Response({"message": "银行卡不存在"}, status=status.HTTP_404_NOT_FOUND)
+                return Response(ResponseMessage("银行卡不存在", status.HTTP_404_NOT_FOUND), status=status.HTTP_404_NOT_FOUND)
 
             if not is_admin and int(card.user_id) != int(current_user_id):
-                return Response({"message": "无权限查看"}, status=status.HTTP_403_FORBIDDEN)
+                return Response(ResponseMessage("无权限查看", status.HTTP_403_FORBIDDEN), status=status.HTTP_403_FORBIDDEN)
 
             return Response({**_serialize_bankcard(card, include_file_names=True), "message": "查询成功"})
 
@@ -246,7 +250,7 @@ class BankCardDetailView(BaseAPIView):
         summary="编辑银行卡",
         description="修改银行卡信息。非管理员只能修改自己的银行卡。",
         request=BankCardUpdateRequestSerializer,
-        responses={200: dict, 400: dict, 404: dict},
+        responses={200: CommonResponseSerializer, 400: CommonResponseSerializer, 404: CommonResponseSerializer, 403: CommonResponseSerializer},
     )
     def post(self, request, id):
         def _handle():
@@ -300,7 +304,7 @@ class BankCardDetailView(BaseAPIView):
                 card.is_default = is_default
 
             card.save()
-            return Response({"message": "修改成功"})
+            return Response(ResponseMessage("修改成功"))
 
         return self.invoke(_handle)
 
@@ -308,7 +312,7 @@ class BankCardDetailView(BaseAPIView):
         tags=["bankcards"],
         summary="删除银行卡",
         description="删除指定银行卡。非管理员只能删除自己的银行卡。",
-        responses={200: dict, 404: dict},
+        responses={200: CommonResponseSerializer, 404: CommonResponseSerializer, 403: CommonResponseSerializer},
     )
     def delete(self, request, id):
         def _handle():
@@ -317,13 +321,13 @@ class BankCardDetailView(BaseAPIView):
             try:
                 card = BankCard.objects.get(id=id)
             except BankCard.DoesNotExist:
-                return Response({"message": "银行卡不存在"}, status=status.HTTP_404_NOT_FOUND)
+                return Response(ResponseMessage("银行卡不存在", status.HTTP_404_NOT_FOUND), status=status.HTTP_404_NOT_FOUND)
 
             if not is_admin and int(card.user_id) != int(current_user_id):
-                return Response({"message": "无权限删除"}, status=status.HTTP_403_FORBIDDEN)
+                return Response(ResponseMessage("无权限删除", status.HTTP_403_FORBIDDEN), status=status.HTTP_403_FORBIDDEN)
 
             card.delete()
-            return Response({"message": "删除成功"})
+            return Response(ResponseMessage("删除成功"))
 
         return self.invoke(_handle)
 

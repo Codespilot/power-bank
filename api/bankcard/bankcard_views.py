@@ -304,7 +304,7 @@ class BankCardDetailView(BaseAPIView):
                 card.is_default = is_default
 
             card.save()
-            return Response(ResponseMessage("修改成功"))
+            return Response(ResponseMessage("修改成功").to_dict())
 
         return self.invoke(_handle)
 
@@ -327,7 +327,7 @@ class BankCardDetailView(BaseAPIView):
                 return Response(ResponseMessage("无权限删除", status.HTTP_403_FORBIDDEN), status=status.HTTP_403_FORBIDDEN)
 
             card.delete()
-            return Response(ResponseMessage("删除成功"))
+            return Response(ResponseMessage("删除成功").to_dict())
 
         return self.invoke(_handle)
 

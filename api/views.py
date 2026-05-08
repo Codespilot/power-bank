@@ -25,6 +25,7 @@ class HealthCheckView(APIView):
     def get(self, request):
         return Response({"status": "ok", "service": "power-bank-api"})
 
+
 class BaseAPIView(APIView):
     """API 基类，提供一些通用方法和属性，供其他 API 视图继承使用。"""
 
@@ -36,7 +37,7 @@ class BaseAPIView(APIView):
 
     def invoke(self, func: callable = None, *args, **kwargs) -> Response:
         try:
-            return func(*args, **kwargs) if func else self.build_common_response()
+            return func(*args, **kwargs)
         except (InvalidOperation, TypeError, ValueError) as ve:
             logger.error(f"Error occurred: {ve}", exc_info=True)
             return Response(
@@ -96,3 +97,32 @@ class BaseAPIView(APIView):
     @classmethod
     def format_amount(cls, value) -> str:
         return format(cls.quantize_amount(value), "f")
+
+
+def handle_request(func: callable = None, *args, **kwargs) -> Response:
+    try:
+        return func(*args, **kwargs)
+    except (InvalidOperation, TypeError, ValueError) as ve:
+        logger.error(f"Error occurred: {ve}", exc_info=True)
+        return Response(
+            ResponseMessage(str(ve), 400).to_dict(),
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    except PermissionError as pe:
+        logger.error(f"Permission error: {pe}", exc_info=True)
+        return Response(
+            ResponseMessage(str(pe), 403).to_dict(),
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    except CredentialError as ce:
+        logger.error(f"Credential error: {ce}", exc_info=True)
+        return Response(
+            ResponseMessage(str(ce), 401).to_dict(),
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}", exc_info=True)
+        return Response(
+            ResponseMessage(str(e), 500).to_dict(),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )

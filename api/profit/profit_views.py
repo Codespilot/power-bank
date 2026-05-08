@@ -75,6 +75,7 @@ class ProfitListView(APIView):
         summary="分润记录查询",
         description="分润记录分页查询接口，支持多维度筛选。",
         parameters=[
+            OpenApiParameter("agent_id", int, "query", False, "代理商ID，整数"),
             OpenApiParameter("keyword", str, "query", False, "搜索关键词，匹配代理商的用户名、姓名、手机号、邮箱"),
             OpenApiParameter("date_start", str, "query", False, "结算开始日期，格式 YYYY-MM-DD"),
             OpenApiParameter("date_end", str, "query", False, "结算结束日期，格式 YYYY-MM-DD"),
@@ -97,6 +98,7 @@ class ProfitListView(APIView):
         keyword = str(request.GET.get("keyword", "")).strip()
         date_start = str(request.GET.get("date_start", "")).strip()
         date_end = str(request.GET.get("date_end", "")).strip()
+        agent_id_str = request.GET.get("agent_id")
 
         page = _parse_int(request.GET.get("page", 1), 1)
         if page <= 0:
@@ -114,6 +116,10 @@ class ProfitListView(APIView):
         if not is_admin:
             where_clauses.append("pa.user_id = %s")
             params.append(int(current_user_id))
+
+        if agent_id_str:
+            where_clauses.append("pa.user_id = %s")
+            params.append(int(agent_id_str))
 
         if keyword:
             if FULL_PHONE_REGEX.fullmatch(keyword):

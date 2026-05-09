@@ -179,3 +179,6 @@ class TokenGrantSerializer(serializers.Serializer):
 class UserPasswordChangeRequestSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True, write_only=True)
     new_password = serializers.CharField(required=True, write_only=True)
+
+class UserAgentRateChangeRequestSerializer(serializers.Serializer):
+    rate = serializers.DecimalField(required=True, help_text="新的代理分润比例，格式为小数，例如0.05表示5%", max_digits=5, decimal_places=2)

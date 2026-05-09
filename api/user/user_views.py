@@ -25,6 +25,7 @@ from .user_serializers import (
     TokenGrantResponseSerializer,
     TokenGrantSerializer,
     TokenRefreshSerializer,
+    UserAgentRateChangeRequestSerializer,
     UserCreateSerializer,
     UserDetailSerializer,
     UserListSerializer,
@@ -764,3 +765,33 @@ class UserPasswordChangeView(APIView):
         user.password_salt = password_salt_value
         user.save(update_fields=["password_hash", "password_salt"])
         return Response({"message": "密码修改成功"})
+
+class UserAgentRateChangeView(APIView):
+    @extend_schema(
+        tags=["users"],
+        summary="修改用户代理分润比例",
+        request=UserAgentRateChangeRequestSerializer,
+        responses={
+            200: MessageSerializer,
+            400: MessageSerializer,
+            404: MessageSerializer,
+        },
+    )
+    def put(self, request, id):
+        try:
+            rate = _parse_agent_rate(request.data.get("rate", request.data.get("agent_rate", "0")))
+        except (TypeError, ValueError, AttributeError) as exc:
+            return Response(
+                {"message": str(exc) or "参数错误"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = User.objects.filter(id=id).first()
+        if not user:
+            return Response({"message": "用户不存在"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not user.agent:
+            return Response({"message": "该用户没有上级代理商"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.agent_rate = rate
+        user.save(update_fields=["agent_rate"])
+        return Response({"message": "代理分润比例修改成功"})

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .user_views import UserAgentAssignView, LoginAPIView, RegisterAPIView, TokenGrantView, TokenRefreshView, UserListView, UserCreateView, UserDetailView, UserPasswordChangeView, UserPasswordResetView
+from .user_views import UserAgentAssignView, LoginAPIView, RegisterAPIView, TokenGrantView, TokenRefreshView, UserAgentRateChangeView, UserListView, UserCreateView, UserDetailView, UserPasswordChangeView, UserPasswordResetView
 
 user_urlpatterns = [
     path("users/login", LoginAPIView.as_view(), name="api-auth-login"),
@@ -12,4 +12,5 @@ user_urlpatterns = [
     path("users/<int:id>/reset-password", UserPasswordResetView.as_view(), name="api-users-reset-password"),
     path("users/agent", UserAgentAssignView.as_view(), name="api-agent"),
     path("users/change-password", UserPasswordChangeView.as_view(), name="api-profile-change-password"),
+    path("users/<int:id>/rate", UserAgentRateChangeView.as_view(), name="api-users-change-rate"),
 ]

@@ -41,6 +41,7 @@ from ..auth import (
     create_access_token,
     create_refresh_token,
     decode_jwt,
+    get_current_user,
     get_request_user_id,
     get_user_by_identifier,
     hash_password,
@@ -778,6 +779,7 @@ class UserAgentRateChangeView(APIView):
         },
     )
     def put(self, request, id):
+        current_user_id, is_admin = get_current_user(request)
         try:
             rate = _parse_agent_rate(request.data.get("rate", request.data.get("agent_rate", "0")))
             if rate < 0 or rate > Decimal("1.00"):
@@ -793,7 +795,7 @@ class UserAgentRateChangeView(APIView):
 
         if not user.agent:
             return Response({"message": "该用户没有上级代理商"}, status=status.HTTP_400_BAD_REQUEST)
-        if user.agent.id != user.id:
+        if user.agent.id != current_user_id:
             return Response({"message": "只能修改直属下级的代理分润比例"}, status=status.HTTP_403_FORBIDDEN)
 
         user.agent_rate = rate

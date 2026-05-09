@@ -780,6 +780,8 @@ class UserAgentRateChangeView(APIView):
     def put(self, request, id):
         try:
             rate = _parse_agent_rate(request.data.get("rate", request.data.get("agent_rate", "0")))
+            if rate < 0 or rate > Decimal("1.00"):
+                raise ValueError("分润比例必须在0到1之间")
         except (TypeError, ValueError, AttributeError) as exc:
             return Response(
                 {"message": str(exc) or "参数错误"}, status=status.HTTP_400_BAD_REQUEST
@@ -791,6 +793,8 @@ class UserAgentRateChangeView(APIView):
 
         if not user.agent:
             return Response({"message": "该用户没有上级代理商"}, status=status.HTTP_400_BAD_REQUEST)
+        if user.agent.id != user.id:
+            return Response({"message": "只能修改直属下级的代理分润比例"}, status=status.HTTP_403_FORBIDDEN)
 
         user.agent_rate = rate
         user.save(update_fields=["agent_rate"])

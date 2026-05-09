@@ -71,7 +71,7 @@ ASGI_APPLICATION = "config.asgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "mysql.connector.django",
+        "ENGINE": "django.db.backends.mysql",
         "NAME": os.getenv("MYSQL_DATABASE", "power_bank"),
         "USER": os.getenv("MYSQL_USER", "root"),
         "PASSWORD": os.getenv("MYSQL_PASSWORD", "password"),

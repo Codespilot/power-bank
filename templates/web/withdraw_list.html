@@ -167,16 +167,13 @@
 				{
 					field: 'bank_card_no', title: '收款卡', minWidth: 180,
 					templet: function (d) {
-						if (d.payment_method === 'card') {
-							return (d.bank_card_holder || '--') + ' ' + (d.bank_card_no || '--');
-						}
-						return '--';
+						return (d.bank_card_holder || '--') + '/' + (d.bank_card_no || '--');
 					}
 				},
 				{
 					field: 'receiving_qr_code', title: '收款码', width: 100,
 					templet: function (d) {
-						if (d.payment_method === 'qr' && d.receiving_qr_code_url) {
+						if (d.receiving_qr_code_url) {
 							return '<a class="layui-btn layui-btn-primary layui-btn-xs" onclick="previewQrCode(\'' + d.receiving_qr_code_url + '\')">查看</a>';
 						}
 						return '--';

@@ -363,6 +363,20 @@ class WithdrawView(APIView):
                     created_at=timezone.now(),
                 )
 
+                # 新规范：提现申请保存成功后即生成流水记录
+                WalletRecord.objects.create(
+                    id=generate_snowflake_id(),
+                    user_id=current_user_id,
+                    amount=-_quantize_amount(amount),
+                    before_amount=before_amount,
+                    after_amount=after_amount,
+                    outer_type=WalletRecord.OUTER_TYPE_WITHDRAW,
+                    outer_id=withdraw.id,
+                    is_valid=True,
+                    remark="提现申请，资金冻结",
+                    created_at=timezone.now(),
+                )
+
             refreshed_wallet = Wallet.objects.get(id=current_user_id)
             return Response(
                 {
@@ -437,7 +451,6 @@ class WithdrawApproveView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            before_amount = _quantize_amount(wallet.total_amount)
             wallet.frozen_amount = _quantize_amount(
                 wallet.frozen_amount - withdraw.amount
             )
@@ -452,16 +465,6 @@ class WithdrawApproveView(APIView):
             withdraw.audit_remark = "同意"
             withdraw.save(
                 update_fields=["status", "audit_user", "audit_time", "audit_remark"]
-            )
-
-            WalletRecord.objects.create(
-                id=generate_snowflake_id(),
-                user_id=withdraw.user_id,
-                amount=-_quantize_amount(withdraw.amount),
-                before_amount=before_amount,
-                after_amount=_quantize_amount(wallet.total_amount),
-                remark="提现审批通过",
-                created_at=timezone.now(),
             )
 
         return Response(ResponseMessage("审批通过成功", 200).to_dict())
@@ -557,6 +560,12 @@ class WithdrawRejectView(APIView):
                 update_fields=["status", "audit_user", "audit_time", "audit_remark"]
             )
 
+            # 将对应的流水记录标记为无效，并填写备注
+            WalletRecord.objects.filter(
+                outer_type=WalletRecord.OUTER_TYPE_WITHDRAW,
+                outer_id=withdraw.id,
+            ).update(is_valid=False, remark=f"提现申请被拒绝: {audit_remark[:200]}")
+
         return Response(ResponseMessage("审批拒绝成功", 200).to_dict())
 
 
@@ -639,5 +648,11 @@ class WithdrawCancelView(APIView):
             withdraw.audit_time = timezone.now()
             withdraw.audit_remark = "用户作废"
             withdraw.save(update_fields=["status", "audit_time", "audit_remark"])
+
+            # 将对应的流水记录标记为无效，并填写备注
+            WalletRecord.objects.filter(
+                outer_type=WalletRecord.OUTER_TYPE_WITHDRAW,
+                outer_id=withdraw.id,
+            ).update(is_valid=False, remark="提现申请已作废")
 
         return Response(ResponseMessage("作废成功", 200).to_dict())

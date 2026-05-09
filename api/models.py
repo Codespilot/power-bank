@@ -323,12 +323,23 @@ class WalletRecord(BaseEntity):
     """钱包流水记录。
 
     before_amount 和 after_amount 记录的是本次变动前后的可用金额。
+    outer_type: 外部数据类型，1-提现
+    outer_id: 外部数据ID
+    is_valid: 是否有效（提现审核拒绝或作废时为False）
     """
+    OUTER_TYPE_WITHDRAW = 1
+    OUTER_TYPE_CHOICES = (
+        (OUTER_TYPE_WITHDRAW, "提现"),
+    )
+
     id = models.BigIntegerField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="wallet_records")
     amount = models.DecimalField(max_digits=18, decimal_places=2)
     before_amount = models.DecimalField(max_digits=18, decimal_places=2)
     after_amount = models.DecimalField(max_digits=18, decimal_places=2)
+    outer_type = models.IntegerField(null=True, blank=True, verbose_name="外部数据类型")
+    outer_id = models.BigIntegerField(null=True, blank=True, verbose_name="外部ID")
+    is_valid = models.BooleanField(default=True, verbose_name="是否有效")
     remark = models.CharField(max_length=500, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 

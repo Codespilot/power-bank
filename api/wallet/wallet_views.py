@@ -172,6 +172,11 @@ class WalletRecordListView(BaseAPIView):
                     "after_amount": self.format_amount(item.after_amount),
                     "remark": item.remark or "--",
                     "created_at": self.format_datetime(item.created_at),
+                    "type": "income" if item.amount > 0 else "outgo",
+                    "is_valid": item.is_valid,
+                    "outer_type": item.outer_type,
+                    "outer_id": str(item.outer_id) if item.outer_id else None,
+                    "is_valid_text": "有效" if item.is_valid else "无效",
                 }
                 for item in records
             ]

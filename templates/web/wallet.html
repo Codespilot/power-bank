@@ -4,110 +4,112 @@
 
 {% block content %}
 <style>
-    .wallet-overview {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-    }
+	.wallet-overview {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 16px;
+	}
 
-    .wallet-stat {
-        background: linear-gradient(135deg, #f8fbff, #eef4ff);
-        border: 1px solid #e4edff;
-        border-radius: 12px;
-        padding: 18px 20px;
-    }
+	.wallet-stat {
+		background: linear-gradient(135deg, #f8fbff, #eef4ff);
+		border: 1px solid #e4edff;
+		border-radius: 12px;
+		padding: 18px 20px;
+	}
 
-    .wallet-stat-label {
-        color: #6b7280;
-        font-size: 14px;
-        margin-bottom: 10px;
-    }
+	.wallet-stat-label {
+		color: #6b7280;
+		font-size: 14px;
+		margin-bottom: 10px;
+	}
 
-    .wallet-stat-value {
-        color: #1d4ed8;
-        font-size: 28px;
-        font-weight: 700;
-    }
+	.wallet-stat-value {
+		color: #1d4ed8;
+		font-size: 28px;
+		font-weight: 700;
+	}
 
-    .wallet-action-box {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        border: 1px dashed #c9d8ff;
-        border-radius: 12px;
-        padding: 18px 20px;
-        background: #fcfdff;
-        gap: 11px;
-    }
+	.wallet-action-box {
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		border: 1px dashed #c9d8ff;
+		border-radius: 12px;
+		padding: 18px 20px;
+		background: #fcfdff;
+		gap: 11px;
+	}
 
-    .wallet-action-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: nowrap;
-    }
+	.wallet-action-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: nowrap;
+	}
 
-    .wallet-action-row .layui-btn {
-        margin: 0 !important;
-        white-space: nowrap;
-    }
+	.wallet-action-row .layui-btn {
+		margin: 0 !important;
+		white-space: nowrap;
+	}
 
-    .wallet-action-desc {
-        color: #6b7280;
-        margin: 8px 0 16px;
-        line-height: 1.8;
-    }
+	.wallet-action-desc {
+		color: #6b7280;
+		margin: 8px 0 16px;
+		line-height: 1.8;
+	}
 </style>
 
 <div class="layui-row layui-col-space16">
-    <div class="layui-col-md8">
-        <div class="wallet-overview">
-            <div class="wallet-stat">
-                <div class="wallet-stat-label">总金额</div>
-                <div class="wallet-stat-value" id="wallet-total-amount">0.00</div>
-            </div>
-            <div class="wallet-stat">
-                <div class="wallet-stat-label">冻结金额</div>
-                <div class="wallet-stat-value" id="wallet-frozen-amount">0.00</div>
-            </div>
-            <div class="wallet-stat">
-                <div class="wallet-stat-label">可用金额</div>
-                <div class="wallet-stat-value" id="wallet-available-amount">0.00</div>
-            </div>
-        </div>
-    </div>
-    <div class="layui-col-md4">
-        <div class="wallet-action-box">
-            <h3>提现申请</h3>
-            <div class="wallet-action-row">
-                <button type="button" class="layui-btn layui-btn-normal" id="wallet-withdraw-btn">立即提现</button>
-                <a href="/withdraw" class="layui-btn layui-btn-primary layui-border">查看申请记录</a>
-            </div>
-        </div>
-    </div>
+	<div class="layui-col-md8">
+		<div class="wallet-overview">
+			<div class="wallet-stat">
+				<div class="wallet-stat-label">总金额</div>
+				<div class="wallet-stat-value" id="wallet-total-amount">0.00</div>
+			</div>
+			<div class="wallet-stat">
+				<div class="wallet-stat-label">冻结金额</div>
+				<div class="wallet-stat-value" id="wallet-frozen-amount">0.00</div>
+			</div>
+			<div class="wallet-stat">
+				<div class="wallet-stat-label">可用金额</div>
+				<div class="wallet-stat-value" id="wallet-available-amount">0.00</div>
+			</div>
+		</div>
+	</div>
+	<div class="layui-col-md4">
+		<div class="wallet-action-box">
+			<h3>提现申请</h3>
+			<div class="wallet-action-row">
+				<button type="button" class="layui-btn layui-btn-normal" id="wallet-withdraw-btn">立即提现</button>
+				<a href="/withdraw" class="layui-btn layui-btn-primary layui-border">查看申请记录</a>
+			</div>
+		</div>
+	</div>
 </div>
 
 <form class="layui-form layui-row layui-col-space16" style="margin-top: 18px;">
-    <div class="layui-col-md5">
-        <div class="layui-form-item">
-            <div class="layui-inline">
-                <label class="layui-form-label" style="width: 90px;">流水日期</label>
-                <div class="layui-inline" id="wallet-date-range">
-                    <div class="layui-input-inline">
-                        <input type="text" id="wallet-date-start" class="layui-input" placeholder="开始日期" autocomplete="off">
-                    </div>
-                    <div class="layui-form-mid">-</div>
-                    <div class="layui-input-inline">
-                        <input type="text" id="wallet-date-end" class="layui-input" placeholder="结束日期" autocomplete="off">
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="layui-col-md2 layui-col-md-offset5" style="text-align: right;">
-        <button type="button" class="layui-btn layui-btn-primary" id="wallet-search-btn">查询</button>
-    </div>
+	<div class="layui-col-md5">
+		<div class="layui-form-item">
+			<div class="layui-inline">
+				<label class="layui-form-label" style="width: 90px;">流水日期</label>
+				<div class="layui-inline" id="wallet-date-range">
+					<div class="layui-input-inline">
+						<input type="text" id="wallet-date-start" class="layui-input" placeholder="开始日期"
+							autocomplete="off">
+					</div>
+					<div class="layui-form-mid">-</div>
+					<div class="layui-input-inline">
+						<input type="text" id="wallet-date-end" class="layui-input" placeholder="结束日期"
+							autocomplete="off">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="layui-col-md2 layui-col-md-offset5" style="text-align: right;">
+		<button type="button" class="layui-btn layui-btn-primary" id="wallet-search-btn">查询</button>
+	</div>
 </form>
 
 <table class="layui-hide" id="wallet-record-list"></table>
@@ -115,235 +117,244 @@
 
 {% block extra_js %}
 <script>
-    layui.use(function () {
-        var table = layui.table;
-        var laydate = layui.laydate;
-        var layer = layui.layer;
-        var form = layui.form;
-        var currentWallet = {
-            total_amount: '0.00',
-            frozen_amount: '0.00',
-            available_amount: '0.00'
-        };
+	layui.use(function () {
+		var table = layui.table;
+		var laydate = layui.laydate;
+		var layer = layui.layer;
+		var form = layui.form;
+		var currentWallet = {
+			total_amount: '0.00',
+			frozen_amount: '0.00',
+			available_amount: '0.00'
+		};
 
-        function setText(id, value) {
-            document.getElementById(id).textContent = value || '0.00';
-        }
+		function setText(id, value) {
+			document.getElementById(id).textContent = value || '0.00';
+		}
 
-        function loadWallet() {
-            fetch('/api/wallet')
-                .then(function (response) { return response.json(); })
-                .then(function (res) {
-                    if (res.message !== '查询成功') {
-                        layer.msg(res.message || '钱包信息加载失败', { icon: 5 });
-                        return;
-                    }
-                    currentWallet = res;
-                    setText('wallet-total-amount', res.total_amount);
-                    setText('wallet-frozen-amount', res.frozen_amount);
-                    setText('wallet-available-amount', res.available_amount);
-                });
-        }
+		function loadWallet() {
+			fetch('/api/wallet')
+				.then(function (response) { return response.json(); })
+				.then(function (res) {
+					if (res.message !== '查询成功') {
+						layer.msg(res.message || '钱包信息加载失败', { icon: 5 });
+						return;
+					}
+					currentWallet = res;
+					setText('wallet-total-amount', res.total_amount);
+					setText('wallet-frozen-amount', res.frozen_amount);
+					setText('wallet-available-amount', res.available_amount);
+				});
+		}
 
-        laydate.render({
-            elem: '#wallet-date-range',
-            range: ['#wallet-date-start', '#wallet-date-end'],
-            rangeLinked: true
-        });
+		laydate.render({
+			elem: '#wallet-date-range',
+			range: ['#wallet-date-start', '#wallet-date-end'],
+			rangeLinked: true
+		});
 
-        table.render({
-            elem: '#wallet-record-list',
-            id: 'walletRecordTable',
-            url: '/api/wallet/record',
-            response: { statusCode: 200 },
-            parseData: function (res) {
-                return {
-                    code: 200,
-                    msg: res.message || '',
-                    count: res.count || 0,
-                    data: res.results || []
-                };
-            },
-            cols: [[
-                { field: 'created_at', title: '时间', width: 180 },
-                {
-                    field: 'amount',
-                    title: '金额',
-                    width: 120,
-                    templet: function (d) {
-                        var color = Number(d.amount) < 0 ? '#e74c3c' : '#16a34a';
-                        return '<span style="color:' + color + ';font-weight:600;">' + d.amount + '</span>';
-                    }
-                },
-                { field: 'before_amount', title: '变动前金额', width: 140 },
-                { field: 'after_amount', title: '变动后金额', width: 140 },
-                { field: 'remark', title: '备注', minWidth: 260 }
-            ]],
-            page: true,
-            limit: 10,
-            limits: [10, 20, 50, 100],
-            height: 'full-420'
-        });
+		table.render({
+			elem: '#wallet-record-list',
+			id: 'walletRecordTable',
+			url: '/api/wallet/record',
+			response: { statusCode: 200 },
+			parseData: function (res) {
+				return {
+					code: 200,
+					msg: res.message || '',
+					count: res.count || 0,
+					data: res.results || []
+				};
+			},
+			cols: [[
+				{ field: 'created_at', title: '时间', width: 180 },
+				{
+					field: 'amount',
+					title: '金额',
+					width: 120,
+					templet: function (d) {
+						var color = Number(d.amount) < 0 ? '#e74c3c' : '#16a34a';
+						return '<span style="color:' + color + ';font-weight:600;">' + d.amount + '</span>';
+					}
+				},
+				{ field: 'before_amount', title: '变动前金额', width: 140 },
+				{ field: 'after_amount', title: '变动后金额', width: 140 },
+				{ field: 'remark', title: '备注', minWidth: 260 },
+				{
+					field: 'is_valid_text',
+					title: '状态',
+					 width: 80,
+					templet: function (d) {
+						var color = d.is_valid ? '#16a34a' : '#e74c3c';
+						return '<span style="color:' + color + ';font-weight:600;">' + d.is_valid_text + '</span>';
+					}
+				}
+			]],
+			page: true,
+			limit: 10,
+			limits: [10, 20, 50, 100],
+			height: 'full-420'
+		});
 
-        document.getElementById('wallet-search-btn').addEventListener('click', function () {
-            table.reload('walletRecordTable', {
-                page: { curr: 1 },
-                where: {
-                    from: document.getElementById('wallet-date-start').value,
-                    to: document.getElementById('wallet-date-end').value
-                }
-            });
-        });
+		document.getElementById('wallet-search-btn').addEventListener('click', function () {
+			table.reload('walletRecordTable', {
+				page: { curr: 1 },
+				where: {
+					from: document.getElementById('wallet-date-start').value,
+					to: document.getElementById('wallet-date-end').value
+				}
+			});
+		});
 
-        function loadBankCards(selectId) {
-            fetch('/api/bankcards/lookup')
-                .then(function (response) { return response.json(); })
-                .then(function (res) {
-                    var select = document.getElementById(selectId);
-                    if (!select) return;
-                    select.innerHTML = '<option value="">请选择银行卡</option>';
-                    if (res.results) {
-                        res.results.forEach(function (card) {
-                            var opt = document.createElement('option');
-                            opt.value = card.id;
-                            opt.textContent = card.name + '（' + card.card_no + '）';
-                            select.appendChild(opt);
-                        });
-                    }
-                    form.render('select');
-                });
-        }
+		function loadBankCards(selectId) {
+			fetch('/api/bankcards/lookup')
+				.then(function (response) { return response.json(); })
+				.then(function (res) {
+					var select = document.getElementById(selectId);
+					if (!select) return;
+					select.innerHTML = '<option value="">请选择银行卡</option>';
+					if (res.results) {
+						res.results.forEach(function (card) {
+							var opt = document.createElement('option');
+							opt.value = card.id;
+							opt.textContent = card.name + '（' + card.card_no + '）';
+							select.appendChild(opt);
+						});
+					}
+					form.render('select');
+				});
+		}
 
-        document.getElementById('wallet-withdraw-btn').addEventListener('click', function () {
-            var maxAmount = Number(currentWallet.available_amount || 0);
-            if (maxAmount < 0.01) {
-                layer.msg('当前可用金额不足，暂不能提现', { icon: 5 });
-                return;
-            }
+		document.getElementById('wallet-withdraw-btn').addEventListener('click', function () {
+			var maxAmount = Number(currentWallet.available_amount || 0);
+			if (maxAmount < 0.01) {
+				layer.msg('当前可用金额不足，暂不能提现', { icon: 5 });
+				return;
+			}
 
-            layer.open({
-                type: 1,
-                title: '提现申请',
-                area: ['480px', 'auto'],
-                content: '' +
-                    '<div class="layui-form" style="padding:20px 24px;">' +
-                    '  <div class="layui-form-item">' +
-                    '    <label class="layui-form-label">收款银行卡</label>' +
-                    '    <div class="layui-input-block">' +
-                    '      <select id="withdraw-bankcard-select">' +
-                    '        <option value="">请选择银行卡（可选）</option>' +
-                    '      </select>' +
-                    '    </div>' +
-                    '  </div>' +
-                    '  <div class="layui-form-item">' +
-                    '    <label class="layui-form-label">收款码</label>' +
-                    '    <div class="layui-input-block">' +
-                    '      <button type="button" class="layui-btn layui-btn-primary" id="withdraw-upload-qrcode-btn">选择收款码图片（可选）</button>' +
-                    '      <input type="hidden" id="withdraw-qrcode-filename" value="">' +
-                    '      <div id="withdraw-qrcode-preview" style="margin-top:8px;"></div>' +
-                    '    </div>' +
-                    '  </div>' +
-                    '  <div class="layui-form-item">' +
-                    '    <label class="layui-form-label">提现金额</label>' +
-                    '    <div class="layui-input-block">' +
-                    '      <input id="withdraw-amount-input" type="text" lay-affix="number" min="1" max="' + maxAmount.toFixed(2) + '" autocomplete="off" class="layui-input" placeholder="请输入提现金额，例如12.34">' +
-                    '      <div style="color:#999;margin-top:4px;font-size:12px;">最小1元，当前可提现：' + maxAmount.toFixed(2) + '元</div>' +
-                    '    </div>' +
-                    '  </div>' +
-                    '</div>',
-                success: function () {
-                    loadBankCards('withdraw-bankcard-select');
-                    form.render();
+			layer.open({
+				type: 1,
+				title: '提现申请',
+				area: ['480px', 'auto'],
+				content: '' +
+					'<div class="layui-form" style="padding:20px 24px;">' +
+					'  <div class="layui-form-item">' +
+					'    <label class="layui-form-label">收款银行卡</label>' +
+					'    <div class="layui-input-block">' +
+					'      <select id="withdraw-bankcard-select">' +
+					'        <option value="">请选择银行卡（可选）</option>' +
+					'      </select>' +
+					'    </div>' +
+					'  </div>' +
+					'  <div class="layui-form-item">' +
+					'    <label class="layui-form-label">收款码</label>' +
+					'    <div class="layui-input-block">' +
+					'      <button type="button" class="layui-btn layui-btn-primary" id="withdraw-upload-qrcode-btn">选择收款码图片（可选）</button>' +
+					'      <input type="hidden" id="withdraw-qrcode-filename" value="">' +
+					'      <div id="withdraw-qrcode-preview" style="margin-top:8px;"></div>' +
+					'    </div>' +
+					'  </div>' +
+					'  <div class="layui-form-item">' +
+					'    <label class="layui-form-label">提现金额</label>' +
+					'    <div class="layui-input-block">' +
+					'      <input id="withdraw-amount-input" type="text" lay-affix="number" min="1" max="' + maxAmount.toFixed(2) + '" autocomplete="off" class="layui-input" placeholder="请输入提现金额，例如12.34">' +
+					'      <div style="color:#999;margin-top:4px;font-size:12px;">最小1元，当前可提现：' + maxAmount.toFixed(2) + '元</div>' +
+					'    </div>' +
+					'  </div>' +
+					'</div>',
+				success: function () {
+					loadBankCards('withdraw-bankcard-select');
+					form.render();
 
-                    // 上传收款码
-                    var fileInput = document.createElement('input');
-                    fileInput.type = 'file';
-                    fileInput.accept = 'image/*';
-                    fileInput.style.display = 'none';
-                    document.body.appendChild(fileInput);
+					// 上传收款码
+					var fileInput = document.createElement('input');
+					fileInput.type = 'file';
+					fileInput.accept = 'image/*';
+					fileInput.style.display = 'none';
+					document.body.appendChild(fileInput);
 
-                    document.getElementById('withdraw-upload-qrcode-btn').addEventListener('click', function () {
-                        fileInput.click();
-                    });
+					document.getElementById('withdraw-upload-qrcode-btn').addEventListener('click', function () {
+						fileInput.click();
+					});
 
-                    fileInput.addEventListener('change', function () {
-                        var file = fileInput.files[0];
-                        if (!file) return;
+					fileInput.addEventListener('change', function () {
+						var file = fileInput.files[0];
+						if (!file) return;
 
-                        var formData = new FormData();
-                        formData.append('file', file);
+						var formData = new FormData();
+						formData.append('file', file);
 
-                        fetch('/api/attachments/upload/form', {
-                            method: 'POST',
-                            body: formData
-                        }).then(function (r) { return r.json(); })
-                            .then(function (res) {
-                                if (res.file_name) {
-                                    document.getElementById('withdraw-qrcode-filename').value = res.file_name;
-                                    var imgUrl = res.file_url || '/files/attachments/' + res.file_name;
-                                    document.getElementById('withdraw-qrcode-preview').innerHTML =
-                                        '<img src="' + imgUrl + '" style="max-width:120px;max-height:120px;border:1px solid #eee;border-radius:4px;" onerror="this.style.display=\'none\'">' +
-                                        '<div style="color:#16a34a;font-size:12px;margin-top:4px;">已上传</div>';
-                                } else {
-                                    layer.msg(res.message || '上传失败', { icon: 5 });
-                                }
-                            });
-                    });
-                },
-                btn: ['提交', '取消'],
-                yes: function (index) {
-                    var amountInput = document.getElementById('withdraw-amount-input');
-                    var amountValue = (amountInput && amountInput.value || '').trim();
-                    var bankCardId = document.getElementById('withdraw-bankcard-select').value;
-                    var qrCodeFile = document.getElementById('withdraw-qrcode-filename').value;
+						fetch('/api/attachments/upload/form', {
+							method: 'POST',
+							body: formData
+						}).then(function (r) { return r.json(); })
+							.then(function (res) {
+								if (res.file_name) {
+									document.getElementById('withdraw-qrcode-filename').value = res.file_name;
+									var imgUrl = res.file_url || '/files/attachments/' + res.file_name;
+									document.getElementById('withdraw-qrcode-preview').innerHTML =
+										'<img src="' + imgUrl + '" style="max-width:120px;max-height:120px;border:1px solid #eee;border-radius:4px;" onerror="this.style.display=\'none\'">' +
+										'<div style="color:#16a34a;font-size:12px;margin-top:4px;">已上传</div>';
+								} else {
+									layer.msg(res.message || '上传失败', { icon: 5 });
+								}
+							});
+					});
+				},
+				btn: ['提交', '取消'],
+				yes: function (index) {
+					var amountInput = document.getElementById('withdraw-amount-input');
+					var amountValue = (amountInput && amountInput.value || '').trim();
+					var bankCardId = document.getElementById('withdraw-bankcard-select').value;
+					var qrCodeFile = document.getElementById('withdraw-qrcode-filename').value;
 
-                    if (!amountValue) {
-                        layer.msg('请输入提现金额', { icon: 5 });
-                        return;
-                    }
-                    if (!bankCardId && !qrCodeFile) {
-                        layer.msg('请选择银行卡或上传收款码', { icon: 5 });
-                        return;
-                    }
+					if (!amountValue) {
+						layer.msg('请输入提现金额', { icon: 5 });
+						return;
+					}
+					if (!bankCardId && !qrCodeFile) {
+						layer.msg('请选择银行卡或上传收款码', { icon: 5 });
+						return;
+					}
 
-                    var body = {
-                        amount: amountValue
-                    };
-                    if (bankCardId) {
-                        body.bank_card_id = bankCardId;
-                    }
-                    if (qrCodeFile) {
-                        body.receiving_qr_code = qrCodeFile;
-                    }
+					var body = {
+						amount: amountValue
+					};
+					if (bankCardId) {
+						body.bank_card_id = bankCardId;
+					}
+					if (qrCodeFile) {
+						body.receiving_qr_code = qrCodeFile;
+					}
 
-                    fetch('/api/withdraws', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(body)
-                    }).then(function (response) {
-                        return response.json().then(function (data) {
-                            return { ok: response.ok, data: data };
-                        });
-                    }).then(function (result) {
-                        if (result.ok && result.data.message === '提现申请已提交') {
-                            layer.msg('提现申请已提交', { icon: 1 });
-                            layer.close(index);
-                            loadWallet();
-                            table.reload('walletRecordTable', { page: { curr: 1 } });
-                        } else {
-                            layer.msg(result.data.message || '提现申请提交失败', { icon: 5 });
-                        }
-                    });
-                },
-                end: function () {
-                    if (fileInput && fileInput.parentNode) {
-                        fileInput.parentNode.removeChild(fileInput);
-                    }
-                }
-            });
-        });
+					fetch('/api/withdraws', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(body)
+					}).then(function (response) {
+						return response.json().then(function (data) {
+							return { ok: response.ok, data: data };
+						});
+					}).then(function (result) {
+						if (result.ok && result.data.message === '提现申请已提交') {
+							layer.msg('提现申请已提交', { icon: 1 });
+							layer.close(index);
+							loadWallet();
+							table.reload('walletRecordTable', { page: { curr: 1 } });
+						} else {
+							layer.msg(result.data.message || '提现申请提交失败', { icon: 5 });
+						}
+					});
+				},
+				end: function () {
+					if (fileInput && fileInput.parentNode) {
+						fileInput.parentNode.removeChild(fileInput);
+					}
+				}
+			});
+		});
 
-        loadWallet();
-    });
+		loadWallet();
+	});
 </script>
 {% endblock %}

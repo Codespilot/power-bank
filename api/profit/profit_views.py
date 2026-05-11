@@ -15,14 +15,12 @@ from api.serializers import CommonResponseSerializer, GenericResponseSerializer
 
 from ..auth import get_current_user, get_request_user_id
 from ..models import ProfitTaskRecord, UserRole
-
-FULL_PHONE_REGEX = re.compile(r"^1[3-9]\d{9}$")
-
+from api.regex import MOBILE_REGEX
 
 def _parse_int(value, default):
     try:
         parsed = int(str(value).strip())
-    except TypeError, ValueError, AttributeError:
+    except (TypeError, ValueError, AttributeError):
         return default
     return parsed
 
@@ -122,7 +120,7 @@ class ProfitListView(APIView):
             params.append(int(agent_id_str))
 
         if keyword:
-            if FULL_PHONE_REGEX.fullmatch(keyword):
+            if MOBILE_REGEX.fullmatch(keyword):
                 where_clauses.append("usr.phone = %s")
                 params.append(keyword)
             else:

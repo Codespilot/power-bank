@@ -35,8 +35,6 @@ from .user_serializers import (
 )
 from utils.generate_snowflake_id import generate_snowflake_id
 from ..auth import (
-    EMAIL_REGEX,
-    MOBILE_REGEX,
     compute_lock_until,
     create_access_token,
     create_refresh_token,
@@ -48,7 +46,9 @@ from ..auth import (
     is_valid_username,
     verify_password,
 )
+from ..regex import EMAIL_REGEX, MOBILE_REGEX
 
+from django.utils.translation import gettext
 
 def _authenticate_credentials(request, use_session_captcha: bool):
     """统一处理登录鉴权。
@@ -166,7 +166,7 @@ class LoginAPIView(APIView):
 
         request.session["current_user_id"] = user.id
         next_url = request.GET.get("next") or request.data.get("next") or "/"
-        return Response({"message": "登录成功", "user_id": user.id, "next": next_url})
+        return Response({"message": gettext("登录成功"), "user_id": user.id, "next": next_url})
 
 
 class TokenGrantView(APIView):
@@ -195,7 +195,7 @@ class TokenGrantView(APIView):
         refresh_token, refresh_expires_in = create_refresh_token(user)
         return Response(
             {
-                "message": "获取token成功",
+                "message": gettext("获取token成功"),
                 "token_type": "Bearer",
                 "access_token": access_token,
                 "expires_in": expires_in,
@@ -239,7 +239,7 @@ class TokenRefreshView(APIView):
         new_refresh_token, refresh_expires_in = create_refresh_token(user)
         return Response(
             {
-                "message": "刷新token成功",
+                "message": gettext("刷新token成功"),
                 "token_type": "Bearer",
                 "access_token": access_token,
                 "expires_in": expires_in,
@@ -260,20 +260,20 @@ def _resolve_superior_user(agent_phone: str = "", invite_code: str = ""):
 
     if invite_code:
         if not re.fullmatch(r"[a-z0-9]{8}", invite_code):
-            raise ValueError("邀请码无效")
+            raise ValueError(gettext("邀请码无效"))
         invite_record = (
             InviteCode.objects.select_related("user")
             .filter(code=invite_code, is_valid=True)
             .first()
         )
         if not invite_record or not invite_record.user:
-            raise ValueError("邀请码无效")
+            raise ValueError(gettext("邀请码无效"))
         return invite_record.user, invite_record
 
     if agent_phone:
         superior_user = User.objects.filter(phone=agent_phone).first()
         if not superior_user:
-            raise ValueError(f"无法找到对应的用户{agent_phone}")
+            raise ValueError(gettext(f"无法找到对应的用户{agent_phone}"))
         return superior_user, None
 
     return None, None
@@ -296,23 +296,23 @@ def _create_user_account(data, *, invite_code: str = ""):
     agent_rate_raw = str(data.get("agent_rate", "")).strip()
 
     if not re.match(r"^[a-z0-9_]{4,32}$", username):
-        raise ValueError("用户名格式错误，仅支持4-32位小写字母、数字和下划线")
+        raise ValueError(gettext("用户名格式错误，仅支持4-32位小写字母、数字和下划线"))
     if User.objects.filter(username=username).exists():
-        raise ValueError("用户名已存在")
+        raise ValueError(gettext("用户名已存在"))
     if not fullname:
         fullname = username
-        # raise ValueError("姓名不能为空")
-    if not MOBILE_REGEX.fullmatch(phone):
-        raise ValueError("手机号格式错误")
-    if User.objects.filter(phone=phone).exists():
-        raise ValueError("手机号已存在")
+    if phone:
+        if not MOBILE_REGEX.fullmatch(phone):
+            raise ValueError(gettext("手机号格式错误"))
+        if User.objects.filter(phone=phone).exists():
+            raise ValueError(gettext("手机号已存在"))
     if email:
         if not EMAIL_REGEX.fullmatch(email):
-            raise ValueError("邮箱格式错误")
+            raise ValueError(gettext("邮箱格式错误"))
         if User.objects.filter(email=email).exists():
-            raise ValueError("邮箱已存在")
+            raise ValueError(gettext("邮箱已存在"))
     if not password or len(password) < 6:
-        raise ValueError("密码至少6位")
+        raise ValueError(gettext("密码至少6位"))
 
     superior_user, invite_record = _resolve_superior_user(
         agent_phone=agent_phone, invite_code=invite_code
@@ -341,7 +341,7 @@ def _create_user_account(data, *, invite_code: str = ""):
                 or not locked_invite_record.is_valid
                 or not locked_invite_record.user_id
             ):
-                raise ValueError("邀请码无效")
+                raise ValueError(gettext("邀请码无效"))
             superior_user = locked_invite_record.user
             agent_rate = Decimal(str(locked_invite_record.rate or "0.00"))
 
@@ -349,7 +349,7 @@ def _create_user_account(data, *, invite_code: str = ""):
             id=generate_snowflake_id(),
             username=username,
             fullname=fullname,
-            phone=phone,
+            phone=phone or None,
             email=email or None,
             invite_code=locked_invite_record.code if locked_invite_record else None,
             password_hash=password_hash,
@@ -372,7 +372,7 @@ def _create_user_account(data, *, invite_code: str = ""):
 
 
 class UserListPagination(PageNumberPagination):
-    page_size = 20
+    page_size = 10
     page_size_query_param = "limit"
     page_query_param = "page"
     max_page_size = 200
@@ -384,7 +384,7 @@ class UserListPagination(PageNumberPagination):
                 "next": self.get_next_link(),
                 "previous": self.get_previous_link(),
                 "results": data,
-                "message": "查询成功",
+                "message": gettext("查询成功"),
             }
         )
 
@@ -419,7 +419,7 @@ class UserListView(generics.ListAPIView):
                     "next": None,
                     "previous": None,
                     "results": [],
-                    "message": "查询成功",
+                    "message": gettext("查询成功"),
                 },
                 status=status.HTTP_200_OK,
             )
@@ -526,10 +526,10 @@ class UserCreateView(generics.CreateAPIView):
             user = _create_user_account(request.data)
         except Exception as exc:
             return Response(
-                {"message": str(exc) or "创建失败"}, status=status.HTTP_400_BAD_REQUEST
+                {"message": str(exc) or gettext("创建失败")}, status=status.HTTP_400_BAD_REQUEST
             )
         return Response(
-            {"message": "创建成功", "id": str(user.id)}, status=status.HTTP_201_CREATED
+            {"message": gettext("创建成功"), "id": str(user.id)}, status=status.HTTP_201_CREATED
         )
 
 
@@ -571,7 +571,7 @@ class RegisterAPIView(APIView):
         )
         if not invite_code:
             return Response(
-                {"message": "邀请码无效，请通过邀请链接注册"},
+                {"message": gettext("邀请码无效，请通过邀请链接注册")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -580,11 +580,11 @@ class RegisterAPIView(APIView):
         except Exception as exc:
 
             return Response(
-                {"message": str(exc) or "注册失败"}, status=status.HTTP_400_BAD_REQUEST
+                {"message": str(exc) or gettext("注册失败")}, status=status.HTTP_400_BAD_REQUEST
             )
 
         request.session.pop("login_captcha_code", None)
-        return Response({"message": "注册成功", "id": str(user.id)})
+        return Response({"message": gettext("注册成功"), "id": str(user.id)})
 
 
 @extend_schema_view(
@@ -635,7 +635,7 @@ class UserAgentAssignView(APIView):
             rate = _parse_agent_rate(rate_raw)
         except (TypeError, ValueError, AttributeError) as exc:
             return Response(
-                {"message": str(exc) or "参数错误"}, status=status.HTTP_400_BAD_REQUEST
+                {"message": gettext(str(exc) or "参数错误")}, status=status.HTTP_400_BAD_REQUEST
             )
 
         superior = None
@@ -643,7 +643,7 @@ class UserAgentAssignView(APIView):
             superior = User.objects.filter(phone=superior_phone).first()
             if not superior:
                 return Response(
-                    {"message": f"无法找到对应的用户{superior_phone}"},
+                    {"message": gettext(f"无法找到对应的用户{superior_phone}")},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             superior_id = int(superior.id)
@@ -652,26 +652,26 @@ class UserAgentAssignView(APIView):
                 superior_id = int(str(superior_id_raw).strip())
             except (TypeError, ValueError, AttributeError):
                 return Response(
-                    {"message": "参数错误"}, status=status.HTTP_400_BAD_REQUEST
+                    {"message": gettext("参数错误")}, status=status.HTTP_400_BAD_REQUEST
                 )
 
         if id is not None and subordinate_id != id:
             return Response(
-                {"message": "参数不匹配"}, status=status.HTTP_400_BAD_REQUEST
+                {"message": gettext("参数不匹配")}, status=status.HTTP_400_BAD_REQUEST
             )
 
         if superior_id == subordinate_id:
-            return Response(ResponseMessage("不能将自己设置为上级代理商", 400).to_dict(), status=status.HTTP_400_BAD_REQUEST)
+            return Response(ResponseMessage(gettext("不能将自己设置为上级代理商"), 400).to_dict(), status=status.HTTP_400_BAD_REQUEST)
 
         if superior is None:
             superior = User.objects.filter(id=superior_id).first()
         subordinate = User.objects.filter(id=subordinate_id).first()
         if not superior or not subordinate:
-            return Response(ResponseMessage("用户不存在", 404).to_dict(), status=status.HTTP_404_NOT_FOUND)
+            return Response(ResponseMessage(gettext("用户不存在"), 404).to_dict(), status=status.HTTP_404_NOT_FOUND)
 
         if _is_descendant_user(superior_id, subordinate_id):
             return Response(
-                ResponseMessage("所选上级代理商不能是当前用户的下级代理商", 400).to_dict(),
+                ResponseMessage(gettext("所选上级代理商不能是当前用户的下级代理商"), 400).to_dict(),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -692,7 +692,7 @@ class UserAgentAssignView(APIView):
                 created_at=timezone.now(),
             )
 
-        return Response({"message": "上级代理商分配成功"})
+        return Response({"message": gettext("上级代理商分配成功")})
 
 
 class UserPasswordResetView(APIView):
@@ -708,17 +708,17 @@ class UserPasswordResetView(APIView):
     def post(self, request, id):
         user = User.objects.filter(id=id).first()
         if not user:
-            return Response({"message": "用户不存在"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"message": gettext("用户不存在")}, status=status.HTTP_404_NOT_FOUND)
         password = request.data.get("password", "").strip()
         if not password or len(password) < 6:
             return Response(
-                {"message": "密码至少6位"}, status=status.HTTP_400_BAD_REQUEST
+                {"message": gettext("密码至少6位")}, status=status.HTTP_400_BAD_REQUEST
             )
         password_hash, password_salt = hash_password(password)
         user.password_hash = password_hash
         user.password_salt = password_salt
         user.save(update_fields=["password_hash", "password_salt"])
-        return Response({"message": "密码重置成功"})
+        return Response({"message": gettext("密码重置成功")})
 
 
 class UserPasswordChangeView(APIView):
@@ -735,11 +735,11 @@ class UserPasswordChangeView(APIView):
     def post(self, request):
         user_id = get_request_user_id(request)
         if not user_id:
-            return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"message": gettext("未登录")}, status=status.HTTP_401_UNAUTHORIZED)
 
         user = User.objects.filter(id=user_id).first()
         if not user:
-            return Response({"message": "用户不存在"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"message": gettext("用户不存在")}, status=status.HTTP_404_NOT_FOUND)
 
         old_password = str(request.data.get("old_password", ""))
         new_password = str(request.data.get("new_password", ""))
@@ -747,17 +747,17 @@ class UserPasswordChangeView(APIView):
 
         if not verify_password(user, old_password):
             return Response(
-                {"message": "原密码错误"}, status=status.HTTP_400_BAD_REQUEST
+                {"message": gettext("原密码错误")}, status=status.HTTP_400_BAD_REQUEST
             )
 
         if not new_password or len(new_password) < 6:
             return Response(
-                {"message": "新密码至少6位"}, status=status.HTTP_400_BAD_REQUEST
+                {"message": gettext("新密码至少6位")}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # if new_password != confirm_password:
         #     return Response(
-        #         {"message": "两次输入的新密码不一致"},
+        #         {"message": gettext("两次输入的新密码不一致")},
         #         status=status.HTTP_400_BAD_REQUEST,
         #     )
 
@@ -765,7 +765,7 @@ class UserPasswordChangeView(APIView):
         user.password_hash = password_hash_value
         user.password_salt = password_salt_value
         user.save(update_fields=["password_hash", "password_salt"])
-        return Response({"message": "密码修改成功"})
+        return Response({"message": gettext("密码修改成功")})
 
 class UserAgentRateChangeView(APIView):
     @extend_schema(
@@ -786,18 +786,18 @@ class UserAgentRateChangeView(APIView):
                 raise ValueError("分润比例必须在0到1之间")
         except (TypeError, ValueError, AttributeError) as exc:
             return Response(
-                {"message": str(exc) or "参数错误"}, status=status.HTTP_400_BAD_REQUEST
+                {"message": gettext(str(exc) or "参数错误")}, status=status.HTTP_400_BAD_REQUEST
             )
 
         user = User.objects.filter(id=id).first()
         if not user:
-            return Response({"message": "用户不存在"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"message": gettext("用户不存在")}, status=status.HTTP_404_NOT_FOUND)
 
         if not user.agent:
-            return Response({"message": "该用户没有上级代理商"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": gettext("该用户没有上级代理商")}, status=status.HTTP_400_BAD_REQUEST)
         if user.agent.id != current_user_id:
-            return Response({"message": "只能修改直属下级的代理分润比例"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"message": gettext("只能修改直属下级的代理分润比例")}, status=status.HTTP_403_FORBIDDEN)
 
         user.agent_rate = rate
         user.save(update_fields=["agent_rate"])
-        return Response({"message": "代理分润比例修改成功"})
+        return Response({"message": gettext("代理分润比例修改成功")})

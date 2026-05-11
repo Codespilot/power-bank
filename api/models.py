@@ -39,7 +39,7 @@ class User(BaseEntity):
     id = models.BigIntegerField(primary_key=True)
     username = models.CharField(max_length=32, unique=True)
     fullname = models.CharField(max_length=64, default="")
-    phone = models.CharField(max_length=11, unique=True)
+    phone = models.CharField(max_length=22, null=True, blank=True, unique=True)
     email = models.CharField(max_length=255, unique=True, null=True, blank=True)
     invite_code = models.CharField(max_length=8, null=True, blank=True)
     password_hash = models.CharField(max_length=512)

@@ -5,16 +5,16 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.auth import EMAIL_REGEX, MOBILE_REGEX, get_request_user_id
+from api.auth import get_request_user_id
 from django.http import HttpRequest
 
 from api.profile.profile_serializers import (
     UserProfileResponseSerializer,
     UserProfileUpdateRequestSerializer,
 )
-from ..models import User, UserRole
+from ..models import InviteCode, User, UserRole
 from ..user.user_serializers import _format_agent_rate, _get_superior_agent_display
-
+from ..regex import EMAIL_REGEX, MOBILE_REGEX
 
 class UserProfileView(APIView):
     def _build_invite_link(self, request: HttpRequest, code: str) -> str:
@@ -38,12 +38,16 @@ class UserProfileView(APIView):
     )
     def get(self, request):
         user = self._get_current_user(request)
+
         if not user:
             return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
 
         is_admin = UserRole.objects.filter(
             user_id=user.id, role=UserRole.ROLE_ADMIN
         ).exists()
+
+        invite_code = InviteCode.objects.filter(user_id=user.id).first()
+
         return Response(
             {
                 "id": str(user.id),
@@ -54,7 +58,7 @@ class UserProfileView(APIView):
                 "superior_agent": _get_superior_agent_display(user),
                 "agent_rate": _format_agent_rate(user.agent_rate, bool(user.agent_id)),
                 "user_is_admin": is_admin,
-                "invite_code": user.invite_code,
+                "invite_code": invite_code.code if invite_code else "",
             }
         )
 
@@ -78,15 +82,16 @@ class UserProfileView(APIView):
                 {"message": "姓名不能为空"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        if not MOBILE_REGEX.fullmatch(phone):
-            return Response(
-                {"message": "手机号格式错误"}, status=status.HTTP_400_BAD_REQUEST
-            )
+        if phone:
+            if not MOBILE_REGEX.fullmatch(phone):
+                return Response(
+                    {"message": "手机号格式错误"}, status=status.HTTP_400_BAD_REQUEST
+                )
 
-        if User.objects.exclude(id=user.id).filter(phone=phone).exists():
-            return Response(
-                {"message": "手机号已存在"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            if User.objects.exclude(id=user.id).filter(phone=phone).exists():
+                return Response(
+                    {"message": "手机号已存在"}, status=status.HTTP_400_BAD_REQUEST
+                )
 
         if email:
             if not EMAIL_REGEX.fullmatch(email):
@@ -99,7 +104,7 @@ class UserProfileView(APIView):
                 )
 
         user.fullname = fullname
-        user.phone = phone
+        user.phone = phone or None
         user.email = email or None
         user.save(update_fields=["fullname", "phone", "email"])
         return Response({"message": "资料修改成功"})

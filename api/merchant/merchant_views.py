@@ -1,4 +1,3 @@
-import re
 from decimal import Decimal
 
 from django.db import connection, transaction
@@ -19,8 +18,7 @@ from utils.generate_snowflake_id import generate_snowflake_id
 from ..serializers import CommonResponseSerializer, GenericResponseSerializer
 from ..auth import get_current_user, get_request_user_id
 from ..models import Merchant, MerchantHistory, User
-
-FULL_PHONE_REGEX = re.compile(r"^1[3-9]\d{9}$")
+from api.regex import MOBILE_REGEX
 
 
 def _parse_int(value, default):
@@ -108,7 +106,7 @@ class MerchantListView(APIView):
             params.append(f"%{merchant}%")
 
         if agent:
-            if FULL_PHONE_REGEX.fullmatch(agent):
+            if MOBILE_REGEX.fullmatch(agent):
                 where_clauses.append("usr.phone = %s")
                 params.append(agent)
             else:
@@ -274,7 +272,7 @@ def _assign_merchants(request, merchant_ids, agent_phone: str = None, agent_id: 
         if agent_id:
             user = User.objects.filter(id=agent_id).first()
         elif agent_phone:
-            if not FULL_PHONE_REGEX.fullmatch(agent_phone):
+            if not MOBILE_REGEX.fullmatch(agent_phone):
                 raise ValueError("代理商手机号格式不正确")
             user = User.objects.filter(phone=agent_phone).first()
         else:

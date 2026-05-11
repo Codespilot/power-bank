@@ -16,6 +16,8 @@ from ..models import InviteCode, User, UserRole
 from ..user.user_serializers import _format_agent_rate, _get_superior_agent_display
 from ..regex import EMAIL_REGEX, MOBILE_REGEX
 
+from django.utils.translation import gettext
+
 class UserProfileView(APIView):
     def _build_invite_link(self, request: HttpRequest, code: str) -> str:
         if not code:
@@ -40,7 +42,7 @@ class UserProfileView(APIView):
         user = self._get_current_user(request)
 
         if not user:
-            return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"message": gettext("auth_failed")}, status=status.HTTP_401_UNAUTHORIZED)
 
         is_admin = UserRole.objects.filter(
             user_id=user.id, role=UserRole.ROLE_ADMIN
@@ -71,7 +73,7 @@ class UserProfileView(APIView):
     def post(self, request):
         user = self._get_current_user(request)
         if not user:
-            return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"message": gettext("auth_failed")}, status=status.HTTP_401_UNAUTHORIZED)
 
         fullname = str(request.data.get("fullname", "")).strip()
         phone = str(request.data.get("phone", "")).strip()
@@ -79,32 +81,32 @@ class UserProfileView(APIView):
 
         if not fullname:
             return Response(
-                {"message": "姓名不能为空"}, status=status.HTTP_400_BAD_REQUEST
+                {"message": gettext("fullname_required")}, status=status.HTTP_400_BAD_REQUEST
             )
 
         if phone:
             if not MOBILE_REGEX.fullmatch(phone):
                 return Response(
-                    {"message": "手机号格式错误"}, status=status.HTTP_400_BAD_REQUEST
+                    {"message": gettext("phone_format_error")}, status=status.HTTP_400_BAD_REQUEST
                 )
 
             if User.objects.exclude(id=user.id).filter(phone=phone).exists():
                 return Response(
-                    {"message": "手机号已存在"}, status=status.HTTP_400_BAD_REQUEST
+                    {"message": gettext("phone_already_exists")}, status=status.HTTP_400_BAD_REQUEST
                 )
 
         if email:
             if not EMAIL_REGEX.fullmatch(email):
                 return Response(
-                    {"message": "邮箱格式错误"}, status=status.HTTP_400_BAD_REQUEST
+                    {"message": gettext("email_format_error")}, status=status.HTTP_400_BAD_REQUEST
                 )
             if User.objects.exclude(id=user.id).filter(email=email).exists():
                 return Response(
-                    {"message": "邮箱已存在"}, status=status.HTTP_400_BAD_REQUEST
+                    {"message": gettext("email_already_exists")}, status=status.HTTP_400_BAD_REQUEST
                 )
 
         user.fullname = fullname
         user.phone = phone or None
         user.email = email or None
         user.save(update_fields=["fullname", "phone", "email"])
-        return Response({"message": "资料修改成功"})
+        return Response({"message": gettext("operation_succeed")}, status=status.HTTP_200_OK)

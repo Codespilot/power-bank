@@ -20,6 +20,8 @@ from ..auth import get_current_user, get_request_user_id
 from ..models import Merchant, MerchantHistory, User
 from api.regex import MOBILE_REGEX
 
+from django.utils.translation import gettext
+
 
 def _parse_int(value, default):
     try:
@@ -77,7 +79,7 @@ class MerchantListView(APIView):
         current_user_id, is_admin = get_current_user(request)
         if not current_user_id:
             return Response(
-                {"count": 0, "results": [], "message": "未登录"},
+                {"count": 0, "results": [], "message": gettext("auth_failed")},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -179,7 +181,7 @@ class MerchantListView(APIView):
                 "page": page,
                 "limit": limit,
                 "results": results,
-                "message": "查询成功",
+                "message": gettext("query_success"),
             }
         )
 
@@ -207,7 +209,7 @@ class MerchantHistoryListView(APIView):
         merchant = Merchant.objects.filter(id=id).first()
         if not merchant:
             return Response(
-                {"count": 0, "results": [], "message": "商户不存在"},
+                {"count": 0, "results": [], "message": gettext("merchant_not_found")},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -243,7 +245,7 @@ class MerchantHistoryListView(APIView):
         ]
 
         return Response(
-            {"count": len(results), "results": results, "message": "查询成功"}
+            {"count": len(results), "results": results, "message": gettext("query_success")}
         )
 
 
@@ -264,7 +266,7 @@ def _assign_merchants(request, merchant_ids, agent_phone: str = None, agent_id: 
     """
     current_user_id, is_admin = get_current_user(request)
     if not current_user_id:
-        return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"message": gettext("auth_failed")}, status=status.HTTP_401_UNAUTHORIZED)
 
     try:
 
@@ -301,7 +303,7 @@ def _assign_merchants(request, merchant_ids, agent_phone: str = None, agent_id: 
                 .order_by("id")
             )
             if not merchants:
-                raise ValueError("商户不存在")
+                raise ValueError(gettext("merchant_not_found"))
 
             if not is_admin:
                 invalid_merchants = [
@@ -310,7 +312,7 @@ def _assign_merchants(request, merchant_ids, agent_phone: str = None, agent_id: 
                     if int(merchant.agent_id or 0) != int(current_user_id)
                 ]
                 if invalid_merchants:
-                    raise PermissionError("普通用户仅能划拨自己名下的商户")
+                    raise PermissionError(gettext("permission_denied"))
 
             for merchant in merchants:
                 old_agent_id = merchant.agent_id
@@ -324,14 +326,14 @@ def _assign_merchants(request, merchant_ids, agent_phone: str = None, agent_id: 
                     created_at=timezone.now(),
                 )
 
-        return Response({"message": "划拨成功"})
+        return Response({"message": gettext("operation_succeed")})
     except PermissionError as error:
         return Response({"message": str(error)}, status=status.HTTP_403_FORBIDDEN)
     except (TypeError, ValueError) as error:
         return Response({"message": str(error)}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response(
-            {"message": f"划拨失败: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST
+            {"message": f"{gettext('operation_failed')}: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST
         )
 
 

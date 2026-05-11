@@ -55,3 +55,15 @@ uv run python manage.py runserver
 
 - 前端页面: `http://127.0.0.1:8000/`
 - API 健康检查: `http://127.0.0.1:8000/api/health/`
+
+
+## 提取可翻译的字符串
+
+```bash
+django-admin makemessages -all
+```
+
+## 翻译字符串
+```bash
+django-admin compilemessages
+```

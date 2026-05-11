@@ -1,0 +1,161 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-09 19:35+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "query_succeed"
+msgstr "查询成功"
+
+msgid "operation_succeed"
+msgstr "操作成功"
+
+msgid "operation_failed"
+msgstr "操作失败"
+
+msgid "auth_failed"
+msgstr "认证失败"
+
+msgid "permission_denied"
+msgstr "没有操作权限"
+
+msgid "invalid_parameters"
+msgstr "参数错误"
+
+msgid "invalid_date_format"
+msgstr "日期格式错误"
+
+msgid "login_succeed"
+msgstr "登录成功"
+
+msgid "auth_succeed"
+msgstr "认证成功"
+
+msgid "invite_code_invalid"
+msgstr "邀请码无效"
+
+msgid "invate_code_required"
+msgstr "必须使用邀请码注册"
+
+msgid "register_failed"
+msgstr "注册失败"
+
+msgid "register_succeed"
+msgstr "注册成功"
+
+msgid "invalid_username"
+msgstr "无效的用户名"
+
+msgid "invalid_credentials"
+msgstr "用户名或密码错误"
+
+msgid "invalid_captcha"
+msgstr "验证码错误"
+
+msgid "account_locked"
+msgstr "账号已锁定，请在 {locked_out_time} 后重试"
+
+msgid "user_not_found"
+msgstr "用户不存在"
+
+msgid "refresh_token_required"
+msgstr "令牌不能为空"
+
+msgid "username_format_error"
+msgstr "用户名格式错误"
+
+msgid "username_already_exists"
+msgstr "用户名已存在"
+
+msgid "phone_format_error"
+msgstr "手机号格式错误"
+
+msgid "phone_already_exists"
+msgstr "手机号已存在"
+
+msgid "email_format_error"
+msgstr "邮箱地址格式错误"
+
+msgid "email_already_exists"
+msgstr "邮箱已存在"
+
+msgid "password_too_short"
+msgstr "密码至少6位"
+
+msgid "agent_rate_out_of_range"
+msgstr "分润比例必须在0到1之间"
+
+msgid "old_password_incorrect"
+msgstr "原密码错误"
+
+msgid "user_has_no_agent"
+msgstr "没有分配代理商"
+
+msgid "is_valid_text_yes"
+msgstr "有效"
+
+msgid "is_valid_text_no"
+msgstr "无效"
+
+msgid "fullname_required"
+msgstr "姓名不能为空"
+
+msgid "settle_source_text_direct"
+msgstr "直接分润"
+
+msgid "settle_source_text_subagent"
+msgstr "下级代理商"
+
+
+msgid "withdraw_audit_approved"
+msgstr "同意"
+
+msgid "withdraw_audit_rejected"
+msgstr "拒绝"
+
+msgid "withdraw_audit_canceled"
+msgstr "用户作废申请"
+
+msgid "withdraw_audit_remark_required"
+msgstr "请填写审批意见"
+
+msgid "withdraw_amount_too_low"
+msgstr "提现金额不能低于0.01"
+
+msgid "withdraw_payment_method_required"
+msgstr "请选择银行卡或上传收款码照片"
+
+msgid "withdraw_bank_card_param_error"
+msgstr "银行卡id错误"
+
+msgid "withdraw_bank_card_not_found"
+msgstr "银行卡不存在"
+
+msgid "withdraw_qr_code_not_found"
+msgstr "收款码文件不存在"
+
+msgid "withdraw_pending_exists"
+msgstr "当前有待处理的提现申请，请稍后再试"
+
+msgid "withdraw_amount_exceeds_available"
+msgstr "提现金额不能大于可用金额"
+
+msgid "withdraw_not_found"
+msgstr "提现申请不存在"
+
+msgid "merchant_not_found"
+msgstr "商户不存在"

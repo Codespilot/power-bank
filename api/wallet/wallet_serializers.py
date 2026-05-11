@@ -33,13 +33,6 @@ class WalletWithdrawResponseSerializer(serializers.Serializer):
     message = serializers.CharField(help_text="响应消息")
 
 
-class WalletRecordListRequestSerializer(serializers.Serializer):
-    page = serializers.IntegerField(required=False, default=1, help_text="页码")
-    limit = serializers.IntegerField(required=False, default=10, help_text="每页数量")
-    date_from = serializers.CharField(required=False, allow_blank=True, help_text="起始日期 (YYYY-MM-DD)")
-    date_to = serializers.CharField(required=False, allow_blank=True, help_text="结束日期 (YYYY-MM-DD)")
-
-
 class WalletRecordListResponseSerializer(serializers.Serializer):
     id = serializers.CharField(help_text="记录ID")
     amount = serializers.CharField(help_text="变动金额")

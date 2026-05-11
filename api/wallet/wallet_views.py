@@ -13,11 +13,11 @@ from ..views import BaseAPIView, handle_request
 
 from .wallet_serializers import (
     WalletInfoSerializer,
-    WalletRecordListRequestSerializer,
     WalletRecordListResponseSerializer,
 )
 
 from ..models import Wallet, WalletRecord
+from django.utils.translation import gettext
 
 
 def _parse_int(value, default: int) -> int:
@@ -65,12 +65,14 @@ class WalletView(BaseAPIView):
         def _handle():
             user_id = self.get_current_user_id(request)
             if not user_id:
-                raise CredentialError("未登录")
+                raise CredentialError(gettext("auth_failed"))
 
             wallet, _ = Wallet.objects.get_or_create(
                 id=user_id, defaults=_wallet_defaults()
             )
-            return Response({**_serialize_wallet(wallet), "message": "查询成功"})
+            return Response(
+                {**_serialize_wallet(wallet), "message": gettext("query_succeed")}
+            )
 
         return handle_request(_handle)
 
@@ -99,7 +101,10 @@ class WalletRecordListView(BaseAPIView):
                 name="to", description="结束日期 (YYYY-MM-DD)", required=False, type=str
             ),
             OpenApiParameter(
-                name="type", description="流水类型（income、i、1: 收入, outgo、o、-1: 支出）", required=False, type=str
+                name="type",
+                description="流水类型（income、i、1: 收入, outgo、o、-1: 支出）",
+                required=False,
+                type=str,
             ),
         ],
         responses={
@@ -113,7 +118,7 @@ class WalletRecordListView(BaseAPIView):
             user_id = self.get_current_user_id(request)
             if not user_id:
                 return Response(
-                    {"count": 0, "results": [], "message": "未登录"},
+                    {"count": 0, "results": [], "message": gettext("auth_failed")},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
 
@@ -123,7 +128,11 @@ class WalletRecordListView(BaseAPIView):
 
             date_from = str(request.GET.get("from", "")).strip()
             date_to = str(request.GET.get("to", "")).strip()
-            type_str = request.GET.get("type").strip().lower() if request.GET.get("type") else None
+            type_str = (
+                request.GET.get("type").strip().lower()
+                if request.GET.get("type")
+                else None
+            )
             match type_str:
                 case None | "":
                     pass
@@ -133,7 +142,12 @@ class WalletRecordListView(BaseAPIView):
                     qs = qs.filter(amount__lt=0)
                 case _:
                     return Response(
-                        {"count": 0, "results": [], "message": "无效的type参数"},
+                        {
+                            "count": 0,
+                            "results": [],
+                            "message": gettext("invalid_parameters")
+                            + f": type={type_str}",
+                        },
                         status=status.HTTP_400_BAD_REQUEST,
                     )
 
@@ -154,7 +168,11 @@ class WalletRecordListView(BaseAPIView):
                     qs = qs.filter(created_at__lt=end_dt)
             except ValueError:
                 return Response(
-                    {"count": 0, "results": [], "message": "日期格式错误"},
+                    {
+                        "count": 0,
+                        "results": [],
+                        "message": gettext("invalid_date_format"),
+                    },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -176,7 +194,11 @@ class WalletRecordListView(BaseAPIView):
                     "is_valid": item.is_valid,
                     "outer_type": item.outer_type,
                     "outer_id": str(item.outer_id) if item.outer_id else None,
-                    "is_valid_text": "有效" if item.is_valid else "无效",
+                    "is_valid_text": (
+                        gettext("is_valid_text_yes")
+                        if item.is_valid
+                        else gettext("is_valid_text_no")
+                    ),
                 }
                 for item in records
             ]
@@ -187,7 +209,7 @@ class WalletRecordListView(BaseAPIView):
                     "page": page,
                     "limit": limit,
                     "results": results,
-                    "message": "查询成功",
+                    "message": gettext("query_succeed"),
                 }
             )
 

@@ -29,6 +29,8 @@ from .withdraw_serializers import (
     WithdrawListResponseSerializer,
 )
 
+from django.utils.translation import gettext
+
 _AMOUNT_QUANT = Decimal("0.01")
 
 
@@ -262,7 +264,7 @@ class WithdrawView(APIView):
                 "results": results,
                 "summary": summary,
                 "is_admin": is_admin,
-                "message": "查询成功",
+                "message": gettext("query_succeed"),
             }
         )
 
@@ -281,13 +283,13 @@ class WithdrawView(APIView):
         try:
             current_user_id = get_request_user_id(request)
             if not current_user_id:
-                raise CredentialError("未登录")
+                raise CredentialError(gettext("auth_failed"))
 
             amount = _quantize_amount(request.data.get("amount", "0"))
 
             if amount < Decimal("0.01"):
                 return Response(
-                    {"message": "提现金额不能低于0.01"},
+                    {"message": gettext("withdraw_amount_too_low")},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -300,16 +302,16 @@ class WithdrawView(APIView):
             qr_code_value = str(request.data.get("receiving_qr_code", "")).strip()
 
             if not bank_card_id_str and not qr_code_value:
-                raise ValueError("请选择银行卡或上传收款码照片")
+                raise ValueError(gettext("withdraw_payment_method_required"))
 
             if bank_card_id_str:
                 if not bank_card_id_str.isdigit():
-                    raise ValueError("银行卡参数错误")
+                    raise ValueError(gettext("withdraw_bank_card_param_error"))
                 bank_card = BankCard.objects.filter(
                     id=int(bank_card_id_str), user_id=current_user_id
                 ).first()
                 if not bank_card:
-                    raise ValueError("银行卡不存在")
+                    raise ValueError(gettext("withdraw_bank_card_not_found"))
                 bank_card_id = int(bank_card.id)
                 bank_card_no = bank_card.card_no
                 bank_card_holder = bank_card.name
@@ -317,7 +319,7 @@ class WithdrawView(APIView):
             if qr_code_value:
                 attachment = Attachment.objects.filter(file_name=qr_code_value).first()  # 验证文件存在
                 if not attachment:
-                    raise ValueError("收款码文件不存在")
+                    raise ValueError(gettext("withdraw_qr_code_not_found"))
                 receiving_qr_code = attachment.file_name
 
             with transaction.atomic():
@@ -332,14 +334,14 @@ class WithdrawView(APIView):
                     )
                     .exists()
                 ):
-                    raise ValueError("当前有待处理的提现申请，请稍后再试")
+                    raise ValueError(gettext("withdraw_pending_exists"))
 
                 wallet, _ = Wallet.objects.select_for_update().get_or_create(
                     id=current_user_id, defaults=_wallet_defaults()
                 )
                 before_amount = _quantize_amount(wallet.available_amount)
                 if amount > before_amount:
-                    raise ValueError("提现金额不能大于可用金额")
+                    raise ValueError(gettext("withdraw_amount_exceeds_available"))
 
                 after_amount = _quantize_amount(before_amount - amount)
                 wallet.available_amount = after_amount
@@ -347,7 +349,7 @@ class WithdrawView(APIView):
                 wallet.save(update_fields=["available_amount", "frozen_amount"])
 
                 remark = (
-                    str(request.data.get("remark", "")).strip() or "提现申请，资金冻结"
+                    str(request.data.get("remark", "")).strip() or ""
                 )
                 withdraw = Withdraw.objects.create(
                     id=generate_snowflake_id(),
@@ -373,7 +375,7 @@ class WithdrawView(APIView):
                     outer_type=WalletRecord.OUTER_TYPE_WITHDRAW,
                     outer_id=withdraw.id,
                     is_valid=True,
-                    remark="提现申请，资金冻结",
+                    remark="",
                     created_at=timezone.now(),
                 )
 
@@ -387,13 +389,13 @@ class WithdrawView(APIView):
                         refreshed_wallet.available_amount
                     ),
                     "withdraw_id": str(withdraw.id),
-                    "message": "提现申请已提交",
+                    "message": gettext("operation_succeed"),
                 }
             )
         except CredentialError:
-            return Response(ResponseMessage("未登录", 401).to_dict(), status=status.HTTP_401_UNAUTHORIZED)
+            return Response(ResponseMessage(gettext("auth_failed"), 401).to_dict(), status=status.HTTP_401_UNAUTHORIZED)
         except (TypeError, ValueError, InvalidOperation) as e:
-            return Response((ResponseMessage(f"参数错误: {str(e)}", 400).to_dict()), status=status.HTTP_400_BAD_REQUEST)
+            return Response((ResponseMessage(f"{gettext('invalid_parameters')}: {str(e)}", 400).to_dict()), status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response(ResponseMessage(f"提现申请失败: {str(e)}", 500).to_dict(), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -419,15 +421,15 @@ class WithdrawApproveView(APIView):
     def post(self, request, id: int):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
-            return Response({"message": "未登录"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"message": gettext("auth_failed")}, status=status.HTTP_401_UNAUTHORIZED)
         if not _is_admin(current_user_id):
-            return Response({"message": "无权限操作"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"message": gettext("permission_denied")}, status=status.HTTP_403_FORBIDDEN)
 
         with transaction.atomic():
             withdraw = Withdraw.objects.select_for_update().filter(id=id).first()
             if not withdraw:
                 return Response(
-                    {"message": "提现申请不存在"}, status=status.HTTP_404_NOT_FOUND
+                    {"message": gettext("withdraw_not_found")}, status=status.HTTP_404_NOT_FOUND
                 )
             if withdraw.status != Withdraw.STATUS_PENDING_APPROVAL:
                 return Response(
@@ -462,12 +464,12 @@ class WithdrawApproveView(APIView):
             withdraw.status = Withdraw.STATUS_APPROVED
             withdraw.audit_user_id = current_user_id
             withdraw.audit_time = timezone.now()
-            withdraw.audit_remark = "同意"
+            withdraw.audit_remark = "withdraw_audit_approved"
             withdraw.save(
                 update_fields=["status", "audit_user", "audit_time", "audit_remark"]
             )
 
-        return Response(ResponseMessage("审批通过成功", 200).to_dict())
+        return Response(ResponseMessage(gettext("operation_succeed"), 200).to_dict())
 
 
 class WithdrawRejectView(APIView):
@@ -498,19 +500,19 @@ class WithdrawRejectView(APIView):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
             return Response(
-                ResponseMessage("未登录", 401).to_dict(),
+                ResponseMessage(gettext("auth_failed"), 401).to_dict(),
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         if not _is_admin(current_user_id):
             return Response(
-                ResponseMessage("无权限操作", 403).to_dict(),
+                ResponseMessage(gettext("permission_denied"), 403).to_dict(),
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         audit_remark = str(request.data.get("audit_remark", "")).strip()
         if not audit_remark:
             return Response(
-                ResponseMessage("请填写审批意见", 400).to_dict(),
+                ResponseMessage(gettext("withdraw_audit_remark_required"), 400).to_dict(),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -564,9 +566,9 @@ class WithdrawRejectView(APIView):
             WalletRecord.objects.filter(
                 outer_type=WalletRecord.OUTER_TYPE_WITHDRAW,
                 outer_id=withdraw.id,
-            ).update(is_valid=False, remark=f"提现申请被拒绝: {audit_remark[:200]}")
+            ).update(is_valid=False, remark=f"Withdraw Rejected: {audit_remark[:200]}")
 
-        return Response(ResponseMessage("审批拒绝成功", 200).to_dict())
+        return Response(ResponseMessage(gettext("operation_succeed"), 200).to_dict())
 
 
 class WithdrawCancelView(APIView):
@@ -597,7 +599,7 @@ class WithdrawCancelView(APIView):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
             return Response(
-                ResponseMessage("未登录", 401).to_dict(),
+                ResponseMessage(gettext("auth_failed"), 401).to_dict(),
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -646,13 +648,13 @@ class WithdrawCancelView(APIView):
 
             withdraw.status = Withdraw.STATUS_CANCELLED
             withdraw.audit_time = timezone.now()
-            withdraw.audit_remark = "用户作废"
+            withdraw.audit_remark = "withdraw_audit_rejected"
             withdraw.save(update_fields=["status", "audit_time", "audit_remark"])
 
             # 将对应的流水记录标记为无效，并填写备注
             WalletRecord.objects.filter(
                 outer_type=WalletRecord.OUTER_TYPE_WITHDRAW,
                 outer_id=withdraw.id,
-            ).update(is_valid=False, remark="提现申请已作废")
+            ).update(is_valid=False, remark="Withdraw Cancelled by User")
 
-        return Response(ResponseMessage("作废成功", 200).to_dict())
+        return Response(ResponseMessage(gettext("operation_succeed"), 200).to_dict())

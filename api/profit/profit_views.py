@@ -17,6 +17,8 @@ from ..auth import get_current_user, get_request_user_id
 from ..models import ProfitTaskRecord, UserRole
 from api.regex import MOBILE_REGEX
 
+from django.utils.translation import gettext
+
 def _parse_int(value, default):
     try:
         parsed = int(str(value).strip())
@@ -89,7 +91,7 @@ class ProfitListView(APIView):
         current_user_id, is_admin = get_current_user(request)
         if not current_user_id:
             return Response(
-                {"count": 0, "results": [], "message": "未登录"},
+                {"count": 0, "results": [], "message": gettext("auth_failed")},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -149,7 +151,7 @@ class ProfitListView(APIView):
                 params.append(_to_utc_string(end_dt))
         except ValueError:
             return Response(
-                {"count": 0, "results": [], "message": "日期格式错误"},
+                {"count": 0, "results": [], "message": gettext("date_format_error")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -218,9 +220,9 @@ class ProfitListView(APIView):
                     "settle_amount": _format_decimal(row.get("settle_amount")),
                     "settle_source": settle_source,
                     "settle_source_text": (
-                        "直接分润"
+                        gettext("direct_profit")
                         if settle_source == "direct"
-                        else "下级代理商" if settle_source == "subagent" else "--"
+                        else gettext("subagent") if settle_source == "subagent" else "--"
                     ),
                     "source_agent_display": _source_display(
                         row.get("source_fullname"),
@@ -238,7 +240,7 @@ class ProfitListView(APIView):
                 "page": page,
                 "limit": limit,
                 "results": results,
-                "message": "查询成功",
+                "message": gettext("query_succeed"),
             }
         )
 
@@ -250,7 +252,7 @@ class ProfitTaskListView(APIView):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
             return None, Response(
-                {"count": 0, "results": [], "message": "未登录"},
+                {"count": 0, "results": [], "message": gettext("auth_failed")},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -259,7 +261,7 @@ class ProfitTaskListView(APIView):
         ).exists()
         if not is_admin:
             return None, Response(
-                {"count": 0, "results": [], "message": "无权限访问"},
+                {"count": 0, "results": [], "message": gettext("permission_denied")},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -301,7 +303,7 @@ class ProfitTaskListView(APIView):
                 queryset = queryset.filter(run_time__lt=end_dt)
         except ValueError:
             return Response(
-                {"count": 0, "results": [], "message": "日期格式错误"},
+                {"count": 0, "results": [], "message": gettext("date_format_error")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -329,6 +331,6 @@ class ProfitTaskListView(APIView):
                 "page": page,
                 "limit": limit,
                 "results": results,
-                "message": "查询成功",
+                "message": gettext("query_succeed"),
             }
         )

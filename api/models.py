@@ -2,8 +2,6 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 from decimal import Decimal
-import secrets
-import string
 
 from django.utils import timezone
 from utils.generate_snowflake_id import generate_snowflake_id
@@ -13,14 +11,15 @@ from utils.generate_snowflake_id import generate_snowflake_id
 # 本文件集中定义用户、邀请码、钱包、商户、订单、分润等核心业务实体。
 
 
-def _generate_unique_invite_code(model_cls):
-    """生成全局唯一的邀请码，供 InviteCode 模型复用。"""
-    alphabet = string.ascii_lowercase + string.digits
-    for _ in range(20):
-        code = "".join(secrets.choice(alphabet) for _ in range(8))
-        if not model_cls.objects.filter(code=code).exists():
-            return code
-    raise ValueError("无法生成唯一邀请码")
+def _generate_unique_invite_code():
+    """生成全局唯一的邀请码。
+
+    规则：首位是1的8位纯数字，从10000001开始递增。
+    借助 MySQL 自增机制保证并发安全。
+    """
+    seq = InviteCodeSeq.objects.create()
+    code = str(seq.id + 10000000)
+    return code
 
 
 class BaseEntity(models.Model):
@@ -228,6 +227,16 @@ class ProfitAllocation(BaseEntity):
         app_label = "api"
 
 
+class InviteCodeSeq(BaseEntity):
+    """仅用于借助 MySQL 自增值产生自增序号，用于生成邀请码。"""
+    id = models.BigAutoField(primary_key=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "invite_code_seq"
+        app_label = "api"
+
+
 class InviteCode(BaseEntity):
     """邀请码记录。
 
@@ -246,9 +255,9 @@ class InviteCode(BaseEntity):
 
     def save(self, *args, **kwargs):
         if not self.code:
-            self.code = _generate_unique_invite_code(InviteCode)
+            self.code = _generate_unique_invite_code()
         else:
-            self.code = str(self.code).strip().lower()
+            self.code = str(self.code).strip()
         super().save(*args, **kwargs)
 
     class Meta:

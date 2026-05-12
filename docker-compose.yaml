@@ -1,0 +1,20 @@
+services:
+  energo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: energo
+    # command: gunicorn config.asgi:application -k uvicorn.workers.UvicornWorker --host 0.0.0.0 --port 8000
+    command: gunicorn config.asgi:application -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
+    volumes:
+      - ~/app_data/energo:/app
+    ports:
+      - "8000:8000"
+    network_mode: bridge
+    environment:
+      - MYSQL_DRIVER=pymysql
+      - MYSQL_DATABASE=energo
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=password
+      - MYSQL_HOST=host.docker.internal
+      - MYSQL_PORT=3306

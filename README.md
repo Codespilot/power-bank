@@ -67,3 +67,9 @@ django-admin makemessages -all
 ```bash
 django-admin compilemessages
 ```
+
+# 使用uvicorn运行
+
+```bash
+python -m gunicorn config.asgi:application -k uvicorn_worker.UvicornWorker
+```

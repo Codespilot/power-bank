@@ -1,5 +1,5 @@
 [project]
-name = "power-bank"
+name = "energo"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -12,9 +12,16 @@ dependencies = [
     "drf-spectacular",
     "drf-spectacular-sidecar",
     "pymysql",
+    "mysql-connector-python",
     "python-dotenv",
     "pandas",
     "openpyxl",
     "Pillow",
-    "blinker"
+    "blinker",
+    "uvicorn",
+    "uvicorn-worker",
+    "gunicorn",
 ]
+
+[tool.setuptools]
+package-dir = {"" = "."}

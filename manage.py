@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 import os
 import sys
+from dotenv import load_dotenv
 
-import pymysql
-pymysql.install_as_MySQLdb()
+load_dotenv()
+
+if os.getenv("MYSQL_DRIVER", None) == "pymysql":
+    import pymysql
+    import pymysql.cursors
+    import pymysql.connections
+    pymysql.install_as_MySQLdb()
+
 
 def main() -> None:
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")

@@ -16,6 +16,7 @@ from .merchant_serializers import (
 
 from utils.generate_snowflake_id import generate_snowflake_id
 from ..serializers import CommonResponseSerializer, GenericResponseSerializer
+from ..message import ResponseMessage
 from ..auth import get_current_user, get_request_user_id
 from ..models import Merchant, MerchantHistory, User
 from api.regex import MOBILE_REGEX
@@ -79,7 +80,7 @@ class MerchantListView(APIView):
         current_user_id, is_admin = get_current_user(request)
         if not current_user_id:
             return Response(
-                {"count": 0, "results": [], "message": gettext("auth_failed")},
+                ResponseMessage(gettext("auth_failed"), 401).to_dict(),
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -275,13 +276,13 @@ def _assign_merchants(request, merchant_ids, agent_phone: str = None, agent_id: 
             user = User.objects.filter(id=agent_id).first()
         elif agent_phone:
             if not MOBILE_REGEX.fullmatch(agent_phone):
-                raise ValueError("代理商手机号格式不正确")
+                raise ValueError(gettext("phone_format_error"))
             user = User.objects.filter(phone=agent_phone).first()
         else:
-            raise ValueError("参数错误")
+            raise ValueError(gettext("invalid_parameters"))
 
         if not user:
-            raise ValueError("未找到对应代理商")
+            raise ValueError(gettext("user_not_found"))
 
         if not is_admin and int(user.agent_id or 0) != int(current_user_id):
             raise PermissionError("普通用户仅能划拨给自己的直属下级代理商")
@@ -326,14 +327,15 @@ def _assign_merchants(request, merchant_ids, agent_phone: str = None, agent_id: 
                     created_at=timezone.now(),
                 )
 
-        return Response({"message": gettext("operation_succeed")})
+        return Response(ResponseMessage(gettext("operation_succeed"), 200).to_dict())
     except PermissionError as error:
-        return Response({"message": str(error)}, status=status.HTTP_403_FORBIDDEN)
+        return Response(ResponseMessage(str(error), 403).to_dict(), status=status.HTTP_403_FORBIDDEN)
     except (TypeError, ValueError) as error:
-        return Response({"message": str(error)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(ResponseMessage(str(error), 400).to_dict(), status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response(
-            {"message": f"{gettext('operation_failed')}: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST
+            ResponseMessage(f"{gettext('operation_failed')}: {str(e)}", 400).to_dict(),
+            status=status.HTTP_400_BAD_REQUEST
         )
 
 
@@ -422,13 +424,7 @@ class MerchantHistoryInView(APIView):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
             return Response(
-                {
-                    "count": 0,
-                    "page": 1,
-                    "limit": 10,
-                    "results": [],
-                    "message": "未登录",
-                },
+                ResponseMessage(gettext("auth_failed"), 401).to_dict(),
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -477,14 +473,7 @@ class MerchantHistoryOutView(APIView):
     def get(self, request):
         current_user_id = get_request_user_id(request)
         if not current_user_id:
-            return Response(
-                {
-                    "count": 0,
-                    "page": 1,
-                    "limit": 10,
-                    "results": [],
-                    "message": "未登录",
-                },
+            return Response(ResponseMessage(),
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -539,6 +528,6 @@ def _paginate_history(request, base_qs):
             "page": page,
             "limit": limit,
             "results": results,
-            "message": "查询成功",
+            "message": gettext("query_success"),
         }
     )

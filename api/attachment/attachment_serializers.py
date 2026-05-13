@@ -8,7 +8,7 @@ class AttachmentUploadResponseSerializer(serializers.Serializer):
     file_url = serializers.CharField(help_text="文件访问URL")
 
 class AttachmentListResponseSerializer(serializers.Serializer):
-    id = serializers.CharField(help_text="附件ID")
+    id = serializers.IntegerField(help_text="附件ID")
     file_name = serializers.CharField(help_text="存储文件名")
     origin_name = serializers.CharField(help_text="原始文件名")
     file_size = serializers.IntegerField(help_text="文件大小")
@@ -18,7 +18,7 @@ class AttachmentListResponseSerializer(serializers.Serializer):
 
 
 class AttachmentDetailResponseSerializer(serializers.Serializer):
-    id = serializers.CharField(help_text="附件ID")
+    id = serializers.IntegerField(help_text="附件ID")
     file_name = serializers.CharField(help_text="存储文件名")
     origin_name = serializers.CharField(help_text="原始文件名")
     file_size = serializers.IntegerField(help_text="文件大小")

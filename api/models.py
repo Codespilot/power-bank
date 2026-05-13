@@ -4,7 +4,6 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
 
 from django.utils import timezone
-from utils.generate_snowflake_id import generate_snowflake_id
 
 
 # ===== 核心数据模型 =====

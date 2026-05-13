@@ -71,5 +71,11 @@ django-admin compilemessages
 # 使用uvicorn运行
 
 ```bash
-python -m gunicorn config.asgi:application -k uvicorn_worker.UvicornWorker
+python -m gunicorn config.asgi:application -k uvicorn_worker.UvicornWorker -b 0.0.0.0:8000
+```
+
+或
+
+```bash
+python -m uvicorn config.asgi:application --host 0.0.0.0 --port 8000
 ```

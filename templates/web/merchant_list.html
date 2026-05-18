@@ -99,8 +99,8 @@
                         <div class="layui-form-item">
                             <label class="layui-form-label" style="width: 90px;">代理商</label>
                             <div class="layui-input-block" style="margin-left: 120px;">
-                                <input type="text" name="agent_phone" value="${defaultPhone || ''}" lay-verify="required|phone" placeholder="请输入代理商手机号" class="layui-input">
-                                {% if not user_is_admin %}<div class="layui-form-mid" style="margin-left:0;color:#999;float:none;">仅支持输入自己直属下级代理商手机号</div>{% endif %}
+                                <input type="text" name="agent_contact" value="${defaultPhone || ''}" lay-verify="required" placeholder="请输入代理商联系方式（邮箱或手机号）" class="layui-input">
+                                {% if not user_is_admin %}<div class="layui-form-mid" style="margin-left:0;color:#999;float:none;">仅支持输入自己直属下级代理商联系方式（邮箱或手机号）</div>{% endif %}
                             </div>
                         </div>
                         <div class="layui-form-item" style="margin-bottom: 0;">
@@ -120,7 +120,7 @@
 							},
 							body: JSON.stringify({
 								merchant_ids: merchantIds,
-								agent_phone: formData.field.agent_phone
+								agent_contact: formData.field.agent_contact
 							})
 						}).then(function (response) {
 							return response.json();
@@ -176,7 +176,7 @@
 				return;
 			}
 
-			openAssignDialog([data.id], data.merchant_name, data.agent_phone !== '--' ? data.agent_phone : '');
+			openAssignDialog([data.id], data.merchant_name, data.agent_email !== '--' ? data.agent_email : data.agent_phone);
 		});
 	});
 </script>

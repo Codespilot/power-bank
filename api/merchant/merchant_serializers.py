@@ -14,6 +14,7 @@ class MerchantListResponseSerializer(serializers.Serializer):
     merchant_name = serializers.CharField(help_text="商户名称")
     agent_fullname = serializers.CharField(help_text="代理商姓名")
     agent_phone = serializers.CharField(help_text="代理商手机号")
+    agent_email = serializers.CharField(help_text="代理商邮箱")
     order_count = serializers.IntegerField(help_text="订单数量")
     order_amount = serializers.DecimalField(max_digits=18, decimal_places=2, help_text="订单总金额")
     merchant_profit = serializers.DecimalField(max_digits=18, decimal_places=2, help_text="商户分润总金额")
@@ -43,14 +44,14 @@ class MerchantHistoryPageResponseSerializer(serializers.Serializer):
 
 
 class MerchantAssignAgentRequestSerializer(serializers.Serializer):
-    agent_id = serializers.IntegerField(required=False, allow_null=True, help_text="代理商用户ID，与agent_phone二选一")
-    agent_phone = serializers.CharField(required=False, allow_blank=True, help_text="代理商手机号，与agent_id二选一")
+    agent_id = serializers.IntegerField(required=False, allow_null=True, help_text="代理商用户ID，与agent_contact二选一")
+    agent_contact = serializers.CharField(required=False, allow_blank=True, help_text="代理商联系方式（邮箱或手机号），与agent_id二选一")
 
 
 class MerchantBatchAssignAgentRequestSerializer(serializers.Serializer):
     merchant_ids = serializers.ListField(child=serializers.IntegerField(), required=True, help_text="商户ID列表")
-    agent_id = serializers.IntegerField(required=False, allow_null=True, help_text="代理商用户ID，与agent_phone二选一")
-    agent_phone = serializers.CharField(required=False, allow_blank=True, help_text="代理商手机号，与agent_id二选一")
+    agent_id = serializers.IntegerField(required=False, allow_null=True, help_text="代理商用户ID，与agent_contact二选一")
+    agent_contact = serializers.CharField(required=False, allow_blank=True, help_text="代理商联系方式（邮箱或手机号），与agent_id二选一")
 
 
 class MerchantHistoryListRequestSerializer(serializers.Serializer):

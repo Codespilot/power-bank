@@ -19,7 +19,7 @@ from ..serializers import CommonResponseSerializer, GenericResponseSerializer
 from ..message import ResponseMessage
 from ..auth import get_current_user, get_request_user_id
 from ..models import Merchant, MerchantHistory, User
-from api.regex import MOBILE_REGEX
+from api.regex import EMAIL_REGEX, MOBILE_REGEX
 
 from django.utils.translation import gettext
 
@@ -143,6 +143,7 @@ class MerchantListView(APIView):
                 mch.name,
                 usr.fullname AS agent_fullname,
                 usr.phone AS agent_phone,
+                usr.email AS agent_email,
                 COALESCE(odr.order_count, 0) AS order_count,
                 COALESCE(odr.order_amount, 0) AS order_amount,
                 COALESCE(odr.merchant_profit, 0) AS merchant_profit
@@ -169,6 +170,7 @@ class MerchantListView(APIView):
                 "merchant_name": row["name"],
                 "agent_fullname": (row.get("agent_fullname") or "").strip() or "--",
                 "agent_phone": (row.get("agent_phone") or "").strip() or "--",
+                "agent_email": (row.get("agent_email") or "").strip() or "--",
                 "order_count": int(row.get("order_count") or 0),
                 "order_amount": _format_decimal(row.get("order_amount")),
                 "merchant_profit": _format_decimal(row.get("merchant_profit")),
@@ -250,14 +252,14 @@ class MerchantHistoryListView(APIView):
         )
 
 
-def _assign_merchants(request, merchant_ids, agent_phone: str = None, agent_id: int = None):
+def _assign_merchants(request, merchant_ids, agent_contact: str = None, agent_id: int = None):
     """
     将一个或多个商户划拨给指定代理商。管理员可划拨任意商户，普通代理商仅能划拨自己名下的商户给自己的直属下级代理商。
 
     args:
         request: 当前请求对象
         merchant_ids: 商户ID列表
-        agent_phone: 目标代理商手机号（可选）
+        agent_contact: 目标代理商联系方式（邮箱或手机号，可选）
         agent_id: 目标代理商用户ID（可选）
     returns:
         Response对象，包含操作结果信息
@@ -274,10 +276,13 @@ def _assign_merchants(request, merchant_ids, agent_phone: str = None, agent_id: 
         user = None
         if agent_id:
             user = User.objects.filter(id=agent_id).first()
-        elif agent_phone:
-            if not MOBILE_REGEX.fullmatch(agent_phone):
+        elif agent_contact:
+            if EMAIL_REGEX.fullmatch(agent_contact):
+                user = User.objects.filter(email=agent_contact).first()
+            elif MOBILE_REGEX.fullmatch(agent_contact):
+                user = User.objects.filter(phone=agent_contact).first()
+            else:
                 raise ValueError(gettext("phone_format_error"))
-            user = User.objects.filter(phone=agent_phone).first()
         else:
             raise ValueError(gettext("invalid_parameters"))
 
@@ -366,7 +371,7 @@ class MerchantAssignAgentView(APIView):
         return _assign_merchants(
             request,
             [id],
-            request.data.get("agent_phone", ""),
+            request.data.get("agent_contact", ""),
             agent_id=int(request.data.get("agent_id")) if request.data.get("agent_id") else None,
         )
 
@@ -390,7 +395,7 @@ class MerchantBatchAssignAgentView(APIView):
         return _assign_merchants(
             request,
             merchant_ids,
-            request.data.get("agent_phone", ""),
+            request.data.get("agent_contact", ""),
             agent_id=int(request.data.get("agent_id")) if request.data.get("agent_id") else None,
         )
 

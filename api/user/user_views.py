@@ -163,18 +163,16 @@ class LoginAPIView(APIView):
     # )
     @extend_schema(exclude=True)  # 该接口不在自动文档中展示
     def post(self, request):
-        user, error_response = _authenticate_credentials(
-            request, use_session_captcha=True
-        )
-        if error_response is not None:
-            return error_response
+        try:
+            user, error_response = _authenticate_credentials(request, use_session_captcha=True)
+            if error_response is not None:
+                return error_response
 
-        request.session["current_user_id"] = user.id
-        next_url = request.GET.get("next") or request.data.get("next") or "/"
-        return Response(
-            {"message": gettext("login_succeed"), "user_id": user.id, "next": next_url}
-        )
-
+            request.session["current_user_id"] = user.id
+            next_url = request.GET.get("next") or request.data.get("next") or "/"
+            return Response({"message": gettext("login_succeed"), "user_id": user.id, "next": next_url})
+        except Exception as exception:
+           return Response({"message": gettext("login_failed") + str(exception),"next_url":next_url}, status=status.HTTP_401_UNAUTHORIZED)
 
 class TokenGrantView(APIView):
     authentication_classes = []
